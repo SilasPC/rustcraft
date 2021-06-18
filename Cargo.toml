@@ -1,0 +1,12 @@
+[package]
+name = "rustcraft"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+sdl2 = { version = "*", features = ["bundled", "static-link"] }
+gl = "*"
+cgmath = "*"
+image = "*"
+hecs = "*"
+rand = "*"
