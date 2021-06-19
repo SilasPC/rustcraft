@@ -67,7 +67,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let mut view_mat = Matrix4::one();
     'main: loop {
 
-        data.delta = data.frame_time.elapsed().as_secs_f32();
+        data.delta = data.frame_time.elapsed().as_secs_f32().min(0.1);
         data.frame_time = Instant::now();
 
         data.input.start_new_frame();
@@ -144,7 +144,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         program.load_mat4(0, &Matrix4::from(data.fov));
         program.load_mat4(1, &view_mat);
         
-        for chunk in data.world.chunks.iter_mut().flat_map(|inn| inn.iter_mut()) {
+        for chunk in data.world.chunks.iter_mut().flat_map(|inn| inn.iter_mut().flat_map(|i2| i2.iter_mut())) {
 
             chunk.refresh(&data.block_map, &data.atlas);
 
@@ -201,7 +201,7 @@ fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_m
         if cc.x < 0 || pos.y < 0. || cc.z < 0 {
             return false;
         }
-        let chunk = &w.chunks[cc.x as usize][cc.z as usize];
+        let chunk = &w.chunks[cc.x as usize][cc.y as usize][cc.z as usize];
         if sc.x < 0 {sc.x += 16}
         if sc.z < 0 {sc.z += 16}
         let id = chunk.data[sc.x as usize][sc.y as usize][sc.z as usize];
@@ -215,7 +215,7 @@ fn set_block(w: &mut crate::world::WorldData, pos: &Vector3<f32>, val: usize) {
     if cc.x < 0 || pos.y < 0. || cc.z < 0 {
         return
     }
-    let chunk = &mut w.chunks[cc.x as usize][cc.z as usize];
+    let chunk = &mut w.chunks[cc.x as usize][cc.y as usize][cc.z as usize];
     if sc.x < 0 {sc.x += 16}
     if sc.z < 0 {sc.z += 16}
     chunk.data[sc.x as usize][sc.y as usize][sc.z as usize] = val;

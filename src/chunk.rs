@@ -4,9 +4,17 @@ use crate::engine::vao::*;
 use crate::rustcraft::block::Block;
 use crate::Data as WData;
 
+pub enum GenState {
+    Empty,
+    Terrain,
+    Detail,
+    Done,
+}
+
 type Data = [[[usize; 16]; 16]; 16];
 
 pub struct Chunk {
+    pub gen_state: GenState,
     pub needs_refresh: bool,
     pub pos: Vector3<f32>,
     pub data: Data,
@@ -19,9 +27,7 @@ impl Chunk {
 
         let mut data = [[[0; 16]; 16]; 16];
 
-        use std::ops::Mul;
-
-        for x in 0..16 {
+        /* for x in 0..16 {
             for y in 0..16 {
                 for z in 0..16 {
                     let xf = 2. * (16. * pos.x as f32 + x as f32).mul(0.1).sin();
@@ -38,13 +44,53 @@ impl Chunk {
                     //if y == 0 {data[x][y][z] = true}
                 }
             }
-        }
+        } */
 
         let pos = Vector3 {x: pos.x as f32, y: pos.y as f32, z: pos.z as f32};
         let (verts, uvs) = make_mesh(&data, block_map, atlas);
         let mesh = VAO::textured(&verts, &uvs);
-        Self { data, mesh, pos, needs_refresh: false }
+        Self { gen_state: GenState::Empty, data, mesh, pos, needs_refresh: false }
 
+    }
+
+    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen) {
+        for x in 0..16 {
+            for y in 0..16 {
+                for z in 0..16 {
+                    let pos = self.pos.map(|x| x as isize);
+
+                    let ax = 16 * pos.x + x;
+                    let ay = 16 * pos.y + y;
+                    let az = 16 * pos.z + z;
+
+                    // if noise.is_cave(ax, ay, az) {continue}
+
+                    let d = noise.density(ax,ay,az);
+                    let da = noise.density(ax,ay+1,az);
+                    
+                    self.data[x as usize][y as usize][z as usize] = 
+                    if d > 0.56 {
+                        1
+                    } else if d > 0.52 {
+                        if da > 0.52 {
+                            2
+                        } else {
+                            3
+                        }
+                    } else {
+                        0
+                    };
+                    /* if db > 0.52 && db < 0.56 && d < 0.51 && !(cb > 0.57) {
+                        let t = noise.get2d([x as f64 / 1.5, z as f64 / 1.5]);
+                        if t > 0.52 {
+                            self.data[x as usize][y as usize][z as usize] = 4;
+                        }
+                    } */
+                }
+            }
+        }
+        self.needs_refresh = true;
+        self.gen_state = GenState::Terrain;
     }
 
     pub fn refresh(&mut self, wdata: &Vec<Block>, atlas: &crate::texture::TextureAtlas) {

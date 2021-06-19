@@ -9,4 +9,5 @@ gl = "*"
 cgmath = "*"
 image = "*"
 hecs = "*"
-rand = "*"
+rand = { version = "*", features = ["small_rng"] }
+perlin_noise = "*"

@@ -11,6 +11,7 @@ pub struct Physics {
     force: Vector3<f32>,
     vel: Vector3<f32>,
     grounded: bool,
+    no_clip: bool,
 }
 
 impl Physics {
@@ -23,7 +24,13 @@ impl Physics {
             grounded: true,
             force: zero,
             vel: zero,
+            no_clip: false
         }
+    }
+
+    pub fn set_flying(&mut self, flying: bool) {
+        self.no_clip = flying;
+        self.gravity = !flying;
     }
 
     pub fn set_size(&mut self, size: &Vector3<f32>) {
@@ -63,32 +70,34 @@ impl Physics {
         
         let mut new_pos = pos.pos + self.vel * delta;
 
-        if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
-            x: new_pos.x,
-            ..pos.pos
-        }) {
-            new_pos.x = pos.pos.x;
-            self.vel.x = 0.;
-        }
-        if self.vel.y != 0. && check_hit(block_map, world, &Vector3 {
-            y: new_pos.y,
-            ..pos.pos
-        }) {
-            new_pos.y = pos.pos.y;
-            if self.vel.y < 0. {
-                self.grounded = true;
-                new_pos.y = new_pos.y.floor();
-            } 
-            self.vel.y = 0.;
-        } else {
-            self.grounded = false;
-        }
-        if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
-            z: new_pos.z,
-            ..pos.pos
-        }) {
-            new_pos.z = pos.pos.z;
-            self.vel.z = 0.;
+        if !self.no_clip {
+            if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
+                x: new_pos.x,
+                ..pos.pos
+            }) {
+                new_pos.x = pos.pos.x;
+                self.vel.x = 0.;
+            }
+            if self.vel.y != 0. && check_hit(block_map, world, &Vector3 {
+                y: new_pos.y,
+                ..pos.pos
+            }) {
+                new_pos.y = pos.pos.y;
+                if self.vel.y < 0. {
+                    self.grounded = true;
+                    new_pos.y = new_pos.y.floor();
+                } 
+                self.vel.y = 0.;
+            } else {
+                self.grounded = false;
+            }
+            if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
+                z: new_pos.z,
+                ..pos.pos
+            }) {
+                new_pos.z = pos.pos.z;
+                self.vel.z = 0.;
+            }
         }
 
         pos.pos = new_pos;
@@ -108,7 +117,7 @@ impl Physics {
             if cc.x < 0 || pos.y < 0. || cc.z < 0 {
                 return false;
             }
-            let chunk = &world.chunks[cc.x as usize][cc.z as usize];
+            let chunk = &world.chunks[cc.x as usize][cc.y as usize][cc.z as usize];
             if sc.x < 0 {sc.x += 16}
             if sc.z < 0 {sc.z += 16}
             let id = chunk.data[sc.x as usize][sc.y as usize][sc.z as usize];
