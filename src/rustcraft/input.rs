@@ -5,25 +5,31 @@ use cgmath::*;
 pub struct Input {
     forward: i32,
     rightward: i32,
-    jump: bool,
-    primary: bool,
-    secondary: bool,
+    jump: u32,
+    primary: u32,
+    secondary: u32,
     scroll: i32,
     mouse: (i32,i32)
 }
 
 impl Input {
 
-    pub fn primary(&self) -> bool {self.primary}
-    pub fn secondary(&self) -> bool {self.secondary}
-    pub fn jump(&self) -> bool {self.jump}
-    pub fn scroll(&self) -> i32 {self.scroll()}
+    pub fn clicked_primary(&self) -> bool {self.primary == 1}
+    pub fn clicked_secondary(&self) -> bool {self.secondary == 1}
+    pub fn holding_primary(&self) -> bool {self.primary >= 1}
+    pub fn holding_secondary(&self) -> bool {self.secondary >= 1}
+    pub fn clicked_jump(&self) -> bool {self.jump == 1}
+    pub fn holding_jump(&self) -> bool {self.jump >= 1}
+    pub fn scroll(&self) -> i32 {self.scroll}
     pub fn mouse_x(&self) -> i32 {self.mouse.0}
     pub fn mouse_y(&self) -> i32 {self.mouse.1}
 
     pub fn start_new_frame(&mut self) {
         self.mouse = (0,0);
         self.scroll = 0;
+        if self.primary > 0 {self.primary += 1}
+        if self.secondary > 0 {self.secondary += 1}
+        if self.jump > 0 {self.jump += 1}
     }
     pub fn reset(&mut self) {*self = Self::default();}
 
@@ -37,16 +43,16 @@ impl Input {
             Event::KeyDown {keycode: Some(S), ..} => self.forward -= 1,
             Event::KeyDown {keycode: Some(A), ..} => self.rightward -= 1,
             Event::KeyDown {keycode: Some(D), ..} => self.rightward += 1,
-            Event::KeyDown {keycode: Some(Space), ..} => self.jump = true,
+            Event::KeyDown {keycode: Some(Space), ..} => self.jump += 1,
             Event::KeyUp {keycode: Some(W), ..} => self.forward += -1,
             Event::KeyUp {keycode: Some(S), ..} => self.forward -= -1,
             Event::KeyUp {keycode: Some(A), ..} => self.rightward -= -1,
             Event::KeyUp {keycode: Some(D), ..} => self.rightward += -1,
-            Event::KeyUp {keycode: Some(Space), ..} => self.jump = false,
-            Event::MouseButtonDown { mouse_btn: Left, .. } => self.primary = true,
-            Event::MouseButtonDown { mouse_btn: Right, .. } => self.secondary = true,
-            Event::MouseButtonUp { mouse_btn: Left, .. } => self.primary = false,
-            Event::MouseButtonUp { mouse_btn: Right, .. } => self.secondary = false,
+            Event::KeyUp {keycode: Some(Space), ..} => self.jump = 0,
+            Event::MouseButtonDown { mouse_btn: Left, .. } => self.primary += 1,
+            Event::MouseButtonDown { mouse_btn: Right, .. } => self.secondary += 1,
+            Event::MouseButtonUp { mouse_btn: Left, .. } => self.primary = 0,
+            Event::MouseButtonUp { mouse_btn: Right, .. } => self.secondary = 0,
             Event::MouseMotion { xrel, yrel, .. } => {
                 self.mouse.0 += xrel;
                 self.mouse.1 += yrel;

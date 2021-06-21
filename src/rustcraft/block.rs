@@ -4,5 +4,6 @@ pub struct Block {
     pub solid: bool,
     pub transparent: bool,
     pub no_render: bool,
-    pub texture: (usize,usize,usize)
+    pub texture: (usize,usize,usize),
+    pub has_gravity: bool,
 }

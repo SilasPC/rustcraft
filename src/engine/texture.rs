@@ -34,14 +34,17 @@ impl Texture {
 
     pub fn from_path(path: &str) -> Self {
         use image::io::Reader as ImgReader;
-        let img = ImgReader::open(path).unwrap().decode().unwrap();
+        let img = ImgReader::open(path)
+            .map_err(|_| format!("Failed to open texture file {}",path))
+            .unwrap()
+            .decode().unwrap();
         let img = img.into_rgba8();
         let size = img.dimensions();
         Self::from_rgba(&img, size)
     }
 
     // https://docs.rs/piston2d-opengl_graphics/0.78.0/src/opengl_graphics/texture.rs.html#181-224
-    fn from_rgba(img: &image::RgbaImage, size: (u32,u32)) -> Self {
+    fn from_rgba(img: &RgbaImage, size: (u32,u32)) -> Self {
         let mut id = 0;
         unsafe {
             gl::GenTextures(1, &mut id);

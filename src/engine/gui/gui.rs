@@ -7,8 +7,8 @@ use crate::texture::Texture;
 pub struct ContainerGUI(pub Vec<FlatGUI>);
 
 impl GUI for ContainerGUI {
-    fn render(&self, r: &mut Renderer) {
-        for gui in &self.0 {
+    fn render(&mut self, r: &mut Renderer) {
+        for gui in &mut self.0 {
             gui.render(r);
         }
     }
@@ -22,7 +22,7 @@ pub struct FlatGUI {
 }
 
 impl GUI for FlatGUI {
-    fn render(&self, r: &mut Renderer) {
+    fn render(&mut self, r: &mut Renderer) {
         self.texture.bind();
         r.render(self.pos, self.texture.aspect_ratio(), self.anchor, self.scale);
     }

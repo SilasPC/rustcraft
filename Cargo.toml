@@ -10,4 +10,8 @@ cgmath = "*"
 image = "*"
 hecs = "*"
 rand = { version = "*", features = ["small_rng"] }
-perlin_noise = "*"
+# perlin_noise = "*"
+#https://docs.rs/fart-aabb/0.4.0/fart_aabb/struct.AabbTree.html
+#https://github.com/lukebitts/aabb-tree
+
+aabb-tree = { path = "./aabb-tree" }

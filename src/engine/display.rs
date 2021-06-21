@@ -56,7 +56,7 @@ impl GLDisplay {
         x as f32 / y as f32
     }
 
-    pub fn toggle_fullscren(&mut self) {
+    pub fn toggle_fullscren(&mut self) -> bool {
         let fs = self.window.fullscreen_state();
         use sdl2::video::FullscreenType::*;
         self.window.set_fullscreen(
@@ -64,7 +64,7 @@ impl GLDisplay {
                 Off => True,
                 _ => Off
             }
-        );
+        ).is_ok()
     }
 
 }

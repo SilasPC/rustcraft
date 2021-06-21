@@ -1,4 +1,5 @@
 
+use crate::game_loop::block_at;
 use crate::world::WorldData;
 use crate::block::Block;
 use cgmath::*;
@@ -43,10 +44,23 @@ impl Physics {
         }
     }
 
+    pub fn get_aabb(&self, pos: &Position) -> crate::AABB {
+        const E: f32 = 0.;// 0.01; // 10. * std::f32::EPSILON;
+        ((
+            pos.pos.x+E,
+            pos.pos.y+E,
+            pos.pos.z+E,
+        ),(
+            pos.pos.x+self.size.x-E,
+            pos.pos.y+self.size.y-E,
+            pos.pos.z+self.size.z-E,
+        ))
+    }
+
     pub fn is_grounded(&self) -> bool {self.grounded}
     pub fn size(&self) -> &Vector3<f32> {&self.size}
 
-    pub fn apply_force(&mut self, f: &Vector3<f32>) {
+    pub fn apply_force_once(&mut self, f: &Vector3<f32>) {
         self.vel += *f;
     }
 
@@ -61,7 +75,8 @@ impl Physics {
     pub fn apply_force_continuous(&mut self, delta: f32, f: &Vector3<f32>) {
         self.force += f * delta;
     }
-    pub fn update(&mut self, pos: &mut Position, delta: f32, block_map: &Vec<Block>, world: &WorldData) {
+    /// returns true if position was updated
+    pub fn update(&mut self, pos: &mut Position, delta: f32, block_map: &Vec<Block>, world: &WorldData) -> bool {
 
         self.vel += self.force;
         self.force = self.force.map(|_| 0.);
@@ -71,33 +86,45 @@ impl Physics {
         let mut new_pos = pos.pos + self.vel * delta;
 
         if !self.no_clip {
-            if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
-                x: new_pos.x,
-                ..pos.pos
-            }) {
-                new_pos.x = pos.pos.x;
-                self.vel.x = 0.;
+            macro_rules! test_it {
+                ($x:expr, $y:expr, $z:expr) => {
+                    if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
+                        x: new_pos.x + $x * self.size.x,
+                        ..pos.pos
+                    }) {
+                        new_pos.x = pos.pos.x;
+                        self.vel.x = 0.;
+                    }
+                    if self.vel.y != 0. && check_hit(block_map, world, &Vector3 {
+                        y: new_pos.y + $y * self.size.y,
+                        ..pos.pos
+                    }) {
+                        new_pos.y = pos.pos.y;
+                        if self.vel.y < 0. {
+                            self.grounded = true;
+                            new_pos.y = new_pos.y.floor();
+                        } 
+                        self.vel.y = 0.;
+                    } else {
+                        self.grounded = false;
+                    }
+                    if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
+                        z: new_pos.z + $z * self.size.z,
+                        ..pos.pos
+                    }) {
+                        new_pos.z = pos.pos.z;
+                        self.vel.z = 0.;
+                    }
+                };
             }
-            if self.vel.y != 0. && check_hit(block_map, world, &Vector3 {
-                y: new_pos.y,
-                ..pos.pos
-            }) {
-                new_pos.y = pos.pos.y;
-                if self.vel.y < 0. {
-                    self.grounded = true;
-                    new_pos.y = new_pos.y.floor();
-                } 
-                self.vel.y = 0.;
-            } else {
-                self.grounded = false;
-            }
-            if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
-                z: new_pos.z,
-                ..pos.pos
-            }) {
-                new_pos.z = pos.pos.z;
-                self.vel.z = 0.;
-            }
+            test_it!(0.,0.,0.);/* 
+            test_it!(1.,0.,0.);
+            test_it!(0.,1.,0.);
+            test_it!(0.,0.,1.);
+            test_it!(1.,1.,0.);
+            test_it!(1.,0.,1.);
+            test_it!(0.,1.,1.);
+            test_it!(1.,1.,1.); */
         }
 
         pos.pos = new_pos;
@@ -110,24 +137,21 @@ impl Physics {
         if self.vel.y != 0. {
             self.grounded = false;
         }
+        
+        return true;
 
-        fn check_hit(block_map: &Vec<Block>, world: &WorldData, pos: &Vector3<f32>) -> bool {
-            let cc = (pos / 16.).map(|c| c.floor() as isize);
-            let mut sc = (pos % 16.).map(|c| c.floor() as isize);
-            if cc.x < 0 || pos.y < 0. || cc.z < 0 {
-                return false;
-            }
-            let chunk = &world.chunks[cc.x as usize][cc.y as usize][cc.z as usize];
-            if sc.x < 0 {sc.x += 16}
-            if sc.z < 0 {sc.z += 16}
-            let id = chunk.data[sc.x as usize][sc.y as usize][sc.z as usize];
-            block_map[id].solid
+        fn check_hit(block_map: &Vec<crate::rustcraft::block::Block>, w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
+            block_at(w, pos)
+                .map(|id| block_map[id].solid)
+                .unwrap_or(true)
         }
     }
 
     pub fn system_update(data: &mut crate::Data) {
-        for (_ent, (pos, phys)) in data.ecs.query_mut::<(&mut Position, &mut Physics)>() {
-            phys.update(pos, data.delta, &data.block_map, &data.world);
+        for (ent, (pos, phys)) in data.ecs.query_mut::<(&mut Position, &mut Physics)>() {
+            if phys.update(pos, data.delta, &data.block_map, &data.world) {
+                data.ent_tree.set(ent, &phys.get_aabb(&pos));
+            }
         }
     }
 

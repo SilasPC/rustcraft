@@ -22,10 +22,6 @@ impl From<Vector3<f32>> for Position {
 
 impl Position {
 
-    pub fn add(&mut self, p: &Vector3<f32>) {
-        self.pos += *p;
-    }
-
     pub fn rotate(&mut self, pitch: f32, yaw: f32) {
         let p = &mut self.rot.x.0;
         let y = &mut self.rot.y.0;

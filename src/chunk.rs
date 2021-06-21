@@ -4,6 +4,7 @@ use crate::engine::vao::*;
 use crate::rustcraft::block::Block;
 use crate::Data as WData;
 
+/// Signifies the current state of the chunk generation
 pub enum GenState {
     Empty,
     Terrain,
@@ -25,27 +26,7 @@ impl Chunk {
 
     pub fn new(pos: Vector3<isize>, block_map: &Vec<Block>, atlas: &crate::texture::TextureAtlas) -> Self {
 
-        let mut data = [[[0; 16]; 16]; 16];
-
-        /* for x in 0..16 {
-            for y in 0..16 {
-                for z in 0..16 {
-                    let xf = 2. * (16. * pos.x as f32 + x as f32).mul(0.1).sin();
-                    let zf = 2. * (16. * pos.z as f32 + z as f32).mul(0.2).sin();
-                    if (y as f32) < 5. + xf + zf {
-                        if y < 4 {
-                            data[x][y][z] = 4;
-                        } else if (1. + y as f32) >= 5. + xf + zf {
-                            data[x][y][z] = 3;
-                        } else {
-                            data[x][y][z] = 2;
-                        }
-                    }
-                    //if y == 0 {data[x][y][z] = true}
-                }
-            }
-        } */
-
+        let data = [[[0; 16]; 16]; 16];
         let pos = Vector3 {x: pos.x as f32, y: pos.y as f32, z: pos.z as f32};
         let (verts, uvs) = make_mesh(&data, block_map, atlas);
         let mesh = VAO::textured(&verts, &uvs);

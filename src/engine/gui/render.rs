@@ -4,7 +4,7 @@ use crate::program::Program;
 use cgmath::*;
 
 pub trait GUI {
-    fn render(&self, renderer: &mut Renderer);
+    fn render(&mut self, renderer: &mut Renderer);
 }
 
 pub struct GUIRenderer {
@@ -47,7 +47,7 @@ impl GUIRenderer {
         
     }
 
-    pub fn render(&mut self, gui: &impl GUI, aspect_ratio: f32) {
+    pub fn render(&mut self, gui: &mut impl GUI, aspect_ratio: f32) {
         self.program.enable();
         self.program.load_vec2(0, &Vector2 {x: 0., y: 0.});
         self.program.load_vec2(1, &Vector2 {x: 1./aspect_ratio, y: 0.});
