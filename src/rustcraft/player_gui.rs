@@ -20,16 +20,15 @@ impl PlayerGUI {
             texture: toolbar.into(),
             anchor: Anchor::Bottom,
             pos: -Vector2::unit_y(),
-            scale: Scale::FixedWidth(1.3)
+            scale: Scale::Pixels(3),
         };
-        // width == 1.3 => height == 1.3/9.
 
         let selector = Texture::from_path("assets/item_selected.png");
         let selector = FlatGUI {
             texture: selector.into(),
             anchor: Anchor::Bottom.add(Anchor::Offset(-4.,0.)),
             pos: -Vector2::unit_y(),
-            scale: Scale::FixedWidth(1.3/9.)
+            scale: Scale::Pixels(3),
         };
 
         let crosshairs = Texture::from_path("assets/crosshairs.png");
@@ -37,7 +36,7 @@ impl PlayerGUI {
             texture: crosshairs.into(),
             anchor: Anchor::Center,
             pos: Vector2 { x: 0., y: 0. },
-            scale: Scale::FixedHeight(0.1),
+            scale: Scale::Pixels(3),
         };
 
         let heart = std::rc::Rc::from(Texture::from_path("assets/heart.png"));
@@ -47,7 +46,7 @@ impl PlayerGUI {
                 texture: std::rc::Rc::clone(&heart),
                 anchor: Anchor::BottomLeft.add(Anchor::Offset(1.1 * i as f32, 0.)),
                 pos: Vector2 {x: -1.3/2., y: -0.8 },
-                scale: Scale::FixedWidth(1.3/9. / 2.)
+                scale: Scale::Pixels(3),
             })
         }
         let hearts = ContainerGUI(hearts);

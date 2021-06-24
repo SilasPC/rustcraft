@@ -1,14 +1,48 @@
 
 use gl::types::{GLuint as uint, GLint as int, GLenum};
 
+pub enum RenderKind {
+    Triangles,
+    Lines,
+}
+
 pub struct VAO {
     id: uint,
     verts: uint,
     uvs: uint,
     vertex_count: i32,
+    kind: RenderKind,
 }
 
 impl VAO {
+
+    pub fn lines(verts: &[f32]) -> Self {
+        
+        unsafe {
+            
+            let mut id = 0;
+    
+            gl::GenVertexArrays(1, &mut id);
+            gl::BindVertexArray(id);
+            
+            let mut verts_id = 0;
+            gl::GenBuffers(1, &mut verts_id);
+            configure_float_vbo(verts_id, 0, 3);
+            transfer_to_array_buffer(verts_id, verts);
+    
+            gl::BindVertexArray(0);
+    
+            Self {
+                id,
+                verts: verts_id,
+                uvs: 0,
+                vertex_count: verts.len() as i32,
+                kind: RenderKind::Lines,
+            }
+
+        }
+
+    }
 
     pub fn update(&mut self, verts: &[f32], uvs: &[f32]) {
 
@@ -22,6 +56,34 @@ impl VAO {
             gl::BindVertexArray(0);
         }
         self.vertex_count = verts.len() as i32;
+    }
+
+    pub fn empty_textured() -> Self {
+
+        unsafe {
+            
+            let mut id = 0;
+    
+            gl::GenVertexArrays(1, &mut id);
+            gl::BindVertexArray(id);
+            
+            let mut ids = [0,0];
+            gl::GenBuffers(2, ids.as_mut_ptr());
+            configure_float_vbo(ids[0], 0, 3);
+            configure_float_vbo(ids[1], 1, 2);
+    
+            gl::BindVertexArray(0);
+    
+            Self {
+                id,
+                verts: ids[0],
+                uvs: ids[1],
+                vertex_count: 0,
+                kind: RenderKind::Triangles,
+            }
+
+        }
+
     }
 
     pub fn textured(verts: &[f32], uvs: &[f32]) -> Self {
@@ -52,7 +114,8 @@ impl VAO {
                 id,
                 verts: verts_id,
                 uvs: uvs_id,
-                vertex_count: verts.len() as i32
+                vertex_count: verts.len() as i32,
+                kind: RenderKind::Triangles,
             }
 
         }
@@ -65,11 +128,15 @@ impl VAO {
     }
 
     pub fn draw(&self) {
+        let (gle, count) = match self.kind {
+            RenderKind::Triangles => (gl::TRIANGLES, 3),
+            RenderKind::Lines => (gl::LINES, 2),
+        };
         unsafe {
             gl::DrawArrays(
-                gl::TRIANGLES,
+                gle,
                 0,
-                self.triangle_count()
+                self.vertex_count / count
             );
         }
     }

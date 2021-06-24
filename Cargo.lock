@@ -692,6 +692,7 @@ dependencies = [
  "hecs",
  "image",
  "rand 0.8.4",
+ "regex",
  "sdl2",
 ]
 

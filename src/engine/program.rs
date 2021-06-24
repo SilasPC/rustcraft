@@ -92,6 +92,11 @@ impl Program {
             gl::Uniform3f(self.uniforms[index], data.x, data.y, data.z);
         }
     }
+    pub fn load_vec4(&self, index: usize, data: &Vector4<f32>) {
+        unsafe {
+            gl::Uniform4f(self.uniforms[index], data.x, data.y, data.z, data.w);
+        }
+    }
     pub fn load_mat4(&self, index: usize, data: &Matrix4<f32>) {
         unsafe {
             gl::UniformMatrix4fv(self.uniforms[index], 1, gl::FALSE, data.as_ptr());

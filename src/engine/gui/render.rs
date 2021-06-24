@@ -4,6 +4,7 @@ use crate::program::Program;
 use cgmath::*;
 
 pub trait GUI {
+    /// Typical implementation will bind a texture, then call renderer.render(...)
     fn render(&mut self, renderer: &mut Renderer);
 }
 
@@ -47,7 +48,11 @@ impl GUIRenderer {
         
     }
 
-    pub fn render(&mut self, gui: &mut impl GUI, aspect_ratio: f32) {
+    pub fn render(&mut self, gui: &mut impl GUI, screen_size: (u32,u32), mouse_pos: (i32, i32), delta: f32) {
+        let screen_size = (screen_size.0 as f32, screen_size.1 as f32);
+        let mouse_pos = (mouse_pos.0 as f32 / screen_size.0, mouse_pos.1 as f32 / screen_size.1);
+        let mouse_pos = (mouse_pos.0 * 2. - 1., mouse_pos.1 * 2. - 1.);
+        let aspect_ratio = screen_size.0 / screen_size.1;
         self.program.enable();
         self.program.load_vec2(0, &Vector2 {x: 0., y: 0.});
         self.program.load_vec2(1, &Vector2 {x: 1./aspect_ratio, y: 0.});
@@ -57,7 +62,12 @@ impl GUIRenderer {
             gl::Disable(gl::DEPTH_TEST);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
-        let mut renderer = Renderer(self, aspect_ratio);
+        let mut renderer = Renderer {
+            renderer: self,
+            screen_size,
+            delta,
+            mouse_pos
+        };
         gui.render(&mut renderer);
         unsafe {
             gl::Disable(gl::BLEND);
@@ -67,21 +77,40 @@ impl GUIRenderer {
 
 }
 
-pub struct Renderer<'a>(&'a mut GUIRenderer, f32);
+pub struct Renderer<'a> {
+    renderer: &'a mut GUIRenderer,
+    screen_size: (f32, f32),
+    delta: f32,
+    mouse_pos: (f32, f32)
+}
 
 impl<'a> Renderer<'a> {
 
-    pub fn render(&self, position: Vector2<f32>, image_aspect_ratio: f32, anchor: Anchor, scale: Scale) {
-        let [mut scale, offset] = calc(self.1, image_aspect_ratio, anchor, scale);
-        self.0.program.load_vec2(0, &(position + offset));
-        self.0.program.load_vec2(1, &scale);
-        self.0.vao.draw();
+    pub fn is_mouse_over(&self, image_size: (f32, f32), anchor: Anchor, scale: Scale) -> bool {
+        let [scale, offset] = calc(self.screen_size, image_size, anchor, scale);
+        let pos = self.mouse_pos;
+
+        // println!("mouse: {:?}, scale: {:?}, offset: {:?}",pos,scale,offset);
+
+        pos.0 >= offset.x && pos.1 >= offset.y && pos.0 <= offset.x + scale.x && pos.1 <= offset.y + scale.y
+
     }
+
+    pub fn render(&self, position: Vector2<f32>, image_size: (f32, f32), anchor: Anchor, scale: Scale) {
+        let aspect_ratio = self.screen_size.0 / self.screen_size.1;
+        let [scale, offset] = calc(self.screen_size, image_size, anchor, scale);
+        self.renderer.program.load_vec2(0, &(position + offset));
+        self.renderer.program.load_vec2(1, &scale);
+        self.renderer.vao.draw();
+    }
+
+    pub fn delta(&self) -> f32 {self.delta}
 
 }
 
-fn calc(ar: f32, iar: f32, anchor: Anchor, scale: Scale) -> [Vector2<f32>; 2] {
-
+fn calc(screen_size: (f32,f32), image_size: (f32,f32), anchor: Anchor, scale: Scale) -> [Vector2<f32>; 2] {
+    let ar = screen_size.0 / screen_size.1;
+    let iar = image_size.0 / image_size.1;
     let scale = match scale {
         Scale::FixedWidth(w) => {
             Vector2 {
@@ -95,6 +124,13 @@ fn calc(ar: f32, iar: f32, anchor: Anchor, scale: Scale) -> [Vector2<f32>; 2] {
                 y: h,
             }
         },
+        Scale::Pixels(s) => {
+            let s = s as f32;
+            Vector2 {
+                x: 2. * s * image_size.0 / screen_size.0,
+                y: 2. * s * image_size.1 / screen_size.1,
+            }
+        }
     };
 
     let mut offset = anchor.to_vec();
@@ -109,6 +145,7 @@ fn calc(ar: f32, iar: f32, anchor: Anchor, scale: Scale) -> [Vector2<f32>; 2] {
 pub enum Scale {
     FixedWidth(f32),
     FixedHeight(f32),
+    Pixels(u32),
 }
 
 #[derive(Clone,Copy)]

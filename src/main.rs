@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused)]
 
 mod util;
 mod chunk;
@@ -17,6 +18,7 @@ use aabb_tree::*;
 
 pub struct Settings {
     pub fov: Deg<f32>,
+    pub mouse_sensitivity: f32,
 }
 
 pub type AABB = ((f32,f32,f32,),(f32,f32,f32,));
@@ -120,7 +122,7 @@ impl Data {
             input: Input::default(),
             cam,
             frame_time: Instant::now(),
-            world: world::WorldData::new(&block_map, &atlas),
+            world: world::WorldData::new(),
             atlas,
             delta: 0.,
             ecs,
@@ -132,7 +134,7 @@ impl Data {
 
 fn main() {
 
-    let mut display = display::GLDisplay::new((900,700));
+    let mut display = display::GLDisplay::new("Rustcraft", (900,700));
 
     unsafe {
         gl::Viewport(0, 0, 900, 700);
@@ -147,16 +149,11 @@ fn main() {
     }
 
     let settings = Settings {
-        fov: Deg(90.)
+        fov: Deg(90.),
+        mouse_sensitivity: 0.5,
     };
     
     let mut data = Data::new(settings);
-
-    /* data.ecs.spawn((Position::from(Vector3 {x:2., y: 12., z: 3.1}), Physics::new(Vector3 {
-        x: 0.8,
-        y: 1.9,
-        z: 0.8,
-    }), WanderingAI::new())); */
 
     game_loop::game_loop(&mut display, &mut data);
     

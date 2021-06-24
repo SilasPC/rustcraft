@@ -9,7 +9,8 @@ pub struct Input {
     primary: u32,
     secondary: u32,
     scroll: i32,
-    mouse: (i32,i32)
+    mouse_rel: (i32,i32),
+    mouse: (i32,i32),
 }
 
 impl Input {
@@ -21,11 +22,11 @@ impl Input {
     pub fn clicked_jump(&self) -> bool {self.jump == 1}
     pub fn holding_jump(&self) -> bool {self.jump >= 1}
     pub fn scroll(&self) -> i32 {self.scroll}
-    pub fn mouse_x(&self) -> i32 {self.mouse.0}
-    pub fn mouse_y(&self) -> i32 {self.mouse.1}
+    pub fn mouse_x(&self) -> i32 {self.mouse_rel.0}
+    pub fn mouse_y(&self) -> i32 {self.mouse_rel.1}
 
     pub fn start_new_frame(&mut self) {
-        self.mouse = (0,0);
+        self.mouse_rel = (0,0);
         self.scroll = 0;
         if self.primary > 0 {self.primary += 1}
         if self.secondary > 0 {self.secondary += 1}
@@ -53,9 +54,11 @@ impl Input {
             Event::MouseButtonDown { mouse_btn: Right, .. } => self.secondary += 1,
             Event::MouseButtonUp { mouse_btn: Left, .. } => self.primary = 0,
             Event::MouseButtonUp { mouse_btn: Right, .. } => self.secondary = 0,
-            Event::MouseMotion { xrel, yrel, .. } => {
-                self.mouse.0 += xrel;
-                self.mouse.1 += yrel;
+            Event::MouseMotion { x, y, xrel, yrel, .. } => {
+                self.mouse.0 = *x;
+                self.mouse.1 = *y;
+                self.mouse_rel.0 += xrel;
+                self.mouse_rel.1 += yrel;
             }
             Event::MouseWheel { y, .. } => self.scroll += y,
             _ => {}
@@ -65,6 +68,8 @@ impl Input {
         self.rightward = self.rightward.min(1).max(-1);
 
     }
+
+    pub fn mouse_pos(&self) -> (i32,i32) {self.mouse}
 
     pub fn compute_movement_vector(&self, yaw: Deg<f32>) -> Vector3<f32> {
         let rad = Rad::from(yaw);

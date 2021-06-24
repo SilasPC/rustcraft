@@ -27,7 +27,7 @@ impl TextureAtlas {
 
 pub struct Texture {
     id: uint,
-    size: (u32, u32),
+    size: (f32, f32),
 }
 
 impl Texture {
@@ -45,6 +45,7 @@ impl Texture {
 
     // https://docs.rs/piston2d-opengl_graphics/0.78.0/src/opengl_graphics/texture.rs.html#181-224
     fn from_rgba(img: &RgbaImage, size: (u32,u32)) -> Self {
+        let size = (size.0 as f32, size.1 as f32);
         let mut id = 0;
         unsafe {
             gl::GenTextures(1, &mut id);
@@ -65,7 +66,7 @@ impl Texture {
     }
 
     pub fn id(&self) -> uint {self.id}
-    pub fn size(&self) -> (u32,u32) {self.size}
+    pub fn size(&self) -> (f32, f32) {self.size}
 
     pub fn aspect_ratio(&self) -> f32 {
         let (x,y) = self.size;

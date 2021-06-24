@@ -48,7 +48,7 @@ pub struct WorldData {
 }
 
 impl WorldData {
-    pub fn new(block_map: &Vec<Block>, atlas: &crate::texture::TextureAtlas) -> Self {
+    pub fn new() -> Self {
         let noise = crate::perlin::PerlinNoise::new("seed!".to_owned(), 4, 0.5);
         let noise_basic = crate::perlin::PerlinNoise::new("seed!".to_owned(), 1, 1.);
         let noise = TerrainGen {
@@ -61,8 +61,9 @@ impl WorldData {
             for y in 0..7isize {
                 let mut zs = vec![];
                 for z in 0..7isize {
-                    let mut chunk = Chunk::new(Vector3 { x, y, z }, block_map, atlas);
+                    let mut chunk = Chunk::new(Vector3 { x, y, z });
                     chunk.gen_terrain(&noise);
+                    chunk.gen_detail();
                     zs.push(
                         chunk
                     );
@@ -73,4 +74,9 @@ impl WorldData {
         }
         WorldData { chunks }
     }
+
+    pub fn chunk_iter_mut(&mut self) -> impl std::iter::Iterator<Item=&mut Chunk> {
+        self.chunks.iter_mut().flat_map(|inn| inn.iter_mut().flat_map(|i2| i2.iter_mut()))
+    }
+
 }

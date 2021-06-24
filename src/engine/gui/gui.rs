@@ -24,6 +24,9 @@ pub struct FlatGUI {
 impl GUI for FlatGUI {
     fn render(&mut self, r: &mut Renderer) {
         self.texture.bind();
-        r.render(self.pos, self.texture.aspect_ratio(), self.anchor, self.scale);
+        // TODO: broken?
+        if !r.is_mouse_over(self.texture.size(), self.anchor, self.scale) {
+            r.render(self.pos, self.texture.size(), self.anchor, self.scale);
+        }
     }
 }

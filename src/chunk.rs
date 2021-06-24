@@ -2,35 +2,32 @@
 use cgmath::*;
 use crate::engine::vao::*;
 use crate::rustcraft::block::Block;
-use crate::Data as WData;
 
-/// Signifies the current state of the chunk generation
-pub enum GenState {
+/// Signifies the current state of the chunk
+#[derive(PartialOrd,PartialEq,Eq,Ord)]
+pub enum ChunkState {
     Empty,
-    Terrain,
-    Detail,
+    Filled,
     Done,
 }
 
 type Data = [[[usize; 16]; 16]; 16];
 
 pub struct Chunk {
-    pub gen_state: GenState,
+    pub chunk_state: ChunkState,
     pub needs_refresh: bool,
     pub pos: Vector3<f32>,
     pub data: Data,
-    pub mesh: VAO,
+    pub mesh: Option<VAO>,
 }
 
 impl Chunk {
 
-    pub fn new(pos: Vector3<isize>, block_map: &Vec<Block>, atlas: &crate::texture::TextureAtlas) -> Self {
+    pub fn new(pos: Vector3<isize>) -> Self {
 
         let data = [[[0; 16]; 16]; 16];
         let pos = Vector3 {x: pos.x as f32, y: pos.y as f32, z: pos.z as f32};
-        let (verts, uvs) = make_mesh(&data, block_map, atlas);
-        let mesh = VAO::textured(&verts, &uvs);
-        Self { gen_state: GenState::Empty, data, mesh, pos, needs_refresh: false }
+        Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false }
 
     }
 
@@ -71,14 +68,33 @@ impl Chunk {
             }
         }
         self.needs_refresh = true;
-        self.gen_state = GenState::Terrain;
+        self.chunk_state = ChunkState::Filled;
+    }
+
+    pub fn gen_detail(&mut self) {
+        self.chunk_state = ChunkState::Done;
+    }
+
+    pub fn renderable_after_refresh(&self) -> bool {
+        self.chunk_state == ChunkState::Done
     }
 
     pub fn refresh(&mut self, wdata: &Vec<Block>, atlas: &crate::texture::TextureAtlas) {
         if !self.needs_refresh {return}
         let (verts, uvs) = make_mesh(&self.data, wdata, atlas);
-        self.mesh.update(&verts, &uvs);
+        if let Some(mesh) = &mut self.mesh {
+            mesh.update(&verts, &uvs);
+        } else {
+            self.mesh = Some(VAO::textured(&verts, &uvs));
+        }
         self.needs_refresh = false;
+    }
+
+    pub fn bind_and_draw(&self) {
+        if let Some(mesh) = &self.mesh {
+            mesh.bind();
+            mesh.draw();
+        }
     }
 
 }

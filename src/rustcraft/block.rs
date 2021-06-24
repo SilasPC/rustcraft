@@ -1,4 +1,10 @@
 
+pub trait BlockBehaivour {
+    fn did_place() {}
+    fn block_update() {}
+    fn did_break() {}
+}
+
 pub struct Block {
     pub id: usize,
     pub solid: bool,
