@@ -76,7 +76,7 @@ impl Physics {
         self.force += f * delta;
     }
     /// returns true if position was updated
-    pub fn update(&mut self, pos: &mut Position, delta: f32, block_map: &Vec<Block>, world: &WorldData) -> bool {
+    pub fn update(&mut self, pos: &mut Position, delta: f32, block_map: &Vec<std::sync::Arc<Block>>, world: &WorldData) -> bool {
 
         self.vel += self.force;
         self.force = self.force.map(|_| 0.);
@@ -140,7 +140,7 @@ impl Physics {
         
         return true;
 
-        fn check_hit(block_map: &Vec<crate::rustcraft::block::Block>, w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
+        fn check_hit(block_map: &Vec<std::sync::Arc<crate::rustcraft::block::Block>>, w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
             block_at(w, pos)
                 .map(|id| block_map[id].solid)
                 .unwrap_or(true)

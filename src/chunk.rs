@@ -79,7 +79,7 @@ impl Chunk {
         self.chunk_state == ChunkState::Done
     }
 
-    pub fn refresh(&mut self, wdata: &Vec<Block>, atlas: &crate::texture::TextureAtlas) {
+    pub fn refresh(&mut self, wdata: &Vec<std::sync::Arc<Block>>, atlas: &crate::texture::TextureAtlas) {
         if !self.needs_refresh {return}
         let (verts, uvs) = make_mesh(&self.data, wdata, atlas);
         if let Some(mesh) = &mut self.mesh {
@@ -191,7 +191,7 @@ pub fn cube_mesh() -> VAO {
 
 }
 
-fn make_mesh(data: &Data, block_map: &Vec<Block>, atlas: &crate::texture::TextureAtlas) -> (Vec<f32>, Vec<f32>) {
+fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate::texture::TextureAtlas) -> (Vec<f32>, Vec<f32>) {
 
     let mut verts = vec![];
     let mut uvs = vec![];

@@ -1,11 +1,13 @@
 
 use gl::types::{GLuint as uint, GLint as int, GLenum};
 
+#[derive(Debug)]
 pub enum RenderKind {
     Triangles,
     Lines,
 }
 
+#[derive(Debug)]
 pub struct VAO {
     id: uint,
     verts: uint,
@@ -137,6 +139,20 @@ impl VAO {
                 gle,
                 0,
                 self.vertex_count / count
+            );
+        }
+    }
+
+    pub fn draw_18(&self, offset: i32) {
+        let (gle, count) = match self.kind {
+            RenderKind::Triangles => (gl::TRIANGLES, 3),
+            RenderKind::Lines => (gl::LINES, 2),
+        };
+        unsafe {
+            gl::DrawArrays(
+                gle,
+                18 * offset, // number of vertecies
+                18 // number of vertecies
             );
         }
     }

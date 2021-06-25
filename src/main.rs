@@ -59,6 +59,7 @@ impl EntTree {
 }
 
 pub struct Data {
+    pub loader: crate::engine::loader::Loader,
     pub paused: bool,
     pub settings: Settings,
     pub fov: PerspectiveFov<f32>,
@@ -68,13 +69,14 @@ pub struct Data {
     pub delta: f32,
     pub world: world::WorldData,
     pub ecs: hecs::World,
-    pub block_map: Vec<block::Block>,
-    pub atlas: TextureAtlas,
+    pub block_map: Vec<std::sync::Arc<block::Block>>,
+    pub atlas: std::rc::Rc<TextureAtlas>,
     pub ent_tree: EntTree
 }
 
 impl Data {
     pub fn new(settings: Settings) -> Self {
+        let mut loader = crate::engine::loader::Loader::new();
         let fov = PerspectiveFov {
             near: 0.1,
             far: 1000.,
@@ -101,21 +103,19 @@ impl Data {
             ent_tree.set(cam, &aabb);
             cam
         };
-        let atlas = TextureAtlas::new(
-            texture::Texture::from_path("assets/atlas.png"),
-            4,
-        );
+        let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
         use block::Block;
         let block_map = vec![
-            Block { id: 0, transparent: true, solid: false, no_render: true, texture: (0,0,0), has_gravity: false, }, // air
-            Block { id: 1, transparent: false, solid: true, no_render: false, texture: (0,0,0), has_gravity: false, }, // stone
-            Block { id: 2, transparent: false, solid: true, no_render: false, texture: (1,1,1), has_gravity: false, }, // dirt
-            Block { id: 3, transparent: false, solid: true, no_render: false, texture: (3,2,1), has_gravity: false, }, // grass
-            Block { id: 4, transparent: false, solid: true, no_render: false, texture: (5,4,5), has_gravity: false, }, // wood log
-            Block { id: 5, transparent: false, solid: true, no_render: false, texture: (6,6,6), has_gravity: true, }, // sand
-            Block { id: 6, transparent: true, solid: true, no_render: false, texture: (7,7,7), has_gravity: false, }, // leaves
-        ];
+            Block { id: 0, transparent: true, solid: false, no_render: true, texture: (0,0,0), has_gravity: false, drops: None, }, // air
+            Block { id: 1, transparent: false, solid: true, no_render: false, texture: (0,0,0), has_gravity: false, drops: Some(1), }, // stone
+            Block { id: 2, transparent: false, solid: true, no_render: false, texture: (1,1,1), has_gravity: false, drops: Some(2), }, // dirt
+            Block { id: 3, transparent: false, solid: true, no_render: false, texture: (3,2,1), has_gravity: false, drops: Some(2), }, // grass
+            Block { id: 4, transparent: false, solid: true, no_render: false, texture: (5,4,5), has_gravity: false, drops: Some(4), }, // wood log
+            Block { id: 5, transparent: false, solid: true, no_render: false, texture: (6,6,6), has_gravity: true, drops: Some(5), }, // sand
+            Block { id: 6, transparent: true, solid: true, no_render: false, texture: (7,7,7), has_gravity: false, drops: None, }, // leaves
+        ].into_iter().map(std::sync::Arc::new).collect();
         Data {
+            loader,
             paused: false,
             settings,
             fov,
@@ -157,4 +157,70 @@ fn main() {
 
     game_loop::game_loop(&mut display, &mut data);
     
+}
+
+pub fn gen_item_vao(b: &Vec<std::sync::Arc<crate::rustcraft::block::Block>>, a: &TextureAtlas) -> crate::engine::vao::VAO {
+
+    let mut verts = vec![];
+    let mut uvs = vec![];
+
+    // six triangles per block item
+    for b in b {
+        verts.extend_from_slice(&[
+            // top
+            0.5, 1., 0.,
+            0., 0.75, 0.,
+            1., 0.75, 0.,
+            0., 0.75, 0.,
+            0.5, 0.5, 0.,
+            1., 0.75, 0.,
+            // left
+            0., 0.75, 0.,
+            0.5, 0., 0.,
+            0.5, 0.5, 0.,
+            0.5, 0., 0.,
+            0., 0.75, 0.,
+            0.0, 0.25, 0.,
+            // right
+            0.5, 0.5, 0.,
+            0.5, 0., 0.,
+            1., 0.75, 0.,
+            0.5, 0., 0.,
+            1., 0.25, 0.,
+            1., 0.75, 0.,
+        ]);
+        let (t,s,_) = b.texture;
+        let (u,v) = a.get_uv(t);
+        let d = a.uv_dif();
+        uvs.extend_from_slice(&[
+            // top
+            u, v,
+            u, v+d,
+            u+d, v,
+            u, v+d,
+            u+d, v+d,
+            u+d, v,
+        ]);
+        let (u,v) = a.get_uv(s);
+        let d = a.uv_dif();
+        uvs.extend_from_slice(&[
+            // left
+            u, v,
+            u+d, v+d,
+            u+d, v,
+            u+d, v+d,
+            u, v,
+            u, v+d,
+            // right
+            u, v,
+            u, v+d,
+            u+d, v,
+            u, v+d,
+            u+d, v+d,
+            u+d, v,
+        ]);
+    }
+
+    crate::engine::vao::VAO::textured(&verts, &uvs)
+
 }

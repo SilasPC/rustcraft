@@ -7,6 +7,8 @@ use cgmath::*;
 use std::time::{Instant, Duration};
 use crate::texture::Texture;
 use crate::gui::render::*;
+use crate::rustcraft::player::inventory::PlayerInventory;
+use crate::rustcraft::item::ItemStack;
 
 pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
@@ -29,7 +31,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         vec!["project","view","transform"]
     );
 
-    let bbox = Texture::from_path("assets/bbox.png");
+    let bbox = data.loader.load_texture("assets/bbox.png");
     let cube = crate::chunk::cube_mesh();
     let mut guirend = GUIRenderer::new();
 
@@ -37,18 +39,26 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     let mut block_updates = Updates::default();
 
-    let mut pgui = super::player_gui::PlayerGUI::new();
+    let mut pgui = super::player::gui::PlayerGUI::new();
 
     let mut last_tick = Instant::now();
     let tick_duration = Duration::from_millis(50);
 
-    let font = std::rc::Rc::new(crate::engine::text::font::Font::from_font_files("assets/font.png", "assets/font.fnt"));
+    let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
     let text_rend = crate::engine::text::font::TextRenderer::new();
     let mut sum_text = font.build_text("0 fps".into());
 
     use crate::engine::lines::*;
     let box_vao = box_vao();
     let lines = LineProgram::new();
+
+    let item_vao = crate::gen_item_vao(&data.block_map, data.atlas.as_ref());
+    
+    let mut pinv = PlayerInventory::new();
+    let mut stack = ItemStack::stack_of(data.block_map[3].clone());
+    stack.count = 3;
+    pinv.hotbar[3] = stack.clone().into();
+    pinv.hotbar[7] = stack.into();
 
     display.set_mouse_capture(true);
 
@@ -65,6 +75,8 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
             // START WORLD PROCESSING
             block_updates.update(data);
             // STOP WORLD PROCESSING
+
+            Item::system_tick_age_items(data);
 
         }
 
@@ -105,18 +117,31 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
             if data.input.clicked_primary() {
                 if let Some(hit) = raycast_hit {
+                    let bid = block_at(&data.world, &hit.1).unwrap();
                     if set_block(&mut data.world, &data.ent_tree, &hit.1, 0, true) {
+                        let stack = ItemStack::of(data.block_map[bid].clone(), 1);
+                        pinv.merge(Some(stack));
                         block_updates.add_area(hit.1);
                         block_updates.add_single(hit.1);
                     }
                 }
             } else if data.input.clicked_secondary() {
-                if let Some(hit) = raycast_hit {
-                    if set_block(&mut data.world, &data.ent_tree, &hit.0, 5, /* false */true) {
-                        block_updates.add_area(hit.0);
-                        block_updates.add_single(hit.0);
+
+                let maybe_item = &mut pinv.hotbar[pgui.selected_slot as usize];
+                let mut success = false;
+                if let Some(ref mut item) = maybe_item {
+                    if let Some(hit) = raycast_hit {
+                        if set_block(&mut data.world, &data.ent_tree, &hit.0, item.item.id, /* false */true) {
+                            success = true;
+                            block_updates.add_area(hit.0);
+                            block_updates.add_single(hit.0);
+                        }
                     }
                 }
+                if success {
+                    ItemStack::deduct(maybe_item, 1);
+                }
+
             }
 
             pos.rotate(
@@ -145,7 +170,23 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
         // START RENDERING
         render(&program, data, &view_mat, &cube, &bbox);
-        guirend.render(&mut pgui, display.size(), data.input.mouse_pos(), data.delta);
+
+        
+        program.load_mat4(0, &Matrix4::one());
+        program.load_mat4(1, &Matrix4::one());
+        program.load_mat4(2, &Matrix4::from_translation(-Vector3::unit_z()));
+
+        pgui.render(&mut Cursor::bottom_center(display.size()), &guirend, &item_vao, &data.atlas, &pinv);
+
+        /* guirend.render(&mut pgui, display.size(), data.input.mouse_pos(), data.delta);
+        
+        data.atlas.texture().bind();
+        guirend.render_with(display.size(), data.input.mouse_pos(), data.delta, &item_vao, |r, item_vao| {
+            r.set_uniforms(-Vector2::unit_y(),(1.,1.),Anchor::Bottom, Scale::FixedHeight(0.2));
+            item_vao.bind();
+            item_vao.draw_18(3);
+        }); */
+
         sum_text.set_text(format!("{:.0} \nfps", 1. / data.delta));
         text_rend.render(&sum_text);
 
@@ -275,7 +316,7 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
 
 }
 
-fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_map: &Vec<super::block::Block>, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
+fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_map: &Vec<std::sync::Arc<super::block::Block>>, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
     
     let mut dist = 0.;
     while dist < max_dist && !check_hit(block_map, w, &pos) {
@@ -289,7 +330,7 @@ fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_m
         return None
     }
 
-    fn check_hit(block_map: &Vec<super::block::Block>, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
+    fn check_hit(block_map: &Vec<std::sync::Arc<super::block::Block>>, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
         block_at(w, pos)
             .map(|id| block_map[id].solid)
             .unwrap_or(false)

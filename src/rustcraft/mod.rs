@@ -4,4 +4,5 @@ pub mod block;
 pub mod input;
 pub mod world;
 pub mod component;
-pub mod player_gui;
+pub mod player;
+pub mod item;

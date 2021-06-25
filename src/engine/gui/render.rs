@@ -3,14 +3,47 @@ use crate::vao::VAO;
 use crate::program::Program;
 use cgmath::*;
 
-pub trait GUI {
-    /// Typical implementation will bind a texture, then call renderer.render(...)
-    fn render(&mut self, renderer: &mut Renderer);
+pub struct Cursor {
+    pub screen_size: (f32, f32),
+    pub pos: Vector2<f32>,
+}
+
+impl Cursor {
+
+    pub fn bottom_center(screen_size: (u32, u32)) -> Self {
+        let screen_size = (screen_size.0 as f32, screen_size.1 as f32);
+        Self {
+            screen_size,
+            pos: -Vector2::unit_y(),
+        }
+    }
+
+    pub fn pixel_size(&self) -> (f32, f32) {
+        (
+            2. / self.screen_size.0,
+            2. / self.screen_size.1,
+        )
+    }
+
+    pub fn move_pixels(&mut self, x: i32, y: i32) {
+        let (px, py) = self.pixel_size();
+        self.pos.x += px * x as f32;
+        self.pos.y += py * y as f32;
+    }
+
+    pub fn img_size_to_scale(&self, x: i32, y: i32) -> Vector2<f32> {
+        let (px, py) = self.pixel_size();
+        Vector2 {
+            x: px * x as f32,
+            y: py * y as f32,
+        }
+    }
+
 }
 
 pub struct GUIRenderer {
-    vao: VAO,
-    program: Program,
+    pub square: VAO,
+    pub program: Program,
 }
 
 impl GUIRenderer {
@@ -33,7 +66,7 @@ impl GUIRenderer {
             1., 0.,
         ];
 
-        let vao = VAO::textured(&verts, &uvs);
+        let square = VAO::textured(&verts, &uvs);
 
         let program = Program::load(
             include_str!("vert.glsl"),
@@ -42,94 +75,52 @@ impl GUIRenderer {
         );
 
         Self {
-            vao,
+            square,
             program,
         }
         
     }
 
-    pub fn render(&mut self, gui: &mut impl GUI, screen_size: (u32,u32), mouse_pos: (i32, i32), delta: f32) {
-        let screen_size = (screen_size.0 as f32, screen_size.1 as f32);
-        let mouse_pos = (mouse_pos.0 as f32 / screen_size.0, mouse_pos.1 as f32 / screen_size.1);
-        let mouse_pos = (mouse_pos.0 * 2. - 1., mouse_pos.1 * 2. - 1.);
-        let aspect_ratio = screen_size.0 / screen_size.1;
-        self.program.enable();
-        self.program.load_vec2(0, &Vector2 {x: 0., y: 0.});
-        self.program.load_vec2(1, &Vector2 {x: 1./aspect_ratio, y: 0.});
-        self.vao.bind();
+    pub fn start(&self) {
         unsafe {
             gl::Enable(gl::BLEND);
             gl::Disable(gl::DEPTH_TEST);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         }
-        let mut renderer = Renderer {
-            renderer: self,
-            screen_size,
-            delta,
-            mouse_pos
-        };
-        gui.render(&mut renderer);
+    }
+
+    pub fn stop(&self) {
         unsafe {
             gl::Disable(gl::BLEND);
             gl::Enable(gl::DEPTH_TEST);
         }
     }
 
-}
-
-pub struct Renderer<'a> {
-    renderer: &'a mut GUIRenderer,
-    screen_size: (f32, f32),
-    delta: f32,
-    mouse_pos: (f32, f32)
-}
-
-impl<'a> Renderer<'a> {
-
-    pub fn is_mouse_over(&self, image_size: (f32, f32), anchor: Anchor, scale: Scale) -> bool {
-        let [scale, offset] = calc(self.screen_size, image_size, anchor, scale);
-        let pos = self.mouse_pos;
-
-        // println!("mouse: {:?}, scale: {:?}, offset: {:?}",pos,scale,offset);
-
-        pos.0 >= offset.x && pos.1 >= offset.y && pos.0 <= offset.x + scale.x && pos.1 <= offset.y + scale.y
-
+    pub fn set_uniforms(&self, position: &Vector2<f32>, scale_offset: &ScaleOffset) {
+        self.program.load_vec2(0, &(position + scale_offset.offset));
+        self.program.load_vec2(1, &scale_offset.scale);
     }
 
-    pub fn render(&self, position: Vector2<f32>, image_size: (f32, f32), anchor: Anchor, scale: Scale) {
-        let aspect_ratio = self.screen_size.0 / self.screen_size.1;
-        let [scale, offset] = calc(self.screen_size, image_size, anchor, scale);
-        self.renderer.program.load_vec2(0, &(position + offset));
-        self.renderer.program.load_vec2(1, &scale);
-        self.renderer.vao.draw();
+    pub fn set_uniform(&self, position: &Vector2<f32>, scale: &Vector2<f32>) {
+        self.program.load_vec2(0, position);
+        self.program.load_vec2(1, scale);
     }
-
-    pub fn delta(&self) -> f32 {self.delta}
 
 }
 
-fn calc(screen_size: (f32,f32), image_size: (f32,f32), anchor: Anchor, scale: Scale) -> [Vector2<f32>; 2] {
+pub struct ScaleOffset {
+    pub scale: Vector2<f32>,
+    pub offset: Vector2<f32>,
+}
+
+pub fn calc_scale_offset(screen_size: (f32,f32), image_size: (f32,f32), anchor: Anchor) -> ScaleOffset {
     let ar = screen_size.0 / screen_size.1;
     let iar = image_size.0 / image_size.1;
-    let scale = match scale {
-        Scale::FixedWidth(w) => {
-            Vector2 {
-                x: w,
-                y: w * ar / iar,
-            }
-        },
-        Scale::FixedHeight(h) => {
-            Vector2 {
-                x: h * iar / ar,
-                y: h,
-            }
-        },
-        Scale::Pixels(s) => {
-            let s = s as f32;
-            Vector2 {
-                x: 2. * s * image_size.0 / screen_size.0,
-                y: 2. * s * image_size.1 / screen_size.1,
-            }
+    let scale = {
+        let s = 3.; // pixel scale
+        Vector2 {
+            x: 2. * s * image_size.0 / screen_size.0,
+            y: 2. * s * image_size.1 / screen_size.1,
         }
     };
 
@@ -137,15 +128,8 @@ fn calc(screen_size: (f32,f32), image_size: (f32,f32), anchor: Anchor, scale: Sc
     offset.x *= scale.x;
     offset.y *= scale.y;
 
-    [scale, offset]
+    ScaleOffset { scale, offset }
 
-}
-
-#[derive(Clone,Copy)]
-pub enum Scale {
-    FixedWidth(f32),
-    FixedHeight(f32),
-    Pixels(u32),
 }
 
 #[derive(Clone,Copy)]
