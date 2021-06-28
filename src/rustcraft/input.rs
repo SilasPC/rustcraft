@@ -6,6 +6,7 @@ pub struct Input {
     forward: i32,
     rightward: i32,
     jump: u32,
+    sneak: u32,
     primary: u32,
     secondary: u32,
     scroll: i32,
@@ -18,6 +19,7 @@ impl Input {
     pub fn clicked_primary(&self) -> bool {self.primary == 1}
     pub fn clicked_secondary(&self) -> bool {self.secondary == 1}
     pub fn holding_primary(&self) -> bool {self.primary >= 1}
+    pub fn holding_sneak(&self) -> bool {self.sneak >= 1}
     pub fn holding_secondary(&self) -> bool {self.secondary >= 1}
     pub fn clicked_jump(&self) -> bool {self.jump == 1}
     pub fn holding_jump(&self) -> bool {self.jump >= 1}
@@ -34,6 +36,14 @@ impl Input {
     }
     pub fn reset(&mut self) {*self = Self::default();}
 
+    pub fn update_scancodes(&mut self, state: sdl2::keyboard::KeyboardState) {
+        use sdl2::keyboard::Scancode::*;
+        if state.is_scancode_pressed(LShift) {
+            self.sneak += 1;
+        } else {
+            self.sneak = 0;
+        }
+    }
     pub fn update(&mut self, event: &sdl2::event::Event) {
         use sdl2::event::Event;
         use sdl2::mouse::MouseButton::{Right, Left};

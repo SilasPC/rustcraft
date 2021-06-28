@@ -5,7 +5,7 @@ use super::font::*;
 
 pub struct Text {
     pub font: Rc<Font>,
-    pub text: String,
+    text: String,
     pub vao: VAO,
 }
 
@@ -30,6 +30,8 @@ impl Text {
         self.vao.update(&verts, &uvs);
         self.text = text;
     }
+
+    pub fn text(&self) -> &str {&self.text}
 
     fn build(text: &str, font: &Font, size: (f32,f32)) -> (Vec<f32>,Vec<f32>) {
         let mut verts = vec![];

@@ -59,6 +59,7 @@ impl GLDisplay {
         let mouse = self.sdl.mouse();
         mouse.show_cursor(!capture);
         mouse.capture(capture);
+        mouse.set_relative_mouse_mode(capture);
     }
 
     pub fn size(&self) -> (u32,u32) {self.window.size()}

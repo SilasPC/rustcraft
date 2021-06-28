@@ -1,4 +1,5 @@
 
+use crate::text::text::Text;
 use crate::rustcraft::pgui::GUI;
 use crate::gui::render::GUIRenderer;
 use crate::display::GLDisplay;
@@ -16,9 +17,11 @@ pub enum GameState {
         picked_item: Option<ItemStack>,
     },
     Playing,
-    Paused {
-        last_state: Box<GameState>,
-    },
+    Paused,
+    Chat {
+        start_frame: Instant,
+        text: Text,
+    }
 }
 
 impl GameState {
@@ -28,10 +31,12 @@ impl GameState {
     pub fn is_paused(&self) -> bool {
         match self { Self::Paused {..} => true, _ => false }
     }
+    pub fn is_chat(&self) -> bool {
+        match self { Self::Chat {..} => true, _ => false }
+    }
     pub fn show_inventory(&self) -> bool {
         match self {
             Self::Inventory {..} => true,
-            Self::Paused { last_state: box Self::Inventory { .. } } => true,
             _ => false
         }
     }
@@ -86,6 +91,8 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let mut state = GameState::Playing;
     let mut event_pump = display.event_pump();
 
+    display.video.text_input().start();
+
     'main: loop {
 
         data.delta = data.frame_time.elapsed().as_secs_f32().min(0.1);
@@ -104,25 +111,39 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         // START INPUT PROCESSING
 
         data.input.start_new_frame();
-        
-        let mut do_toggle = false;
-        let mut do_refresh = false;
+        display.video.text_input().start();
+        //data.input.update_scancodes(event_pump.keyboard_state());
         for event in event_pump.poll_iter() {
             use sdl2::event::Event::*;
             use sdl2::keyboard::Keycode::*;
             use sdl2::event::WindowEvent::*;
             data.input.update(&event);
             match event {
+                TextInput { ref text, .. } => {
+                    let input_text = text;
+                    match &mut state {
+                        GameState::Chat { text, start_frame } if *start_frame != data.frame_time => {
+                            let mut txt = text.text().to_owned();
+                            txt.push_str(&input_text);
+                            text.set_text(txt);
+                        },
+                        _ => {}
+                    }
+                },
                 Quit {..} => break 'main,
                 KeyDown {keycode: Some(Escape), ..} => {
                     state = match state {
-                        GameState::Paused { last_state } => {
+                        GameState::Paused => {
                             display.set_mouse_capture(true);
-                            *last_state
+                            GameState::Playing
+                        },
+                        GameState::Chat { .. } => {
+                            display.set_mouse_capture(true);
+                            GameState::Playing
                         },
                         _ => {
                             display.set_mouse_capture(false);
-                            GameState::Paused { last_state: state.into() }
+                            GameState::Paused
                         }
                     };
                 },
@@ -136,6 +157,36 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
                         GameState::Inventory { .. } => {
                             display.set_mouse_capture(true);
                             GameState::Playing
+                        },
+                        _ => state
+                    };
+                },
+                KeyDown {keycode: Some(Return), ..} => {
+                    state = match state {
+                        GameState::Chat { text, .. } => {
+                            println!("{}", text.text());
+                            display.set_mouse_capture(true);
+                            GameState::Playing
+                        },
+                        _ => state
+                    };
+                },
+                KeyDown {keycode: Some(T), ..} => {
+                    state = match state {
+                        GameState::Playing => {
+                            display.set_mouse_capture(false);
+                            GameState::Chat { text: font.build_text("".into()), start_frame: data.frame_time }
+                        },
+                        _ => state
+                    };
+                },
+                KeyDown {keycode: Some(Backspace), ..} => {
+                    state = match state {
+                        GameState::Chat { mut text, start_frame } => {
+                            let mut txt = text.text().to_owned();
+                            txt.pop();
+                            text.set_text(txt);
+                            GameState::Chat { text, start_frame }
                         },
                         _ => state
                     };
@@ -245,18 +296,6 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         program.load_mat4(1, &Matrix4::one());
         program.load_mat4(2, &Matrix4::from_translation(-Vector3::unit_z()));
 
-        /* guirend.render(&mut pgui, display.size(), data.input.s(), data.delta);
-        
-        data.atlas.texture().bind();
-        guirend.render_with(display.size(), data.input.mouse_pos(), data.delta, &item_vao, |r, item_vao| {
-            r.set_uniforms(-Vector2::unit_y(),(1.,1.),Anchor::Bottom, Scale::FixedHeight(0.2));
-            item_vao.bind();
-            item_vao.draw_18(3);
-        }); */
-
-        sum_text.set_text(format!("{:.0} \nfps", 1. / data.delta));
-        text_rend.render(&sum_text);
-
         if let Some(hit) = raycast_hit {
             let hit = hit.1.map(|v| v.floor());
             lines.program.enable();
@@ -272,6 +311,16 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
             box_vao.bind();
             box_vao.draw();
         }
+
+        match &state {
+            GameState::Chat { text, .. } => {
+                text_rend.render(&text)
+            },
+            _ => {}
+        };
+
+        /* sum_text.set_text(format!("{:.0} \nfps", 1. / data.delta));
+        text_rend.render(&sum_text); */
 
         // END RENDERING
 

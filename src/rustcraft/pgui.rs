@@ -116,6 +116,13 @@ impl GUI {
             r.move_pixels(-90, -70);
             r.set_uniforms(180, 140);
             r.square.draw();
+        } else {
+            // crosshairs 9x9
+            self.crosshairs.bind();
+            r.set_pixels(hw, hh);
+            r.move_pixels(-4, -4);
+            r.set_uniforms(9, 9);
+            r.square.draw();
         }
 
         // items
