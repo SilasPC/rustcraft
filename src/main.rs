@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 #![allow(unused)]
+#![feature(box_patterns)]
 
 mod util;
 mod chunk;
 mod engine;
 mod rustcraft;
 mod perlin;
+use crate::content::*;
 use engine::program::*;
 use rustcraft::component::*;
 use cgmath::*;
@@ -87,33 +89,13 @@ impl Data {
         
         let mut ent_tree = EntTree::new();
         let cam = {
-            let pos = Position::from(Vector3 {x:50., y: 55., z: 50.});
-            let mut phys = Physics::new(Vector3 {
-                x: 0.8,
-                y: 1.9,
-                z: 0.8,
-            });
-            //cam_phys.set_flying(true);
-            let aabb = phys.get_aabb(&pos);
-            let cam = ecs.spawn((pos, phys, View::from(Vector3 {
-                x: 0.5,
-                y: 1.8,
-                z: 0.5,
-            })));
+            let (cam, aabb) = make_player();
+            let cam = ecs.spawn(cam);
             ent_tree.set(cam, &aabb);
             cam
         };
         let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
-        use block::Block;
-        let block_map = vec![
-            Block { id: 0, transparent: true, solid: false, no_render: true, texture: (0,0,0), has_gravity: false, drops: None, }, // air
-            Block { id: 1, transparent: false, solid: true, no_render: false, texture: (0,0,0), has_gravity: false, drops: Some(1), }, // stone
-            Block { id: 2, transparent: false, solid: true, no_render: false, texture: (1,1,1), has_gravity: false, drops: Some(2), }, // dirt
-            Block { id: 3, transparent: false, solid: true, no_render: false, texture: (3,2,1), has_gravity: false, drops: Some(2), }, // grass
-            Block { id: 4, transparent: false, solid: true, no_render: false, texture: (5,4,5), has_gravity: false, drops: Some(4), }, // wood log
-            Block { id: 5, transparent: false, solid: true, no_render: false, texture: (6,6,6), has_gravity: true, drops: Some(5), }, // sand
-            Block { id: 6, transparent: true, solid: true, no_render: false, texture: (7,7,7), has_gravity: false, drops: None, }, // leaves
-        ].into_iter().map(std::sync::Arc::new).collect();
+        let block_map = make_blocks();
         Data {
             loader,
             paused: false,

@@ -8,6 +8,5 @@ pub struct ContainerGUI(pub Vec<FlatGUI>);
 
 pub struct FlatGUI {
     pub texture: Rc<Texture>,
-    pub anchor: Anchor,
     pub pos: Vector2<f32>,
 }

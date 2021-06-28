@@ -7,7 +7,6 @@ pub struct GLDisplay {
     pub video: VideoSubsystem,
     pub window: Window,
     pub _gl_ctx: GLContext,
-    pub event_pump: EventPump,
     pub is_fullscreen: bool,
 }
 
@@ -30,18 +29,19 @@ impl GLDisplay {
         let _gl_ctx = window.gl_create_context().unwrap();
         
         gl::load_with(|s| video.gl_get_proc_address(s) as *const std::os::raw::c_void);
-        
-        let event_pump = sdl.event_pump().unwrap();
 
         Self {
             sdl,
             video,
             window,
             _gl_ctx,
-            event_pump,
             is_fullscreen: false,
         }
         
+    }
+
+    pub fn event_pump(&self) -> EventPump {
+        self.sdl.event_pump().unwrap()
     }
 
     pub fn set_title(&mut self, title: &str) {
@@ -62,6 +62,10 @@ impl GLDisplay {
     }
 
     pub fn size(&self) -> (u32,u32) {self.window.size()}
+    pub fn size_i32(&self) -> (i32, i32) {
+        let (x,y) = self.window.size();
+        (x as i32, y as i32)
+    }
 
     pub fn aspect_ratio(&self) -> f32 {
         let (x,y) = self.window.size();

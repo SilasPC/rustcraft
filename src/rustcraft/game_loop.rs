@@ -1,4 +1,6 @@
 
+use crate::rustcraft::pgui::GUI;
+use crate::gui::render::GUIRenderer;
 use crate::display::GLDisplay;
 use crate::Program;
 use crate::Data;
@@ -6,9 +8,34 @@ use crate::component::*;
 use cgmath::*;
 use std::time::{Instant, Duration};
 use crate::texture::Texture;
-use crate::gui::render::*;
 use crate::rustcraft::player::inventory::PlayerInventory;
 use crate::rustcraft::item::ItemStack;
+
+pub enum GameState {
+    Inventory {
+        picked_item: Option<ItemStack>,
+    },
+    Playing,
+    Paused {
+        last_state: Box<GameState>,
+    },
+}
+
+impl GameState {
+    pub fn is_playing(&self) -> bool {
+        match self { Self::Playing => true, _ => false }
+    }
+    pub fn is_paused(&self) -> bool {
+        match self { Self::Paused {..} => true, _ => false }
+    }
+    pub fn show_inventory(&self) -> bool {
+        match self {
+            Self::Inventory {..} => true,
+            Self::Paused { last_state: box Self::Inventory { .. } } => true,
+            _ => false
+        }
+    }
+}
 
 pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
@@ -33,13 +60,13 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     let bbox = data.loader.load_texture("assets/bbox.png");
     let cube = crate::chunk::cube_mesh();
-    let mut guirend = GUIRenderer::new();
+    let mut guirend = GUIRenderer::new(display.size_i32());
 
     let mut view_mat = Matrix4::one();
 
     let mut block_updates = Updates::default();
 
-    let mut pgui = super::player::gui::PlayerGUI::new();
+    let mut pgui = GUI::new();
 
     let mut last_tick = Instant::now();
     let tick_duration = Duration::from_millis(50);
@@ -53,14 +80,11 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let lines = LineProgram::new();
 
     let item_vao = crate::gen_item_vao(&data.block_map, data.atlas.as_ref());
-    
-    let mut pinv = PlayerInventory::new();
-    let mut stack = ItemStack::stack_of(data.block_map[3].clone());
-    stack.count = 3;
-    pinv.hotbar[3] = stack.clone().into();
-    pinv.hotbar[7] = stack.into();
 
     display.set_mouse_capture(true);
+
+    let mut state = GameState::Playing;
+    let mut event_pump = display.event_pump();
 
     'main: loop {
 
@@ -70,13 +94,10 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         if last_tick.elapsed() > tick_duration {
             last_tick += tick_duration;
 
-            // EXECUTE GAME TICK
-
-            // START WORLD PROCESSING
-            block_updates.update(data);
-            // STOP WORLD PROCESSING
-
-            Item::system_tick_age_items(data);
+            if !state.is_paused() {
+                block_updates.update(data);
+                Item::system_tick_age_items(data);
+            }    
 
         }
 
@@ -86,99 +107,145 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         
         let mut do_toggle = false;
         let mut do_refresh = false;
-        for event in display.event_pump.poll_iter() {
+        for event in event_pump.poll_iter() {
             use sdl2::event::Event::*;
             use sdl2::keyboard::Keycode::*;
             use sdl2::event::WindowEvent::*;
             data.input.update(&event);
             match event {
                 Quit {..} => break 'main,
-                KeyDown {keycode: Some(Escape), ..} => break 'main,
-                KeyDown {keycode: Some(F11), ..} => do_toggle = true,
-                Window { win_event: Resized(..), .. } => do_refresh = true,
+                KeyDown {keycode: Some(Escape), ..} => {
+                    state = match state {
+                        GameState::Paused { last_state } => {
+                            display.set_mouse_capture(true);
+                            *last_state
+                        },
+                        _ => {
+                            display.set_mouse_capture(false);
+                            GameState::Paused { last_state: state.into() }
+                        }
+                    };
+                },
+                KeyDown {keycode: Some(F11), ..} => display.toggle_fullscren(),
+                KeyDown {keycode: Some(E), ..} => {
+                    state = match state {
+                        GameState::Playing => {
+                            display.set_mouse_capture(false);
+                            GameState::Inventory {picked_item: Option::None}
+                        },
+                        GameState::Inventory { .. } => {
+                            display.set_mouse_capture(true);
+                            GameState::Playing
+                        },
+                        _ => state
+                    };
+                },
+                Window { win_event: Resized(..), .. } => display.refresh(),
                 _ => {}
             }
         }
-
-        if do_toggle {display.toggle_fullscren();}
-        if do_refresh {display.refresh();}
 
         pgui.scroll(-data.input.scroll());
 
         let mut raycast_hit = None;
 
-        if let Ok((pos, phys, view)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View)>(data.cam) {
+        if let Ok((pos, phys, view, pdata)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(data.cam) {
 
             raycast_hit = raycast(pos.pos+view.offset(), &pos.heading(), 5., &data.block_map, &data.world);
 
-            if data.input.holding_jump() {
-                phys.try_jump();
-            }
+            if state.is_playing() {
 
-            if data.input.clicked_primary() {
-                if let Some(hit) = raycast_hit {
-                    let bid = block_at(&data.world, &hit.1).unwrap();
-                    if set_block(&mut data.world, &data.ent_tree, &hit.1, 0, true) {
-                        let stack = ItemStack::of(data.block_map[bid].clone(), 1);
-                        pinv.merge(Some(stack));
-                        block_updates.add_area(hit.1);
-                        block_updates.add_single(hit.1);
-                    }
+                if data.input.holding_jump() {
+                    phys.try_jump();
                 }
-            } else if data.input.clicked_secondary() {
-
-                let maybe_item = &mut pinv.hotbar[pgui.selected_slot as usize];
-                let mut success = false;
-                if let Some(ref mut item) = maybe_item {
+    
+                if data.input.clicked_primary() {
                     if let Some(hit) = raycast_hit {
-                        if set_block(&mut data.world, &data.ent_tree, &hit.0, item.item.id, /* false */true) {
-                            success = true;
-                            block_updates.add_area(hit.0);
-                            block_updates.add_single(hit.0);
+                        let bid = block_at(&data.world, &hit.1).unwrap();
+                        if set_block(&mut data.world, &data.ent_tree, &hit.1, 0, true) {
+                            let stack = ItemStack::of(data.block_map[bid].clone(), 1);
+                            pdata.inventory.merge(Some(stack));
+                            block_updates.add_area(hit.1);
+                            block_updates.add_single(hit.1);
                         }
                     }
+                } else if data.input.clicked_secondary() {
+    
+                    let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
+                    let mut success = false;
+                    if let Some(ref mut item) = maybe_item {
+                        if let Some(hit) = raycast_hit {
+                            if set_block(&mut data.world, &data.ent_tree, &hit.0, item.item.id, /* false */true) {
+                                success = true;
+                                block_updates.add_area(hit.0);
+                                block_updates.add_single(hit.0);
+                            }
+                        }
+                    }
+                    if success {
+                        ItemStack::deduct(maybe_item, 1);
+                    }
+    
                 }
-                if success {
-                    ItemStack::deduct(maybe_item, 1);
-                }
-
+    
+                pos.rotate(
+                    data.input.mouse_y() as f32 * data.settings.mouse_sensitivity,
+                    data.input.mouse_x() as f32 * data.settings.mouse_sensitivity
+                );
+    
+                let force = data.input.compute_movement_vector(pos.yaw()) * 40.;
+                phys.apply_force_continuous(data.delta, &force);
             }
-
-            pos.rotate(
-                data.input.mouse_y() as f32 * data.settings.mouse_sensitivity,
-                data.input.mouse_x() as f32 * data.settings.mouse_sensitivity
-            );
-
-            let force = data.input.compute_movement_vector(pos.yaw()) * 40.;
-            phys.apply_force_continuous(data.delta, &force);
 
             view_mat = Matrix4::from(pos.rot) * Matrix4::from_translation(-pos.pos-view.offset());
 
-            let aabb = phys.get_aabb(pos);
+            /* let aabb = phys.get_aabb(pos);
             //println!("Player: {:?}",aabb);
 
-            data.ent_tree.set(data.cam, &aabb);
-
+            data.ent_tree.set(data.cam, &aabb); */
+            
         }
         
         // START SYSTEMS
-        WanderingAI::system_update(data);
-        Physics::system_update(data);
-        FallingBlock::system_collide_land(data);
+        if !state.is_paused() {
+            WanderingAI::system_update(data);
+            Physics::system_update(data);
+            FallingBlock::system_collide_land(data);
+        }
         // STOP SYSTEMS
 
 
         // START RENDERING
         render(&program, data, &view_mat, &cube, &bbox);
 
-        
+        if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
+            pgui.render(&mut guirend, &item_vao, &data.atlas, &pdata.inventory, state.show_inventory(), data.input.mouse_pos());
+            match state {
+                GameState::Inventory { ref mut picked_item } => {
+                    if data.input.clicked_primary() {
+                        let slot = pgui.determine_hovered_slot(data.input.mouse_pos());
+                        println!("{:?}",slot);
+                        if let Some(slot) = slot {
+                            ItemStack::transfer(picked_item, pdata.inventory.slot_mut(slot));
+                        }
+                    }
+                    if let Some(picked_item) = picked_item {
+                        let m = data.input.mouse_pos();
+                        guirend.set_pixels(m.0, display.size_i32().1 - m.1);
+                        guirend.move_pixels(-8, -8);
+                        guirend.set_uniforms(16, 16);
+                        item_vao.draw_18(picked_item.item.id as i32);
+                    }
+                },
+                _ => {}
+            }
+        }
+
         program.load_mat4(0, &Matrix4::one());
         program.load_mat4(1, &Matrix4::one());
         program.load_mat4(2, &Matrix4::from_translation(-Vector3::unit_z()));
 
-        pgui.render(&mut Cursor::bottom_center(display.size()), &guirend, &item_vao, &data.atlas, &pinv);
-
-        /* guirend.render(&mut pgui, display.size(), data.input.mouse_pos(), data.delta);
+        /* guirend.render(&mut pgui, display.size(), data.input.s(), data.delta);
         
         data.atlas.texture().bind();
         guirend.render_with(display.size(), data.input.mouse_pos(), data.delta, &item_vao, |r, item_vao| {

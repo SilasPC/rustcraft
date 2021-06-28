@@ -12,23 +12,24 @@ pub enum ChunkState {
 }
 
 type Data = [[[usize; 16]; 16]; 16];
+type LightData = [[[u8; 16]; 16]; 16];
 
 pub struct Chunk {
     pub chunk_state: ChunkState,
     pub needs_refresh: bool,
     pub pos: Vector3<f32>,
     pub data: Data,
+    pub light: LightData,
     pub mesh: Option<VAO>,
 }
 
 impl Chunk {
 
     pub fn new(pos: Vector3<isize>) -> Self {
-
         let data = [[[0; 16]; 16]; 16];
+        let light = [[[0; 16]; 16]; 16];
         let pos = Vector3 {x: pos.x as f32, y: pos.y as f32, z: pos.z as f32};
-        Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false }
-
+        Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
     }
 
     pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen) {

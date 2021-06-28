@@ -48,23 +48,42 @@ impl ItemStack {
         }
     }
 
-    pub fn merge(from: Option<ItemStack>, into: &mut Option<ItemStack>) -> Option<ItemStack> {
-        if from.is_none() {return None}
+    pub fn transfer(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
+        if from.is_some() && into.is_some() {
+            let a = from.as_mut().unwrap();
+            let b = into.as_mut().unwrap();
+            if a.item != b.item {
+                std::mem::swap(a, b)
+            } else {
+                let to_move = a.count.min(64-b.count);
+                b.count += to_move;
+                a.count -= to_move;
+                if a.count == 0 {
+                    *from = None
+                }
+            }
+        } else {
+            std::mem::swap(from, into)
+        }
+    }
+
+    pub fn merge(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
+        if from.is_none() {return}
         match into {
             Some(ref mut inner) => {
-                let mut from = from.unwrap();
-                let to_move = from.count.min(64-inner.count);
+                let mut from_inner = from.as_mut().unwrap();
+                if from_inner.item != inner.item {
+                    return
+                }
+                let to_move = from_inner.count.min(64-inner.count);
                 inner.count += to_move;
-                from.count -= to_move;
-                if from.count > 0 {
-                    Some(from)
-                } else {
-                    None
+                from_inner.count -= to_move;
+                if from_inner.count == 0 {
+                    *from = None
                 }
             },
             _ => {
-                *into = from;
-                None
+                std::mem::swap(from, into)
             }
         }
     }

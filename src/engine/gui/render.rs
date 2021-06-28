@@ -4,51 +4,35 @@ use crate::program::Program;
 use cgmath::*;
 
 pub struct Cursor {
-    pub screen_size: (f32, f32),
-    pub pos: Vector2<f32>,
+    pub pos: Vector2<i32>,
 }
 
 impl Cursor {
 
-    pub fn bottom_center(screen_size: (u32, u32)) -> Self {
-        let screen_size = (screen_size.0 as f32, screen_size.1 as f32);
+    pub fn new() -> Self {
         Self {
-            screen_size,
-            pos: -Vector2::unit_y(),
+            pos: Vector2 {x:0, y:0}
         }
-    }
-
-    pub fn pixel_size(&self) -> (f32, f32) {
-        (
-            2. / self.screen_size.0,
-            2. / self.screen_size.1,
-        )
     }
 
     pub fn move_pixels(&mut self, x: i32, y: i32) {
-        let (px, py) = self.pixel_size();
-        self.pos.x += px * x as f32;
-        self.pos.y += py * y as f32;
-    }
-
-    pub fn img_size_to_scale(&self, x: i32, y: i32) -> Vector2<f32> {
-        let (px, py) = self.pixel_size();
-        Vector2 {
-            x: px * x as f32,
-            y: py * y as f32,
-        }
+        self.pos.x += x;
+        self.pos.y += y;
     }
 
 }
 
 pub struct GUIRenderer {
+    pub screen_size: (i32, i32),
+    pub pixel_scale: i32,
+    pub cursor: Cursor,
     pub square: VAO,
     pub program: Program,
 }
 
 impl GUIRenderer {
 
-    pub fn new() -> Self {
+    pub fn new(screen_size: (i32, i32)) -> Self {
         let verts = vec![
             0., 0., 0.,
             1., 0., 0.,
@@ -75,6 +59,9 @@ impl GUIRenderer {
         );
 
         Self {
+            pixel_scale: 3,
+            screen_size,
+            cursor: Cursor::new(),
             square,
             program,
         }
@@ -82,6 +69,7 @@ impl GUIRenderer {
     }
 
     pub fn start(&self) {
+        self.program.enable();
         unsafe {
             gl::Enable(gl::BLEND);
             gl::Disable(gl::DEPTH_TEST);
@@ -96,19 +84,30 @@ impl GUIRenderer {
         }
     }
 
-    pub fn set_uniforms(&self, position: &Vector2<f32>, scale_offset: &ScaleOffset) {
-        self.program.load_vec2(0, &(position + scale_offset.offset));
-        self.program.load_vec2(1, &scale_offset.scale);
+    pub fn move_pixels(&mut self, x: i32, y: i32) {
+        self.cursor.move_pixels(x * self.pixel_scale, y * self.pixel_scale);
     }
 
-    pub fn set_uniform(&self, position: &Vector2<f32>, scale: &Vector2<f32>) {
-        self.program.load_vec2(0, position);
-        self.program.load_vec2(1, scale);
+    pub fn set_pixels(&mut self, x: i32, y: i32) {
+        self.cursor.pos.x = x;
+        self.cursor.pos.y = y;
+    }
+
+    pub fn set_uniforms(&self, img_width: i32, img_height: i32) {
+        let (pw, ph) = (2. / self.screen_size.0 as f32, 2. / self.screen_size.1 as f32);
+        self.program.load_vec2(0, &Vector2 {
+            x: pw * self.cursor.pos.x as f32 - 1.,
+            y: ph * self.cursor.pos.y as f32 - 1.,
+        });
+        self.program.load_vec2(1, &Vector2 {
+            x: (self.pixel_scale * img_width) as f32 * pw,
+            y: (self.pixel_scale * img_height) as f32 * ph,
+        });
     }
 
 }
 
-pub struct ScaleOffset {
+/* pub struct ScaleOffset {
     pub scale: Vector2<f32>,
     pub offset: Vector2<f32>,
 }
@@ -130,9 +129,9 @@ pub fn calc_scale_offset(screen_size: (f32,f32), image_size: (f32,f32), anchor: 
 
     ScaleOffset { scale, offset }
 
-}
+} */
 
-#[derive(Clone,Copy)]
+/* #[derive(Clone,Copy)]
 pub enum Anchor {
     Offset(f32,f32),
     Center,
@@ -165,4 +164,4 @@ impl Anchor {
         let Vector2 {x, y} = self.to_vec() + rhs.to_vec();
         Self::Offset(x,y)
     }
-}
+} */
