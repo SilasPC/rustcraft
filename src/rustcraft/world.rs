@@ -64,18 +64,7 @@ impl WorldData {
             noise_basic
         };
         let mut chunks_tree = BVH::new();
-        for x in 0..7i32 {
-            for y in 0..7 {
-                for z in 0..7 {
-                    /* let pos = Vector3 { x, y, z };
-                    let mut chunk = Chunk::new(pos);
-                    chunks_tree.insert(pos * 16, chunk, &AABB::from_corner(&pos.map(|x| (x * 16) as f32), 16.));
-                    chunks_tree.get(16 * pos); */
-                }
-            }
-        }
-        let mut w = WorldData { chunks_tree, noise };
-        w
+        WorldData { chunks_tree, noise }
     }
 
     pub fn chunk_at_pos(&self, pos: &Vector3<f32>) -> Option<&Chunk> {
