@@ -44,7 +44,7 @@ impl Physics {
         }
     }
 
-    pub fn get_aabb(&self, pos: &Position) -> crate::AABB {
+    pub fn get_aabb(&self, pos: &Position) -> crate::util::AABB {
         const E: f32 = 0.;// 0.01; // 10. * std::f32::EPSILON;
         ((
             pos.pos.x+E,
@@ -54,7 +54,7 @@ impl Physics {
             pos.pos.x+self.size.x-E,
             pos.pos.y+self.size.y-E,
             pos.pos.z+self.size.z-E,
-        ))
+        )).into()
     }
 
     pub fn is_grounded(&self) -> bool {self.grounded}
@@ -150,7 +150,7 @@ impl Physics {
     pub fn system_update(data: &mut crate::Data) {
         for (ent, (pos, phys)) in data.ecs.query_mut::<(&mut Position, &mut Physics)>() {
             if phys.update(pos, data.delta, &data.block_map, &data.world) {
-                data.ent_tree.set(ent, &phys.get_aabb(&pos));
+                data.ent_tree.update(ent, &phys.get_aabb(&pos));
             }
         }
     }

@@ -1,14 +1,26 @@
 
+use crate::util::position_to_sub_coordinates;
+use crate::util::AABB;
 use cgmath::*;
 use crate::engine::vao::*;
 use crate::rustcraft::block::Block;
 
 /// Signifies the current state of the chunk
-#[derive(PartialOrd,PartialEq,Eq,Ord)]
+#[derive(PartialOrd,PartialEq,Eq,Ord,Clone,Copy,Debug)]
 pub enum ChunkState {
     Empty,
     Filled,
     Done,
+}
+
+impl ChunkState {
+    pub fn prev(self) -> Self {
+        match self {
+            ChunkState::Done => ChunkState::Filled,
+            ChunkState::Filled => ChunkState::Empty,
+            ChunkState::Empty => ChunkState::Empty,
+        }
+    }
 }
 
 type Data = [[[usize; 16]; 16]; 16];
@@ -17,19 +29,45 @@ type LightData = [[[u8; 16]; 16]; 16];
 pub struct Chunk {
     pub chunk_state: ChunkState,
     pub needs_refresh: bool,
-    pub pos: Vector3<f32>,
+    pub pos: Vector3<i32>,
     pub data: Data,
     pub light: LightData,
     pub mesh: Option<VAO>,
 }
 
+
+impl std::fmt::Debug for Chunk {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Chunk")
+            .field("pos", &self.pos)
+            .field("chunk_state", &self.chunk_state)
+            .finish()
+    }
+}
+
 impl Chunk {
 
-    pub fn new(pos: Vector3<isize>) -> Self {
+    pub fn new(pos: Vector3<i32>) -> Self {
         let data = [[[0; 16]; 16]; 16];
         let light = [[[0; 16]; 16]; 16];
-        let pos = Vector3 {x: pos.x as f32, y: pos.y as f32, z: pos.z as f32};
         Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
+    }
+
+    pub fn block_id_at_pos(&self, pos: &Vector3<f32>) -> usize {
+        let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
+        self.data[sc.x][sc.y][sc.z]
+    }
+    
+    pub fn set_at_pos(&mut self, pos: &Vector3<f32>, id: usize) -> bool {
+        let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
+        let bid = &mut self.data[sc.x][sc.y][sc.z];
+        if *bid != id {
+            self.needs_refresh = true;
+            *bid = id;
+            true
+        } else {
+            false
+        }
     }
 
     pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen) {
@@ -79,6 +117,8 @@ impl Chunk {
     pub fn renderable_after_refresh(&self) -> bool {
         self.chunk_state == ChunkState::Done
     }
+
+    pub fn aabb(&self) -> AABB { AABB::from_corner(&self.pos.map(|x| x as f32 * 16.), 16.) }
 
     pub fn refresh(&mut self, wdata: &Vec<std::sync::Arc<Block>>, atlas: &crate::texture::TextureAtlas) {
         if !self.needs_refresh {return}

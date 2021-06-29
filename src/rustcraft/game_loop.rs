@@ -1,4 +1,5 @@
 
+use crate::util::AABB;
 use crate::text::text::Text;
 use crate::rustcraft::pgui::GUI;
 use crate::gui::render::GUIRenderer;
@@ -93,7 +94,11 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     display.video.text_input().start();
 
+    data.world.load_around2(&Vector3 {x:50., y: 55., z: 50.}, 40.);
+
     'main: loop {
+
+        let mut do_chunk_load = false;
 
         data.delta = data.frame_time.elapsed().as_secs_f32().min(0.1);
         data.frame_time = Instant::now();
@@ -148,6 +153,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
                     };
                 },
                 KeyDown {keycode: Some(F11), ..} => display.toggle_fullscren(),
+                KeyDown {keycode: Some(R), ..} => do_chunk_load = true,
                 KeyDown {keycode: Some(E), ..} => {
                     state = match state {
                         GameState::Playing => {
@@ -203,6 +209,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         if let Ok((pos, phys, view, pdata)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(data.cam) {
 
             raycast_hit = raycast(pos.pos+view.offset(), &pos.heading(), 5., &data.block_map, &data.world);
+            if do_chunk_load {
+                data.world.load_around2(&pos.pos, 30.);
+            }
 
             if state.is_playing() {
 
@@ -368,7 +377,7 @@ impl Updates {
                                 let falling_block = data.ecs.spawn((
                                     pos_comp, phys, FallingBlock::of(block.id)
                                 ));
-                                data.ent_tree.set(falling_block, &aabb);
+                                data.ent_tree.insert(falling_block, (), &aabb);
                                 self.area2.push(pos);
                             }
                         }
@@ -417,7 +426,7 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
     {
         
         program.load_mat4(2, &Matrix4::from_translation(
-            chunk.pos * 16.
+            chunk.pos.map(|x| x as f32 * 16.)
         ));
 
         chunk.refresh(&data.block_map, &data.atlas);
@@ -454,50 +463,25 @@ fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_m
 }
 
 pub fn block_at(w: &super::world::WorldData, pos: &Vector3<f32>) -> Option<usize> {
-    let cc = (pos / 16.).map(|c| c.floor() as isize);
-    let mut sc = (pos % 16.).map(|c| c.floor() as isize);
-    if cc.x < 0 || pos.y < 0. || cc.z < 0 {
-        return None
-    }
-    let chunk = &w.chunks[cc.x as usize][cc.y as usize][cc.z as usize];
-    if sc.x < 0 {sc.x += 16}
-    if sc.z < 0 {sc.z += 16}
-
-    chunk.data[sc.x as usize][sc.y as usize][sc.z as usize].into()
+    let chunk = w.chunk_at_pos(&pos)?;
+    chunk.block_id_at_pos(&pos).into()
 }
 
-pub fn set_block(w: &mut crate::world::WorldData, t: &crate::EntTree, pos: &Vector3<f32>, val: usize, ignore_ents: bool) -> bool {
+pub fn set_block(w: &mut crate::world::WorldData, t: &crate::util::BVH<hecs::Entity, ()>, pos: &Vector3<f32>, val: usize, ignore_ents: bool) -> bool {
     if !ignore_ents {
+        // TODO: not working properly?
         const EPSILON: f32 = 0.1;
         let bpos = pos.map(|v| v.floor());
-        if t.any_overlaps(&(
-            (
-                bpos.x+EPSILON,
-                bpos.y+EPSILON,
-                bpos.z+EPSILON,
-            ),(
-                bpos.x+1.-EPSILON,
-                bpos.y+1.-EPSILON,
-                bpos.z+1.-EPSILON,
-            )
-        )) {
+        let mut aabb = AABB::from_corner(&bpos, 1.);
+        aabb.extend_radius(-EPSILON);
+        if t.any_overlaps(&aabb) {
             return false
         }
     }
-    let cc = (pos / 16.).map(|c| c.floor() as isize);
-    let mut sc = (pos % 16.).map(|c| c.floor() as isize);
-    if cc.x < 0 || pos.y < 0. || cc.z < 0 {
-        return false
-    }
-    let chunk = &mut w.chunks[cc.x as usize][cc.y as usize][cc.z as usize];
-    if sc.x < 0 {sc.x += 16}
-    if sc.z < 0 {sc.z += 16}
-    let rf = &mut chunk.data[sc.x as usize][sc.y as usize][sc.z as usize];
-    if *rf == val {
-        false
+    let chunk = w.chunk_at_pos_mut(&pos);
+    if let Some(chunk) = chunk {
+        chunk.set_at_pos(&pos, val)
     } else {
-        *rf = val;
-        chunk.needs_refresh = true;
-        true
+        false
     }
 }

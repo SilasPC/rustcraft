@@ -7,6 +7,7 @@ mod chunk;
 mod engine;
 mod rustcraft;
 mod perlin;
+use crate::util::BVH;
 use crate::content::*;
 use engine::program::*;
 use rustcraft::component::*;
@@ -16,48 +17,10 @@ use crate::rustcraft::input::Input;
 use crate::engine::texture::*;
 use engine::*;
 use rustcraft::*;
-use aabb_tree::*;
 
 pub struct Settings {
     pub fov: Deg<f32>,
     pub mouse_sensitivity: f32,
-}
-
-pub type AABB = ((f32,f32,f32,),(f32,f32,f32,));
-
-pub struct EntTree {
-    tree: AabbTree<hecs::Entity>,
-    map: std::collections::HashMap<hecs::Entity, aabb_tree::Proxy>,
-}
-
-impl EntTree {
-    pub fn new() -> Self {
-        Self {
-            tree: AabbTree::new(),
-            map: Default::default()
-        }
-    }
-    pub fn set(&mut self, ent: hecs::Entity, aabb: &AABB) {
-        if let Some(proxy) = self.map.get(&ent) {
-            self.tree.set_aabb(*proxy, aabb);
-        } else {
-            let proxy = self.tree.create_proxy(*aabb, ent);
-            self.map.insert(ent, proxy);
-        }
-    }
-    pub fn remove(&mut self, ent: hecs::Entity) {
-        if let Some(proxy) = self.map.remove(&ent) {
-            self.tree.destroy_proxy(proxy);
-        }
-    }
-    pub fn any_overlaps(&self, aabb: &AABB) -> bool {
-        let mut found = false;
-        self.tree.query_aabb(aabb, |_| {
-            found = true;
-            false
-        });
-        found
-    }
 }
 
 pub struct Data {
@@ -73,7 +36,7 @@ pub struct Data {
     pub ecs: hecs::World,
     pub block_map: Vec<std::sync::Arc<block::Block>>,
     pub atlas: std::rc::Rc<TextureAtlas>,
-    pub ent_tree: EntTree
+    pub ent_tree: BVH<hecs::Entity, ()>,
 }
 
 impl Data {
@@ -87,11 +50,11 @@ impl Data {
         };
         let mut ecs = hecs::World::new();
         
-        let mut ent_tree = EntTree::new();
+        let mut ent_tree = BVH::new();
         let cam = {
             let (cam, aabb) = make_player();
             let cam = ecs.spawn(cam);
-            ent_tree.set(cam, &aabb);
+            ent_tree.insert(cam, (), &aabb);
             cam
         };
         let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
@@ -104,7 +67,7 @@ impl Data {
             input: Input::default(),
             cam,
             frame_time: Instant::now(),
-            world: world::WorldData::new(),
+            world: world::WorldData::new("seed!"),
             atlas,
             delta: 0.,
             ecs,

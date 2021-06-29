@@ -1,12 +1,19 @@
-// PerlinNoise gen taken from https://github.com/processing-js/processing-js/blob/master/src/P5Functions/Math.js
+
 use rand::prelude::*;
 
 /// Perlin Noise generator that outputs 1/2/3D Perlin noise
+/// TODO: does not work for negative coordinates
 #[derive(Clone)]
 pub struct PerlinNoise {
     perm: [usize; 512],
     octaves: usize,
     fallout: f64,
+}
+
+impl std::fmt::Debug for PerlinNoise {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("PerlinNoise").finish()
+    }
 }
 
 impl PerlinNoise {

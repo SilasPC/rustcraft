@@ -1,9 +1,9 @@
 
+use crate::util::AABB;
 use std::sync::Arc;
 use crate::block::Block;
 use cgmath::*;
 use crate::rustcraft::component::*;
-use crate::AABB;
 
 pub fn make_player() -> (impl hecs::DynamicBundle, AABB) {
     let pos = Position::from(Vector3 {x:50., y: 55., z: 50.});
