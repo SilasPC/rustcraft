@@ -53,6 +53,10 @@ impl Chunk {
         Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
     }
 
+    pub fn block_id_at(&self, x: i32, y: i32, z: i32) -> usize {
+        self.data[x.rem_euclid(16) as usize][y.rem_euclid(16) as usize][z.rem_euclid(16) as usize]
+    }
+
     pub fn block_id_at_pos(&self, pos: &Vector3<f32>) -> usize {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
         self.data[sc.x][sc.y][sc.z]

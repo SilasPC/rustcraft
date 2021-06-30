@@ -10,7 +10,7 @@ pub fn make_cstr(len: usize) -> CString {
     unsafe { CString::from_vec_unchecked(buffer) }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct AABB(AABBTuple);
 pub type AABBTuple = ((f32,f32,f32,),(f32,f32,f32,));
 

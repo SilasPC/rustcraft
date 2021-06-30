@@ -1,6 +1,6 @@
 #version 400 core
 
-uniform float scale;
+uniform vec2 scale;
 uniform vec2 position;
 
 layout (location = 0) in vec3 vert;

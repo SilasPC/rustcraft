@@ -1,4 +1,5 @@
 
+use cgmath::Vector2;
 use crate::engine::texture::Texture;
 use std::rc::Rc;
 use super::text::Text;
@@ -18,10 +19,13 @@ impl TextRenderer {
             )
         }
     }
-    pub fn render(&self, text: &Text) {
+    pub fn render(&self, text: &Text, x: f32, y: f32, size: (u32, u32)) {
+        let ar = size.0 as f32 / size.1 as f32;
+        let (w,h) = (2. / size.0 as f32, 2. / size.1 as f32);
+        let s = 0.3;
         self.program.enable();
-        self.program.load_f32(0, 1.);
-        self.program.load_vec2(1, &cgmath::Vector2 {x: 0., y: 0.});
+        self.program.load_vec2(0, &Vector2 {x: s * ar, y: s});
+        self.program.load_vec2(1, &Vector2 {x, y});
         text.vao.bind();
         text.font.atlas.bind();
         unsafe {

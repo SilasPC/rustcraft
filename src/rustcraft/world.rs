@@ -1,4 +1,5 @@
 
+use std::sync::Arc;
 use crate::util::position_to_chunk_coordinates;
 use crate::util::Proxy;
 use crate::util::AABB;
@@ -33,21 +34,42 @@ impl TerrainGen {
     }
 }
 
-pub struct ChunkArea<'a>(pub (i32,i32), pub [[&'a Chunk; 3]; 3]);
+pub struct ChunkArea<'a> {
+    world_data: &'a mut WorldData,
+    pos: Vector3<i32>,
+    area: Vec<Proxy>,
+}
 
 impl<'a> ChunkArea<'a> {
-    pub fn block_at(&self, pos: Vector3<f32>) -> Option<usize> {
-        let cc = (pos / 16.).map(|c| c.floor() as i32);
-        let mut sc = (pos % 16.).map(|c| c.floor() as i32);
-        if cc.x < self.0.0 || cc.x > self.0.0 + 2 || cc.z < self.0.1 || cc.z > self.0.1 + 2 {
-            return None
-        }
-        let chunk = self.1[cc.x as usize - self.0.0 as usize][cc.z as usize - self.0.1 as usize];
-        if sc.x < 0 {sc.x += 16}
-        if sc.z < 0 {sc.z += 16}
-        Some(chunk.data[sc.x as usize][sc.y as usize][sc.z as usize])
+    pub fn block_at(&self, x: i32, y: i32, z: i32) -> usize {
+        self.world_data.chunks_tree[
+            self.area[((x-self.pos.x*16) * 9 + (y-self.pos.y*16) * 3 + (z-self.pos.z*16)) as usize]].block_id_at(x,y,z)
     }
-} 
+    pub fn block_at_pos(&self, pos: &Vector3<f32>) -> usize {
+        let cc = position_to_chunk_coordinates(pos) - self.pos;
+        self.world_data.chunks_tree[self.area[(cc.x * 9 + cc.y * 3 + cc.z) as usize]].block_id_at_pos(pos)
+    }
+    pub fn light_at(&self, mut x: i32, mut y: i32, mut z: i32) -> u8 {
+        x -= self.pos.x * 16;
+        y -= self.pos.y * 16;
+        z -= self.pos.z * 16;
+        let sx = x.rem_euclid(16) as usize;
+        let sy = y.rem_euclid(16) as usize;
+        let sz = z.rem_euclid(16) as usize;
+        self.world_data.chunks_tree[self.area[(x * 9 + y * 3 + z) as usize]].light[sx][sy][sz]
+    }
+    pub fn set_light_at(&mut self, mut x: i32, mut y: i32, mut z: i32, val: u8) {
+        x -= self.pos.x * 16;
+        y -= self.pos.y * 16;
+        z -= self.pos.z * 16;
+        let sx = x.rem_euclid(16) as usize;
+        let sy = y.rem_euclid(16) as usize;
+        let sz = z.rem_euclid(16) as usize;
+        let c = &mut self.world_data.chunks_tree[self.area[(x * 9 + y * 3 + z) as usize]];
+        c.light[sx][sy][sz] = val;
+        c.needs_refresh = true;
+    }
+}
 
 #[derive(Debug)]
 pub struct WorldData {
@@ -56,6 +78,7 @@ pub struct WorldData {
 }
 
 impl WorldData {
+    
     pub fn new(seed: &str) -> Self {
         let noise = crate::perlin::PerlinNoise::new(seed.to_owned(), 4, 0.5);
         let noise_basic = crate::perlin::PerlinNoise::new(seed.to_owned(), 1, 1.);
@@ -65,6 +88,10 @@ impl WorldData {
         };
         let mut chunks_tree = BVH::new();
         WorldData { chunks_tree, noise }
+    }
+
+    pub fn block_id_at_pos(&self, pos: &Vector3<f32>) -> Option<usize> {
+        self.chunk_at_pos(pos).map(|c| c.block_id_at_pos(pos))
     }
 
     pub fn chunk_at_pos(&self, pos: &Vector3<f32>) -> Option<&Chunk> {
@@ -86,6 +113,20 @@ impl WorldData {
             .into_iter()
             .filter(|p| *p != proxy)
             .collect::<Vec<_>>()
+    }
+
+    pub fn area(&mut self, pos: &Vector3<f32>) -> Option<ChunkArea<'_>> {
+        let mut area = self.chunks_tree
+            .query(&AABB::radius(pos, 16.));
+        if area.len() != 27 {
+            return None
+        }
+        area.sort_unstable();
+        ChunkArea {
+            world_data: self,
+            area,
+            pos: position_to_chunk_coordinates(pos) - Vector3 { x: 1, y: 1, z: 1}
+        }.into()
     }
 
     fn fill_empty_around(&mut self, pos: &Vector3<f32>, rad: f32) {
@@ -176,4 +217,28 @@ impl WorldData {
         }
     }
 
+}
+
+pub fn update_light(area: &mut ChunkArea, reg: &Vec<Arc<Block>>) {
+    let mut prop_queue = std::collections::VecDeque::new();
+    while let Some((x,y,z,l)) = prop_queue.pop_front() {
+        if prop(area, reg, x+1, y, z, l) {
+            prop_queue.push_back((x+1,y,z, l-1))}
+        if prop(area, reg, x-1, y, z, l) {
+            prop_queue.push_back((x+1,y,z, l-1))}
+        if prop(area, reg, x, y+1, z, l) {
+            prop_queue.push_back((x,y+1,z, l-1))}
+        if prop(area, reg, x, y-1, z, l) {
+            prop_queue.push_back((x,y-1,z, l-1))}
+        if prop(area, reg, x, y, z+1, l) {
+            prop_queue.push_back((x,y,z+1, l-1))}
+        if prop(area, reg, x, y, z-1, l) {
+            prop_queue.push_back((x,y,z-1, l-1))}
+    }
+    fn prop(area: &mut ChunkArea, reg: &Vec<Arc<Block>>, x: i32, y: i32, z: i32, new_light: u8) -> bool {
+        let b = &reg[area.block_at(x,y,z)];
+        if !b.transparent || area.light_at(x,y,z)+2>new_light {return false}
+        area.set_light_at(x,y,z,new_light-1);
+        true
+    }
 }

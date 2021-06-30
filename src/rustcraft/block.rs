@@ -1,4 +1,28 @@
 
+use crate::TextureAtlas;
+use std::sync::Arc;
+
+pub struct BlockRegistry {
+    pub blocks: Vec<Arc<Block>>,
+    pub texture_atlas: TextureAtlas,
+}
+
+impl BlockRegistry {
+    pub fn new(blocks: Vec<Arc<Block>>, texture_atlas: TextureAtlas) -> Self {
+        Self {
+            blocks,
+            texture_atlas,
+        }
+    }
+}
+
+impl std::ops::Index<usize> for BlockRegistry {
+    type Output = Arc<Block>;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.blocks[index]
+    }
+}
+
 pub trait BlockBehaivour {
     fn did_place() {}
     fn block_update() {}
@@ -8,6 +32,7 @@ pub trait BlockBehaivour {
 #[derive(Clone, Debug)]
 pub struct Block {
     pub id: usize,
+    pub name: &'static str,
     pub solid: bool,
     pub transparent: bool,
     pub no_render: bool,

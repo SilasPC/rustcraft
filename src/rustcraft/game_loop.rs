@@ -1,4 +1,5 @@
 
+use crate::util::position_to_chunk_coordinates;
 use crate::util::AABB;
 use crate::text::text::Text;
 use crate::rustcraft::pgui::GUI;
@@ -79,7 +80,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
     let text_rend = crate::engine::text::font::TextRenderer::new();
-    let mut sum_text = font.build_text("0 fps".into());
+    let mut debug_text = font.build_text("RustCraft dev build".into());
 
     use crate::engine::lines::*;
     let box_vao = box_vao();
@@ -213,6 +214,26 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
                 data.world.load_around2(&pos.pos, 30.);
             }
 
+            let w = &data.world;
+            let bm = &data.block_map;
+            debug_text.set_text(
+                format!(
+r#"
+RustCraft dev build
+    - {:?}
+    - Chunk {:?}
+    - Looking at {:?}
+    - fps: {:.0}
+"#,
+                    pos,
+                    position_to_chunk_coordinates(&pos.pos),
+                    raycast_hit.and_then(|(_,hit)| w.block_id_at_pos(&hit)).map(|id| bm[id].name),
+                    1. / data.delta,
+                )
+            );
+
+            // println!("{}", data.world.area(&pos.pos).is_some());
+
             if state.is_playing() {
 
                 if data.input.holding_jump() {
@@ -323,13 +344,12 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
         match &state {
             GameState::Chat { text, .. } => {
-                text_rend.render(&text)
+                text_rend.render(&text, -0.9, -0.9, display.size())
             },
             _ => {}
         };
 
-        /* sum_text.set_text(format!("{:.0} \nfps", 1. / data.delta));
-        text_rend.render(&sum_text); */
+        text_rend.render(&debug_text, -0.9, 0.9, display.size());
 
         // END RENDERING
 

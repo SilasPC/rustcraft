@@ -10,6 +10,14 @@ pub struct Position {
     pub rot: Euler<Deg<f32>>,
 }
 
+impl std::fmt::Debug for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Position")
+            .field("pos", &(self.pos.x as i32, self.pos.y as i32, self.pos.z as i32))
+            .field("rot", &(self.rot.x, self.rot.y))
+            .finish()
+    }
+}
 
 impl From<Vector3<f32>> for Position {
     fn from(pos: Vector3<f32>) -> Self {
