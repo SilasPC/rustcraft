@@ -1,4 +1,5 @@
 
+use crate::item::Item;
 use std::rc::Rc;
 use crate::vao::VAO;
 use crate::TextureAtlas;
@@ -13,26 +14,18 @@ pub struct Behavior {
     pub on_break: Option<fn(&mut Arc<Block>)>,
 }
 
+impl Eq for Behavior {}
+impl PartialEq for Behavior {
+    fn eq(&self, rhs: &Self) -> bool {true}
+}
+
 impl std::fmt::Debug for Behavior {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("Behavior").finish()
     }
 }
 
-pub struct BlockRegistry {
-    pub blocks: Vec<Arc<Block>>,
-    pub texture_atlas: Rc<TextureAtlas>,
-    pub iso_block_vao: VAO,
-}
-
-impl std::ops::Index<usize> for BlockRegistry {
-    type Output = Arc<Block>;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.blocks[index]
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Block {
     pub id: usize,
     pub name: &'static str,
@@ -45,9 +38,3 @@ pub struct Block {
     pub behavior: Option<Box<Behavior>>,
 }
 
-impl Eq for Block {}
-impl PartialEq for Block {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.id == rhs.id
-    }
-}

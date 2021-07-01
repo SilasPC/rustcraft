@@ -1,7 +1,7 @@
 
-use crate::BlockRegistry;
+use crate::registry::Registry;
 use std::rc::Rc;
-use crate::item::ItemStack;
+use crate::item::*;
 use std::sync::Arc;
 use crate::block::Block;
 use crate::player::inventory::PlayerInventory;
@@ -76,17 +76,25 @@ impl GUI {
         }
         let x = x / 20;
         let y = y / 20;
-        if x < 0 || x > 8 || y < 0 || y > 2 {
-            return None
+        if x >= 0 && x <= 8 && y >= 0 && y <= 2 {
+            let y = 3 - y;
+            Some((x + 9 * y) as u32)
+        } else if x >= 2 && x <= 4 && y >= 4 && y <= 6 {
+            let x = x - 2;
+            let y = 6 - y;
+            Some((x + 3 * y + 36) as u32)
+        } else if x == 6 && y == 5 {
+            Some(45)
+        } else {
+            None
         }
-        Some((x + 9 * (3 - y)) as u32)
     }
 
     pub fn render(
         &self,
         r: &mut GUIRenderer,
-        reg: &BlockRegistry,
-        hotbar: &PlayerInventory,
+        reg: &Registry,
+        inv: &PlayerInventory,
         show_inventory: bool,
         mouse_pos: (i32, i32)
     ) {
@@ -131,11 +139,20 @@ impl GUI {
         r.set_pixels(hw, 0); // hotbar
         r.move_pixels(-90, 0);
         r.move_pixels(2, 2);
-        for s in &hotbar.hotbar {
+        for s in &inv.hotbar {
 
             if let Some(s) = s {
                 r.set_uniforms(16, 16);
-                reg.iso_block_vao.draw_18(s.item.id as i32);
+                match &s.item {
+                    ItemLike::Item(inner) => {
+                        reg.item_vao.bind();
+                        reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
+                    },
+                    ItemLike::Block(inner) => {
+                        reg.iso_block_vao.bind();
+                        reg.iso_block_vao.draw_18(inner.id as i32);
+                    }
+                }
             }
 
             r.move_pixels(20, 0);
@@ -145,18 +162,69 @@ impl GUI {
             r.move_pixels(-90, -70);
             r.move_pixels(2, 2);
             r.move_pixels(0, 2*20);
-            for (i, s) in hotbar.inventory.iter().enumerate() {
+            for (i, s) in inv.inventory.iter().enumerate() {
                 if i % 9 == 0 && i > 0 {
                     r.move_pixels(-9*20, -20);
                 }
     
                 if let Some(s) = s {
                     r.set_uniforms(16, 16);
-                    reg.iso_block_vao.draw_18(s.item.id as i32);
+                    match &s.item {
+                        ItemLike::Item(inner) => {
+                            reg.item_vao.bind();
+                            reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
+                        },
+                        ItemLike::Block(inner) => {
+                            reg.iso_block_vao.bind();
+                            reg.iso_block_vao.draw_18(inner.id as i32);
+                        }
+                    }
                 }
     
                 r.move_pixels(20, 0);
             }
+
+            r.set_pixels(hw, hh); // crafting
+            r.move_pixels(-90, -70);
+            r.move_pixels(2, 2);
+            r.move_pixels(2*20, 6*20);
+            for (i, s) in inv.crafting.iter().take(9).enumerate() {
+                if i % 3 == 0 && i > 0 {
+                    r.move_pixels(-3*20, -20);
+                }
+    
+                if let Some(s) = s {
+                    r.set_uniforms(16, 16);
+                    match &s.item {
+                        ItemLike::Item(inner) => {
+                            reg.item_vao.bind();
+                            reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
+                        },
+                        ItemLike::Block(inner) => {
+                            reg.iso_block_vao.bind();
+                            reg.iso_block_vao.draw_18(inner.id as i32);
+                        }
+                    }
+                }
+    
+                r.move_pixels(20, 0);
+            }
+
+            r.move_pixels(20, 20);
+            if let Some(s) = &inv.crafting[9] {
+                r.set_uniforms(16, 16);
+                match &s.item {
+                    ItemLike::Item(inner) => {
+                        reg.item_vao.bind();
+                        reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
+                    },
+                    ItemLike::Block(inner) => {
+                        reg.iso_block_vao.bind();
+                        reg.iso_block_vao.draw_18(inner.id as i32);
+                    }
+                }
+            }
+
         }
         
         r.stop();

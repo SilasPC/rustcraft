@@ -1,4 +1,8 @@
 
+use crate::block::Block;
+use crate::vao::VAO;
+use crate::item::Item;
+use std::sync::Arc;
 use crate::TextureAtlas;
 use cgmath::Vector3;
 use aabb_tree::AabbTree;
@@ -141,7 +145,7 @@ pub fn position_to_sub_coordinates(pos: &Vector3<f32>) -> Vector3<i32> {
     pos.map(|x| (x % 16.).floor() as i32).map(|x| x.max((x+16)%16))
 }
 
-pub fn gen_item_vao(b: &Vec<std::sync::Arc<crate::rustcraft::block::Block>>, a: &TextureAtlas) -> crate::engine::vao::VAO {
+pub fn gen_block_vao(b: &Vec<Arc<Block>>, a: &TextureAtlas) -> VAO {
 
     let mut verts = vec![];
     let mut uvs = vec![];
@@ -200,6 +204,36 @@ pub fn gen_item_vao(b: &Vec<std::sync::Arc<crate::rustcraft::block::Block>>, a: 
             u, v+d,
             u+d, v+d,
             u+d, v,
+        ]);
+    }
+
+    crate::engine::vao::VAO::textured(&verts, &uvs)
+
+}
+
+pub fn gen_item_vao(items: &Vec<Arc<Item>>, a: &TextureAtlas) -> VAO {
+
+    let mut verts = vec![];
+    let mut uvs = vec![];
+
+    for item in items {
+        verts.extend_from_slice(&[
+            0., 0., 0.,
+            1., 1., 0.,
+            0., 1., 0.,
+            1., 1., 0.,
+            0., 0., 0.,
+            1., 0., 0.,
+        ]);
+        let (u,v) = a.get_uv(item.texture);
+        let d = a.uv_dif();
+        uvs.extend_from_slice(&[
+            u, v+d,
+            u+d, v,
+            u, v,
+            u+d, v,
+            u, v+d,
+            u+d, v+d,
         ]);
     }
 

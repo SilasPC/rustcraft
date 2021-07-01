@@ -1,7 +1,7 @@
 
+use crate::registry::Registry;
 use crate::block::Block;
 use std::sync::Arc;
-use crate::BlockRegistry;
 use crate::util::position_to_chunk_coordinates;
 use crate::util::AABB;
 use crate::text::text::Text;
@@ -15,7 +15,7 @@ use cgmath::*;
 use std::time::{Instant, Duration};
 use crate::texture::Texture;
 use crate::rustcraft::player::inventory::PlayerInventory;
-use crate::rustcraft::item::ItemStack;
+use crate::rustcraft::item::{ItemStack,Item,ItemLike};
 
 pub enum GameState {
     Inventory {
@@ -110,7 +110,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
             if !state.is_paused() {
                 block_updates.update(data);
-                Item::system_tick_age_items(data);
+                crate::rustcraft::component::Item::system_tick_age_items(data);
             }    
 
         }
@@ -245,8 +245,10 @@ RustCraft dev build
                     if let Some(hit) = raycast_hit {
                         let block = data.world.block_at_pos(&hit.1).unwrap().clone();
                         if set_block(&mut data.world, &data.ent_tree, &hit.1, &data.registry[0], true) {
-                            let stack = ItemStack::of(block, 1);
-                            pdata.inventory.merge(Some(stack));
+                            if let Some(drop_id) = block.drops {
+                                let stack = ItemStack::of(data.registry.get(drop_id), 1);
+                                pdata.inventory.merge(Some(stack));
+                            }
                             block_updates.add_area(hit.1);
                             block_updates.add_single(hit.1);
                         }
@@ -256,8 +258,8 @@ RustCraft dev build
                     if let Some(hit) = raycast_hit {
                         let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
                         let mut success = false;
-                        if let Some(ref mut item) = maybe_item {
-                            if set_block(&mut data.world, &data.ent_tree, &hit.0, &item.item, /* false */true) {
+                        if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
+                            if set_block(&mut data.world, &data.ent_tree, &hit.0, &block, /* false */true) {
                                 success = true;
                                 block_updates.add_area(hit.0);
                                 block_updates.add_single(hit.0);
@@ -313,7 +315,7 @@ RustCraft dev build
                         let slot = pgui.determine_hovered_slot(data.input.mouse_pos());
                         println!("{:?}",slot);
                         if let Some(slot) = slot {
-                            ItemStack::transfer(picked_item, pdata.inventory.slot_mut(slot));
+                            pdata.inventory.transfer(slot, picked_item, &data.registry);
                         }
                     }
                     if let Some(picked_item) = picked_item {
@@ -321,7 +323,22 @@ RustCraft dev build
                         guirend.set_pixels(m.0, display.size_i32().1 - m.1);
                         guirend.move_pixels(-8, -8);
                         guirend.set_uniforms(16, 16);
-                        data.registry.iso_block_vao.draw_18(picked_item.item.id as i32);
+                        unsafe {
+                            gl::Enable(gl::BLEND);
+                        }
+                        match &picked_item.item {
+                            ItemLike::Item(inner) => {
+                                data.registry.item_vao.bind();
+                                data.registry.item_vao.draw_6((inner.id - data.registry.blocks.len()) as i32);
+                            },
+                            ItemLike::Block(inner) => {
+                                data.registry.iso_block_vao.bind();
+                                data.registry.iso_block_vao.draw_18(inner.id as i32);
+                            }
+                        }
+                        unsafe {
+                            gl::Disable(gl::BLEND);
+                        }
                     }
                 },
                 _ => {}
@@ -467,7 +484,7 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
 
 }
 
-fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &BlockRegistry, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
+fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &Registry, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
     
     let mut dist = 0.;
     while dist < max_dist && !check_hit(&reg, w, &pos) {
@@ -481,7 +498,7 @@ fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &B
         return None
     }
 
-    fn check_hit(reg: &BlockRegistry, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
+    fn check_hit(reg: &Registry, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
         w.block_at_pos(pos)
             .map(|b| b.solid)
             .unwrap_or(false)

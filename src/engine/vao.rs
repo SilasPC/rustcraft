@@ -27,6 +27,8 @@ impl VAO {
             gl::GenVertexArrays(1, &mut id);
             gl::BindVertexArray(id);
             
+            assert!(id != 0);
+            
             let mut verts_id = 0;
             gl::GenBuffers(1, &mut verts_id);
             configure_float_vbo(verts_id, 0, 3);
@@ -68,6 +70,8 @@ impl VAO {
     
             gl::GenVertexArrays(1, &mut id);
             gl::BindVertexArray(id);
+
+            assert!(id != 0);
             
             let mut ids = [0,0];
             gl::GenBuffers(2, ids.as_mut_ptr());
@@ -99,6 +103,8 @@ impl VAO {
 
             gl::GenVertexArrays(1, &mut id);
             gl::BindVertexArray(id);
+
+            assert!(id != 0);
             
             let mut verts_id = 0;
             gl::GenBuffers(1, &mut verts_id);
@@ -144,15 +150,29 @@ impl VAO {
     }
 
     pub fn draw_18(&self, offset: i32) {
-        let (gle, count) = match self.kind {
+        let (kind, count) = match self.kind {
             RenderKind::Triangles => (gl::TRIANGLES, 3),
             RenderKind::Lines => (gl::LINES, 2),
         };
         unsafe {
             gl::DrawArrays(
-                gle,
-                18 * offset, // number of vertecies
-                18 // number of vertecies
+                kind,
+                18 * offset, // number of verticies
+                18 // number of verticies
+            );
+        }
+    }
+
+    pub fn draw_6(&self, offset: i32) {
+        let (kind, count) = match self.kind {
+            RenderKind::Triangles => (gl::TRIANGLES, 3),
+            RenderKind::Lines => (gl::LINES, 2),
+        };
+        unsafe {
+            gl::DrawArrays(
+                kind,
+                6 * offset, // number of verticies
+                6 // number of verticies
             );
         }
     }

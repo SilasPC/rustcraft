@@ -8,3 +8,5 @@ pub mod player;
 pub mod item;
 pub mod pgui;
 pub mod content;
+pub mod registry;
+pub mod crafting;

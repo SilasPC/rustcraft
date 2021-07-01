@@ -1,6 +1,6 @@
 
+use crate::registry::Registry;
 use std::sync::Arc;
-use crate::BlockRegistry;
 use crate::util::position_to_sub_coordinates;
 use crate::util::AABB;
 use cgmath::*;
@@ -80,7 +80,7 @@ impl Chunk {
         }
     }
 
-    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen, reg: &BlockRegistry) {
+    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen, reg: &Registry) {
         for x in 0..16 {
             for y in 0..16 {
                 for z in 0..16 {
@@ -132,7 +132,7 @@ impl Chunk {
 
     pub fn aabb(&self) -> AABB { AABB::from_corner(&self.pos.map(|x| x as f32 * 16.), 16.) }
 
-    pub fn refresh(&mut self, reg: &BlockRegistry) {
+    pub fn refresh(&mut self, reg: &Registry) {
         if !self.needs_refresh {return}
         let (verts, uvs) = make_mesh(&self.data, reg);
         if let Some(mesh) = &mut self.mesh {
@@ -244,7 +244,7 @@ pub fn cube_mesh() -> VAO {
 
 }
 
-fn make_mesh(data: &Data, reg: &BlockRegistry) -> (Vec<f32>, Vec<f32>) {
+fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
 
     let block_map = &reg.blocks;
     let atlas = &reg.texture_atlas;

@@ -1,5 +1,5 @@
 
-use crate::BlockRegistry;
+use crate::registry::Registry;
 use std::sync::Arc;
 use crate::util::position_to_chunk_coordinates;
 use crate::util::Proxy;
@@ -181,7 +181,7 @@ impl WorldData {
 
     }
 
-    pub fn load_around2(&mut self, pos: &Vector3<f32>, rad: f32, reg: &BlockRegistry) {
+    pub fn load_around2(&mut self, pos: &Vector3<f32>, rad: f32, reg: &Registry) {
         use std::cmp::Reverse as Rev;
         
         self.fill_empty_around(pos, rad + 32.);

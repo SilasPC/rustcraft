@@ -1,4 +1,6 @@
 
+use crate::Registry;
+use crate::crafting::CraftingRegistry;
 use crate::rustcraft::item::*;
 use crate::engine::gui::{render::*, gui::*};
 
@@ -6,16 +8,36 @@ use crate::engine::gui::{render::*, gui::*};
 pub struct PlayerInventory {
    pub hotbar: [Option<ItemStack>; 9],
    pub inventory: [Option<ItemStack>; 27],
+   pub crafting: [Option<ItemStack>; 10],
 }
 
 impl PlayerInventory {
     
     pub fn new() -> Self {Self::default()}
 
-    pub fn slot_mut(&mut self, slot: u32) -> &mut Option<ItemStack> {
+    pub fn slot(&mut self, slot: u32) -> &Option<ItemStack> {
         match slot {
             0..=8 => &mut self.hotbar[slot as usize],
             9..=35 => &mut self.inventory[slot as usize - 9],
+            _ => panic!("Invalid slot no. {}", slot)
+        }
+    }
+
+    pub fn transfer(&mut self, slot: u32, from: &mut Option<ItemStack>, reg: &Registry) {
+        match slot {
+            0..=8 => ItemStack::transfer(from, &mut self.hotbar[slot as usize]),
+            9..=35 => ItemStack::transfer(from, &mut self.inventory[slot as usize - 9]),
+            36..=44 => {
+                ItemStack::transfer(from, &mut self.crafting[slot as usize - 36]);
+                let cr = CraftingRegistry;
+                self.crafting[9] = cr.get_output(&self.crafting[..9], reg);
+            },
+            45 => {
+                if from.is_none() {
+                    ItemStack::transfer(from, &mut self.crafting[9]);
+                    self.crafting.fill(None);
+                }
+            },
             _ => panic!("Invalid slot no. {}", slot)
         }
     }

@@ -1,20 +1,84 @@
 
+use std::sync::Arc;
 use crate::rustcraft::block::*;
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct Item {
+    pub id: usize,
+    pub name: &'static str,
+    pub texture: usize,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum ItemLike {
+    Block(Arc<Block>),
+    Item(Arc<Item>)
+}
+
+impl From<Arc<Block>> for ItemLike {
+    fn from(arc: Arc<Block>) -> Self {
+        Self::Block(arc)
+    }
+}
+impl From<Arc<Item>> for ItemLike {
+    fn from(arc: Arc<Item>) -> Self {
+        Self::Item(arc)
+    }
+}
+
+impl ItemLike {
+    pub fn id(&self) -> usize {
+        match self {
+            Self::Block(inner) => inner.id,
+            Self::Item(inner) => inner.id,
+        }
+    }
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Block(inner) => inner.name,
+            Self::Item(inner) => inner.name,
+        }
+    }
+    pub fn as_block(&self) -> Option<&Arc<Block>> {
+        match self {
+            Self::Block(inner) => Some(inner),
+            Self::Item(_) => None
+        }
+    }
+    pub fn as_item(&self) -> Option<&Arc<Item>> {
+        match self {
+            Self::Item(inner) => Some(inner),
+            Self::Block(_) => None
+        }
+    }
+    pub fn as_block_mut(&mut self) -> Option<&mut Arc<Block>> {
+        match self {
+            Self::Block(inner) => Some(inner),
+            Self::Item(_) => None
+        }
+    }
+    pub fn as_item_mut(&mut self) -> Option<&mut Arc<Item>> {
+        match self {
+            Self::Item(inner) => Some(inner),
+            Self::Block(_) => None
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ItemStack {
     pub count: usize,
-    pub item: std::sync::Arc<Block>,
+    pub item: ItemLike,
 }
 
 impl ItemStack {
 
-    pub fn of(item: std::sync::Arc<Block>, count: usize) -> Self {
-        Self { item, count }
+    pub fn of(item: impl Into<ItemLike>, count: usize) -> Self {
+        Self { item: item.into(), count }
     }
 
-    pub fn stack_of(item: std::sync::Arc<Block>) -> Self {
-        Self { item, count: 64 }
+    pub fn stack_of(item: impl Into<ItemLike>) -> Self {
+        Self { item: item.into(), count: 64 }
     }
 
     pub fn deduct(item: &mut Option<ItemStack>, num: usize) {

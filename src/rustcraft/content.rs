@@ -1,14 +1,13 @@
 
-use crate::block::Behavior;
+use crate::registry::Registry;
+use crate::util::*;
+use crate::block::*;
+use super::item::Item;
 use std::rc::Rc;
 use crate::TextureAtlas;
-use crate::util::gen_item_vao;
-use crate::block::BlockRegistry;
-use crate::util::AABB;
 use std::sync::Arc;
-use crate::block::Block;
 use cgmath::*;
-use crate::rustcraft::component::*;
+use crate::rustcraft::component::{Physics,Position,PlayerData,View};
 
 pub fn make_player() -> (impl hecs::DynamicBundle, AABB) {
     let pos = Position::from(Vector3 {x:50., y: 55., z: 50.});
@@ -39,7 +38,7 @@ pub fn make_blocks() -> Vec<Arc<Block>> {
     let behavior = Box::new(behavior).into();
     vec![
         Block { id: 0, name: "Air", transparent: true, solid: false, no_render: true, texture: (0,0,0), has_gravity: false, drops: None, behavior: None }, // air
-        Block { id: 1, name: "Sand", transparent: false, solid: true, no_render: false, texture: (0,0,0), has_gravity: false, drops: Some(1), behavior: behavior }, // stone
+        Block { id: 1, name: "Stone", transparent: false, solid: true, no_render: false, texture: (0,0,0), has_gravity: false, drops: Some(1), behavior: behavior }, // stone
         Block { id: 2, name: "Dirt", transparent: false, solid: true, no_render: false, texture: (1,1,1), has_gravity: false, drops: Some(2), behavior: None }, // dirt
         Block { id: 3, name: "Grass", transparent: false, solid: true, no_render: false, texture: (3,2,1), has_gravity: false, drops: Some(2), behavior: None }, // grass
         Block { id: 4, name: "Wood", transparent: false, solid: true, no_render: false, texture: (5,4,5), has_gravity: false, drops: Some(4), behavior: None }, // wood log
@@ -48,11 +47,16 @@ pub fn make_blocks() -> Vec<Arc<Block>> {
     ].into_iter().map(std::sync::Arc::new).collect()
 }
 
-pub fn make_registry(texture_atlas: Rc<TextureAtlas>) -> BlockRegistry {
+pub fn make_registry(texture_atlas: Rc<TextureAtlas>) -> Registry {
     let blocks = make_blocks();
-    BlockRegistry {
-        iso_block_vao: gen_item_vao(&blocks, &texture_atlas),
+    let items = vec![
+        Item { id: 7, name: "Stick", texture: 15 }.into()
+    ];
+    Registry {
+        item_vao: gen_item_vao(&items, &texture_atlas),
+        iso_block_vao: gen_block_vao(&blocks, &texture_atlas),
         blocks,
-        texture_atlas
+        items,
+        texture_atlas,
     }
 }
