@@ -1,5 +1,4 @@
 
-use crate::game_loop::block_at;
 use crate::world::WorldData;
 use crate::block::Block;
 use cgmath::*;
@@ -76,7 +75,7 @@ impl Physics {
         self.force += f * delta;
     }
     /// returns true if position was updated
-    pub fn update(&mut self, pos: &mut Position, delta: f32, block_map: &Vec<std::sync::Arc<Block>>, world: &WorldData) -> bool {
+    pub fn update(&mut self, pos: &mut Position, delta: f32, world: &WorldData) -> bool {
 
         self.vel += self.force;
         self.force = self.force.map(|_| 0.);
@@ -88,14 +87,14 @@ impl Physics {
         if !self.no_clip {
             macro_rules! test_it {
                 ($x:expr, $y:expr, $z:expr) => {
-                    if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
+                    if self.vel.x != 0. && check_hit(world, &Vector3 {
                         x: new_pos.x + $x * self.size.x,
                         ..pos.pos
                     }) {
                         new_pos.x = pos.pos.x;
                         self.vel.x = 0.;
                     }
-                    if self.vel.y != 0. && check_hit(block_map, world, &Vector3 {
+                    if self.vel.y != 0. && check_hit(world, &Vector3 {
                         y: new_pos.y + $y * self.size.y,
                         ..pos.pos
                     }) {
@@ -108,7 +107,7 @@ impl Physics {
                     } else {
                         self.grounded = false;
                     }
-                    if self.vel.x != 0. && check_hit(block_map, world, &Vector3 {
+                    if self.vel.x != 0. && check_hit(world, &Vector3 {
                         z: new_pos.z + $z * self.size.z,
                         ..pos.pos
                     }) {
@@ -140,16 +139,16 @@ impl Physics {
         
         return true;
 
-        fn check_hit(block_map: &Vec<std::sync::Arc<crate::rustcraft::block::Block>>, w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
-            block_at(w, pos)
-                .map(|id| block_map[id].solid)
+        fn check_hit(w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
+            w.block_at_pos(pos)
+                .map(|b| b.solid)
                 .unwrap_or(true)
         }
     }
 
     pub fn system_update(data: &mut crate::Data) {
         for (ent, (pos, phys)) in data.ecs.query_mut::<(&mut Position, &mut Physics)>() {
-            if phys.update(pos, data.delta, &data.block_map, &data.world) {
+            if phys.update(pos, data.delta, &data.world) {
                 data.ent_tree.update(ent, &phys.get_aabb(&pos));
             }
         }

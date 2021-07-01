@@ -7,6 +7,7 @@ mod chunk;
 mod engine;
 mod rustcraft;
 mod perlin;
+use crate::block::BlockRegistry;
 use crate::util::BVH;
 use crate::content::*;
 use engine::program::*;
@@ -34,7 +35,7 @@ pub struct Data {
     pub delta: f32,
     pub world: world::WorldData,
     pub ecs: hecs::World,
-    pub block_map: Vec<std::sync::Arc<block::Block>>,
+    pub registry: BlockRegistry,
     pub atlas: std::rc::Rc<TextureAtlas>,
     pub ent_tree: BVH<hecs::Entity, ()>,
 }
@@ -58,7 +59,7 @@ impl Data {
             cam
         };
         let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
-        let block_map = make_blocks();
+        let registry = make_registry(atlas.clone());
         Data {
             loader,
             paused: false,
@@ -67,11 +68,11 @@ impl Data {
             input: Input::default(),
             cam,
             frame_time: Instant::now(),
-            world: world::WorldData::new("seed!"),
+            world: world::WorldData::new("seed!", registry[0].clone()),
+            registry,
             atlas,
             delta: 0.,
             ecs,
-            block_map,
             ent_tree
         }
     }
@@ -102,70 +103,4 @@ fn main() {
 
     game_loop::game_loop(&mut display, &mut data);
     
-}
-
-pub fn gen_item_vao(b: &Vec<std::sync::Arc<crate::rustcraft::block::Block>>, a: &TextureAtlas) -> crate::engine::vao::VAO {
-
-    let mut verts = vec![];
-    let mut uvs = vec![];
-
-    // six triangles per block item
-    for b in b {
-        verts.extend_from_slice(&[
-            // top
-            0.5, 1., 0.,
-            0., 0.75, 0.,
-            1., 0.75, 0.,
-            0., 0.75, 0.,
-            0.5, 0.5, 0.,
-            1., 0.75, 0.,
-            // left
-            0., 0.75, 0.,
-            0.5, 0., 0.,
-            0.5, 0.5, 0.,
-            0.5, 0., 0.,
-            0., 0.75, 0.,
-            0.0, 0.25, 0.,
-            // right
-            0.5, 0.5, 0.,
-            0.5, 0., 0.,
-            1., 0.75, 0.,
-            0.5, 0., 0.,
-            1., 0.25, 0.,
-            1., 0.75, 0.,
-        ]);
-        let (t,s,_) = b.texture;
-        let (u,v) = a.get_uv(t);
-        let d = a.uv_dif();
-        uvs.extend_from_slice(&[
-            // top
-            u, v,
-            u, v+d,
-            u+d, v,
-            u, v+d,
-            u+d, v+d,
-            u+d, v,
-        ]);
-        let (u,v) = a.get_uv(s);
-        let d = a.uv_dif();
-        uvs.extend_from_slice(&[
-            // left
-            u, v,
-            u+d, v+d,
-            u+d, v,
-            u+d, v+d,
-            u, v,
-            u, v+d,
-            // right
-            u, v,
-            u, v+d,
-            u+d, v,
-            u, v+d,
-            u+d, v+d,
-            u+d, v,
-        ]);
-    }
-
-    crate::engine::vao::VAO::textured(&verts, &uvs)
-
 }

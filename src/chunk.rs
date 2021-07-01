@@ -1,4 +1,6 @@
 
+use std::sync::Arc;
+use crate::BlockRegistry;
 use crate::util::position_to_sub_coordinates;
 use crate::util::AABB;
 use cgmath::*;
@@ -23,7 +25,7 @@ impl ChunkState {
     }
 }
 
-type Data = [[[usize; 16]; 16]; 16];
+type Data = Vec<Vec<Vec<Arc<Block>>>>;
 type LightData = [[[u8; 16]; 16]; 16];
 
 pub struct Chunk {
@@ -47,34 +49,38 @@ impl std::fmt::Debug for Chunk {
 
 impl Chunk {
 
-    pub fn new(pos: Vector3<i32>) -> Self {
-        let data = [[[0; 16]; 16]; 16];
+    pub fn new(pos: Vector3<i32>, air: Arc<Block>) -> Self {
+        let data = vec![vec![vec![air;16];16];16];
         let light = [[[0; 16]; 16]; 16];
         Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
     }
 
-    pub fn block_id_at(&self, x: i32, y: i32, z: i32) -> usize {
-        self.data[x.rem_euclid(16) as usize][y.rem_euclid(16) as usize][z.rem_euclid(16) as usize]
+    pub fn block_at(&self, x: i32, y: i32, z: i32) -> &Arc<Block> {
+        &self.data[x.rem_euclid(16) as usize][y.rem_euclid(16) as usize][z.rem_euclid(16) as usize]
     }
 
-    pub fn block_id_at_pos(&self, pos: &Vector3<f32>) -> usize {
+    pub fn block_at_pos_mut(&mut self, pos: &Vector3<f32>) -> &mut Arc<Block> {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
-        self.data[sc.x][sc.y][sc.z]
+        &mut self.data[sc.x][sc.y][sc.z]
+    }
+    pub fn block_at_pos(&self, pos: &Vector3<f32>) -> &Arc<Block> {
+        let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
+        &self.data[sc.x][sc.y][sc.z]
     }
     
-    pub fn set_at_pos(&mut self, pos: &Vector3<f32>, id: usize) -> bool {
+    pub fn set_at_pos(&mut self, pos: &Vector3<f32>, block: &Arc<Block>) -> bool {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
-        let bid = &mut self.data[sc.x][sc.y][sc.z];
-        if *bid != id {
-            self.needs_refresh = true;
-            *bid = id;
-            true
-        } else {
+        let b = &mut self.data[sc.x][sc.y][sc.z];
+        if Arc::ptr_eq(b, block) {
             false
+        } else {
+            *b = block.clone();
+            self.needs_refresh = true;
+            true
         }
     }
 
-    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen) {
+    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen, reg: &BlockRegistry) {
         for x in 0..16 {
             for y in 0..16 {
                 for z in 0..16 {
@@ -90,17 +96,19 @@ impl Chunk {
                     let da = noise.density(ax,ay+1,az);
                     
                     self.data[x as usize][y as usize][z as usize] = 
-                    if d > 0.56 {
-                        1
-                    } else if d > 0.52 {
-                        if da > 0.52 {
-                            2
+                    reg[
+                        if d > 0.56 {
+                            1
+                        } else if d > 0.52 {
+                            if da > 0.52 {
+                                2
+                            } else {
+                                3
+                            }
                         } else {
-                            3
+                            0
                         }
-                    } else {
-                        0
-                    };
+                    ].clone();
                     /* if db > 0.52 && db < 0.56 && d < 0.51 && !(cb > 0.57) {
                         let t = noise.get2d([x as f64 / 1.5, z as f64 / 1.5]);
                         if t > 0.52 {
@@ -124,9 +132,9 @@ impl Chunk {
 
     pub fn aabb(&self) -> AABB { AABB::from_corner(&self.pos.map(|x| x as f32 * 16.), 16.) }
 
-    pub fn refresh(&mut self, wdata: &Vec<std::sync::Arc<Block>>, atlas: &crate::texture::TextureAtlas) {
+    pub fn refresh(&mut self, reg: &BlockRegistry) {
         if !self.needs_refresh {return}
-        let (verts, uvs) = make_mesh(&self.data, wdata, atlas);
+        let (verts, uvs) = make_mesh(&self.data, reg);
         if let Some(mesh) = &mut self.mesh {
             mesh.update(&verts, &uvs);
         } else {
@@ -236,7 +244,10 @@ pub fn cube_mesh() -> VAO {
 
 }
 
-fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate::texture::TextureAtlas) -> (Vec<f32>, Vec<f32>) {
+fn make_mesh(data: &Data, reg: &BlockRegistry) -> (Vec<f32>, Vec<f32>) {
+
+    let block_map = &reg.blocks;
+    let atlas = &reg.texture_atlas;
 
     let mut verts = vec![];
     let mut uvs = vec![];
@@ -247,7 +258,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
         for y in 0..16 {
             for z in 0..16 {
 
-                let block = &block_map[data[x][y][z]];
+                let block = &data[x][y][z];
 
                 let t = block.transparent;
 
@@ -258,7 +269,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
                 let zc = z as isize;
 
                 // y+ face
-                if y == 15 || block_map[data[x][y+1][z]].transparent != t {
+                if y == 15 || data[x][y+1][z].transparent != t {
                     verts.extend_from_slice(&[
                         xc, yc, zc,
                         xc, yc, zc+1,
@@ -280,7 +291,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
                 }
 
                 // y- face
-                if y == 0 || block_map[data[x][y-1][z]].transparent != t {
+                if y == 0 || data[x][y-1][z].transparent != t {
                     let yc = yc - 1;
                     verts.extend_from_slice(&[
                         xc, yc, zc,
@@ -307,7 +318,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
                 let (uh,vh) = (u+uv_dif,v+uv_dif);
 
                 // x- face
-                if x == 0 || block_map[data[x-1][y][z]].transparent != t {
+                if x == 0 || data[x-1][y][z].transparent != t {
                     verts.extend_from_slice(&[
                         xc, yc, zc,
                         xc, yc-1, zc,
@@ -327,7 +338,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
                 }
 
                 // x+ face
-                if x == 15 || block_map[data[x+1][y][z]].transparent != t {
+                if x == 15 || data[x+1][y][z].transparent != t {
                     let xc = xc + 1;
                     verts.extend_from_slice(&[
                         xc, yc, zc,
@@ -348,7 +359,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
                 }
 
                 // z- face
-                if z == 0 || block_map[data[x][y][z-1]].transparent != t {
+                if z == 0 || data[x][y][z-1].transparent != t {
                     let yc = yc - 1; //?
                     verts.extend_from_slice(&[
                         xc, yc, zc,
@@ -369,7 +380,7 @@ fn make_mesh(data: &Data, block_map: &Vec<std::sync::Arc<Block>>, atlas: &crate:
                 }
 
                 // z+ face
-                if z == 15 || block_map[data[x][y][z+1]].transparent != t {
+                if z == 15 || data[x][y][z+1].transparent != t {
                     let yc = yc - 1;//?
                     let zc = zc + 1;
                     verts.extend_from_slice(&[

@@ -1,4 +1,5 @@
 
+use crate::BlockRegistry;
 use std::rc::Rc;
 use crate::item::ItemStack;
 use std::sync::Arc;
@@ -84,8 +85,7 @@ impl GUI {
     pub fn render(
         &self,
         r: &mut GUIRenderer,
-        vao: &crate::engine::vao::VAO,
-        atlas: &crate::engine::texture::TextureAtlas,
+        reg: &BlockRegistry,
         hotbar: &PlayerInventory,
         show_inventory: bool,
         mouse_pos: (i32, i32)
@@ -126,8 +126,8 @@ impl GUI {
         }
 
         // items
-        atlas.texture().bind();
-        vao.bind();
+        reg.texture_atlas.texture().bind();
+        reg.iso_block_vao.bind();
         r.set_pixels(hw, 0); // hotbar
         r.move_pixels(-90, 0);
         r.move_pixels(2, 2);
@@ -135,7 +135,7 @@ impl GUI {
 
             if let Some(s) = s {
                 r.set_uniforms(16, 16);
-                vao.draw_18(s.item.id as i32);
+                reg.iso_block_vao.draw_18(s.item.id as i32);
             }
 
             r.move_pixels(20, 0);
@@ -152,7 +152,7 @@ impl GUI {
     
                 if let Some(s) = s {
                     r.set_uniforms(16, 16);
-                    vao.draw_18(s.item.id as i32);
+                    reg.iso_block_vao.draw_18(s.item.id as i32);
                 }
     
                 r.move_pixels(20, 0);

@@ -1,19 +1,28 @@
 
+use std::rc::Rc;
+use crate::vao::VAO;
 use crate::TextureAtlas;
 use std::sync::Arc;
 
-pub struct BlockRegistry {
-    pub blocks: Vec<Arc<Block>>,
-    pub texture_atlas: TextureAtlas,
+#[derive(Clone, Default)]
+pub struct Behavior {
+    pub on_use: Option<fn(&mut Arc<Block>)>,
+    pub on_hit: Option<fn(&mut Arc<Block>)>,
+    pub on_place: Option<fn(&mut Arc<Block>)>,
+    pub on_update: Option<fn(&mut Arc<Block>)>,
+    pub on_break: Option<fn(&mut Arc<Block>)>,
 }
 
-impl BlockRegistry {
-    pub fn new(blocks: Vec<Arc<Block>>, texture_atlas: TextureAtlas) -> Self {
-        Self {
-            blocks,
-            texture_atlas,
-        }
+impl std::fmt::Debug for Behavior {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.debug_struct("Behavior").finish()
     }
+}
+
+pub struct BlockRegistry {
+    pub blocks: Vec<Arc<Block>>,
+    pub texture_atlas: Rc<TextureAtlas>,
+    pub iso_block_vao: VAO,
 }
 
 impl std::ops::Index<usize> for BlockRegistry {
@@ -21,12 +30,6 @@ impl std::ops::Index<usize> for BlockRegistry {
     fn index(&self, index: usize) -> &Self::Output {
         &self.blocks[index]
     }
-}
-
-pub trait BlockBehaivour {
-    fn did_place() {}
-    fn block_update() {}
-    fn did_break() {}
 }
 
 #[derive(Clone, Debug)]
@@ -39,6 +42,7 @@ pub struct Block {
     pub texture: (usize,usize,usize),
     pub has_gravity: bool,
     pub drops: Option<usize>,
+    pub behavior: Option<Box<Behavior>>,
 }
 
 impl Eq for Block {}

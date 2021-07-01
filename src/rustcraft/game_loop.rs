@@ -1,4 +1,7 @@
 
+use crate::block::Block;
+use std::sync::Arc;
+use crate::BlockRegistry;
 use crate::util::position_to_chunk_coordinates;
 use crate::util::AABB;
 use crate::text::text::Text;
@@ -86,8 +89,6 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let box_vao = box_vao();
     let lines = LineProgram::new();
 
-    let item_vao = crate::gen_item_vao(&data.block_map, data.atlas.as_ref());
-
     display.set_mouse_capture(true);
 
     let mut state = GameState::Playing;
@@ -95,7 +96,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     display.video.text_input().start();
 
-    data.world.load_around2(&Vector3 {x:50., y: 55., z: 50.}, 40.);
+    data.world.load_around2(&Vector3 {x:50., y: 55., z: 50.}, 40., &data.registry);
 
     'main: loop {
 
@@ -209,13 +210,13 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
         if let Ok((pos, phys, view, pdata)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(data.cam) {
 
-            raycast_hit = raycast(pos.pos+view.offset(), &pos.heading(), 5., &data.block_map, &data.world);
+            raycast_hit = raycast(pos.pos+view.offset(), &pos.heading(), 5., &data.registry, &data.world);
             if do_chunk_load {
-                data.world.load_around2(&pos.pos, 30.);
+                data.world.load_around2(&pos.pos, 30., &data.registry);
             }
 
             let w = &data.world;
-            let bm = &data.block_map;
+            let bm = &data.registry;
             debug_text.set_text(
                 format!(
 r#"
@@ -227,7 +228,7 @@ RustCraft dev build
 "#,
                     pos,
                     position_to_chunk_coordinates(&pos.pos),
-                    raycast_hit.and_then(|(_,hit)| w.block_id_at_pos(&hit)).map(|id| bm[id].name),
+                    raycast_hit.and_then(|(_,hit)| w.block_at_pos(&hit)).map(|b| b.name),
                     1. / data.delta,
                 )
             );
@@ -242,29 +243,34 @@ RustCraft dev build
     
                 if data.input.clicked_primary() {
                     if let Some(hit) = raycast_hit {
-                        let bid = block_at(&data.world, &hit.1).unwrap();
-                        if set_block(&mut data.world, &data.ent_tree, &hit.1, 0, true) {
-                            let stack = ItemStack::of(data.block_map[bid].clone(), 1);
+                        let block = data.world.block_at_pos(&hit.1).unwrap().clone();
+                        if set_block(&mut data.world, &data.ent_tree, &hit.1, &data.registry[0], true) {
+                            let stack = ItemStack::of(block, 1);
                             pdata.inventory.merge(Some(stack));
                             block_updates.add_area(hit.1);
                             block_updates.add_single(hit.1);
                         }
                     }
                 } else if data.input.clicked_secondary() {
-    
-                    let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
-                    let mut success = false;
-                    if let Some(ref mut item) = maybe_item {
-                        if let Some(hit) = raycast_hit {
-                            if set_block(&mut data.world, &data.ent_tree, &hit.0, item.item.id, /* false */true) {
+
+                    if let Some(hit) = raycast_hit {
+                        let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
+                        let mut success = false;
+                        if let Some(ref mut item) = maybe_item {
+                            if set_block(&mut data.world, &data.ent_tree, &hit.0, &item.item, /* false */true) {
                                 success = true;
                                 block_updates.add_area(hit.0);
                                 block_updates.add_single(hit.0);
                             }
+                        } else {
+                            let b = data.world.block_at_pos_mut(&hit.1).unwrap();
+                            if let Some(on_use) = b.behavior.as_ref().and_then(|b| b.on_use) {
+                                on_use(b);
+                            }
                         }
-                    }
-                    if success {
-                        ItemStack::deduct(maybe_item, 1);
+                        if success {
+                            ItemStack::deduct(maybe_item, 1);
+                        }
                     }
     
                 }
@@ -300,7 +306,7 @@ RustCraft dev build
         render(&program, data, &view_mat, &cube, &bbox);
 
         if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
-            pgui.render(&mut guirend, &item_vao, &data.atlas, &pdata.inventory, state.show_inventory(), data.input.mouse_pos());
+            pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos());
             match state {
                 GameState::Inventory { ref mut picked_item } => {
                     if data.input.clicked_primary() {
@@ -315,7 +321,7 @@ RustCraft dev build
                         guirend.set_pixels(m.0, display.size_i32().1 - m.1);
                         guirend.move_pixels(-8, -8);
                         guirend.set_uniforms(16, 16);
-                        item_vao.draw_18(picked_item.item.id as i32);
+                        data.registry.iso_block_vao.draw_18(picked_item.item.id as i32);
                     }
                 },
                 _ => {}
@@ -378,13 +384,13 @@ impl Updates {
         macro_rules! update {
             ($pos:expr) => {
                 let pos: Vector3<f32> = $pos;
-                if let Some(id) = block_at(&data.world, &pos) {
-                    let block = &data.block_map[id];
+                if let Some(block) = data.world.block_at_pos(&pos) {
+                    let block = block.clone();
                     if block.has_gravity {
-                        if let Some(id) = block_at(&data.world, &(pos - Vector3::unit_y())) {
-                            let below = &data.block_map[id];
+                        if let Some(below) = data.world.block_at_pos(&(pos - Vector3::unit_y())) {
+                            let below = below.as_ref();
                             if !below.solid {
-                                set_block(&mut data.world, &data.ent_tree, &pos, 0, true);
+                                set_block(&mut data.world, &data.ent_tree, &pos, &data.registry[0], true);
                                 let fall_pos = pos.map(|v| v.floor());
                                 let fall_size = Vector3 {
                                     x: 1.,
@@ -395,7 +401,7 @@ impl Updates {
                                 let phys = Physics::new(fall_size);
                                 let aabb = phys.get_aabb(&pos_comp);
                                 let falling_block = data.ecs.spawn((
-                                    pos_comp, phys, FallingBlock::of(block.id)
+                                    pos_comp, phys, FallingBlock::of(block)
                                 ));
                                 data.ent_tree.insert(falling_block, (), &aabb);
                                 self.area2.push(pos);
@@ -449,7 +455,7 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
             chunk.pos.map(|x| x as f32 * 16.)
         ));
 
-        chunk.refresh(&data.block_map, &data.atlas);
+        chunk.refresh(&data.registry);
         chunk.bind_and_draw();
 
     }
@@ -461,10 +467,10 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
 
 }
 
-fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_map: &Vec<std::sync::Arc<super::block::Block>>, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
+fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &BlockRegistry, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
     
     let mut dist = 0.;
-    while dist < max_dist && !check_hit(block_map, w, &pos) {
+    while dist < max_dist && !check_hit(&reg, w, &pos) {
         dist += 0.1;
         pos += 0.1 * heading;
     }
@@ -475,19 +481,14 @@ fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, block_m
         return None
     }
 
-    fn check_hit(block_map: &Vec<std::sync::Arc<super::block::Block>>, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
-        block_at(w, pos)
-            .map(|id| block_map[id].solid)
+    fn check_hit(reg: &BlockRegistry, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
+        w.block_at_pos(pos)
+            .map(|b| b.solid)
             .unwrap_or(false)
     }
 }
 
-pub fn block_at(w: &super::world::WorldData, pos: &Vector3<f32>) -> Option<usize> {
-    let chunk = w.chunk_at_pos(&pos)?;
-    chunk.block_id_at_pos(&pos).into()
-}
-
-pub fn set_block(w: &mut crate::world::WorldData, t: &crate::util::BVH<hecs::Entity, ()>, pos: &Vector3<f32>, val: usize, ignore_ents: bool) -> bool {
+pub fn set_block(w: &mut crate::world::WorldData, t: &crate::util::BVH<hecs::Entity, ()>, pos: &Vector3<f32>, val: &Arc<Block>, ignore_ents: bool) -> bool {
     if !ignore_ents {
         // TODO: not working properly?
         const EPSILON: f32 = 0.1;
