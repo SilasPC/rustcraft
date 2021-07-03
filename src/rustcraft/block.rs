@@ -14,6 +14,10 @@ pub struct Behavior {
     pub on_break: Option<fn(&mut Arc<Block>)>,
 }
 
+impl std::hash::Hash for Behavior {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {}
+}
+
 impl Eq for Behavior {}
 impl PartialEq for Behavior {
     fn eq(&self, rhs: &Self) -> bool {true}
@@ -25,16 +29,23 @@ impl std::fmt::Debug for Behavior {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
 pub struct Block {
     pub id: usize,
-    pub name: &'static str,
+    pub name: String,
+    #[serde(default = "yes")]
     pub solid: bool,
+    #[serde(default)]
     pub transparent: bool,
+    #[serde(default)]
     pub no_render: bool,
     pub texture: (usize,usize,usize),
+    #[serde(default)]
     pub has_gravity: bool,
+    #[serde(default)]
     pub drops: Option<usize>,
+    #[serde(skip)]
     pub behavior: Option<Box<Behavior>>,
 }
 
+const fn yes() -> bool {true}

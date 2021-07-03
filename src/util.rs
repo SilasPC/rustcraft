@@ -1,4 +1,6 @@
 
+use std::collections::HashMap;
+use crate::Data;
 use crate::block::Block;
 use crate::vao::VAO;
 use crate::item::Item;
@@ -123,6 +125,12 @@ impl<K: Copy + Eq + std::hash::Hash, T> BVH<K,T> {
         });
         proxies
     }
+
+    pub fn for_each(&self, f: impl Fn(&K, &T)) {
+        for (k, p) in &self.keys {
+            f(k, &self.vals[p]);
+        }
+    }
 }
 
 impl<K, T> std::ops::Index<Proxy> for BVH<K, T> {
@@ -240,3 +248,56 @@ pub fn gen_item_vao(items: &Vec<Arc<Item>>, a: &TextureAtlas) -> VAO {
     crate::engine::vao::VAO::textured(&verts, &uvs)
 
 }
+/* 
+impl serde::Serialize for crate::Data {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::*;
+        let mut ser = serializer.serialize_tuple(2)?;
+        ser.serialize_element(&self.world.seed)?;
+        ser.serialize_element(&self.cam)?;
+
+        let mut bser = serializer.serialize_seq(None)?;
+        let mut next_id = self.registry.blocks.len();
+        let mut blocks: HashMap<_,_> = self.registry.blocks
+            .iter()
+            .enumerate()
+            .map(|(i,b)| (Arc::as_ptr(b), i))
+            .collect::<HashMap<_,_>>();
+        self.world.chunks_tree.for_each(|pos, chunk| {
+            pos.serialize(ser); // err
+            let mut out = Vec::with_capacity(16*16*16);
+            for plane in &chunk.data {
+                for row in plane {
+                    for block in row {
+                        if let Some(id) = blocks.get(&Arc::as_ptr(block)) {
+                            out.push(id);
+                        } else {
+                            blocks.insert(Arc::as_ptr(block), next_id);
+                            next_id += 1;
+                        }
+                    } 
+                }
+            }
+            bser.serialize_element(&out);
+        });
+        ser.serialize_u32(blocks.len() as u32);
+        for (ptr, id) in blocks {
+            let is_shared = id < self.registry.blocks.len();
+            ser.serialize_bool(is_shared);
+            if is_shared {
+                ser.serialize_u32(id as u32);
+            } else {
+                /// safe because chunks must still contain their arc pointer,
+                /// so data must still be alive
+                let b: &Block = unsafe {Arc::from_raw(ptr).as_ref()};
+                // serialize non-registered block here ...
+            }
+        };
+        
+
+        // hecs::serialize::column::serialize(&self.ecs, context, ser);
+
+        self.world.seed.serialize(ser)
+
+    }
+} */

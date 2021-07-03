@@ -1,4 +1,7 @@
 
+use std::collections::HashMap;
+use crate::item::ItemStack;
+use crate::crafting::CraftingRegistry;
 use crate::registry::Registry;
 use crate::util::*;
 use crate::block::*;
@@ -26,32 +29,12 @@ pub fn make_player() -> (impl hecs::DynamicBundle, AABB) {
     ((pos, phys, view, PlayerData::new()), aabb)
 }
 
-pub fn make_blocks() -> Vec<Arc<Block>> {
-    let behavior = Behavior {
-        on_use: Some(|r| {
-            let b = Arc::make_mut(r);
-            b.name = "right clicked boi";
-            b.behavior = None;
-        }),
-        .. Default::default()
-    };
-    let behavior = Box::new(behavior).into();
-    vec![
-        Block { id: 0, name: "Air", transparent: true, solid: false, no_render: true, texture: (0,0,0), has_gravity: false, drops: None, behavior: None }, // air
-        Block { id: 1, name: "Stone", transparent: false, solid: true, no_render: false, texture: (0,0,0), has_gravity: false, drops: Some(1), behavior: behavior }, // stone
-        Block { id: 2, name: "Dirt", transparent: false, solid: true, no_render: false, texture: (1,1,1), has_gravity: false, drops: Some(2), behavior: None }, // dirt
-        Block { id: 3, name: "Grass", transparent: false, solid: true, no_render: false, texture: (3,2,1), has_gravity: false, drops: Some(2), behavior: None }, // grass
-        Block { id: 4, name: "Wood", transparent: false, solid: true, no_render: false, texture: (5,4,5), has_gravity: false, drops: Some(4), behavior: None }, // wood log
-        Block { id: 5, name: "Sand", transparent: false, solid: true, no_render: false, texture: (6,6,6), has_gravity: true, drops: Some(5), behavior: None }, // sand
-        Block { id: 6, name: "Leaves", transparent: true, solid: true, no_render: false, texture: (7,7,7), has_gravity: false, drops: None, behavior: None }, // leaves
-    ].into_iter().map(std::sync::Arc::new).collect()
-}
-
 pub fn make_registry(texture_atlas: Rc<TextureAtlas>) -> Registry {
-    let blocks = make_blocks();
-    let items = vec![
-        Item { id: 7, name: "Stick", texture: 15 }.into()
-    ];
+    let mut x: SerialItemRegistry = toml::from_str(&std::fs::read_to_string("assets/items.toml").unwrap()).unwrap();
+    x.block.sort_by_key(|a| a.id);
+    x.item.sort_by_key(|a| a.id);
+    let blocks = x.block.into_iter().map(std::sync::Arc::new).collect();
+    let items = x.item.into_iter().map(std::sync::Arc::new).collect();
     Registry {
         item_vao: gen_item_vao(&items, &texture_atlas),
         iso_block_vao: gen_block_vao(&blocks, &texture_atlas),
@@ -59,4 +42,23 @@ pub fn make_registry(texture_atlas: Rc<TextureAtlas>) -> Registry {
         items,
         texture_atlas,
     }
+}
+
+pub fn make_crafting_registry(reg: &Registry) -> CraftingRegistry {
+    let mut cr = CraftingRegistry::new();
+    cr.register(
+        true, &[
+            reg.get(1).into(), None, None,
+            None, None, None,
+            None, None, None,
+        ],
+        ItemStack::of(reg.get(7), 4)
+    );
+    cr
+}
+
+#[derive(serde::Deserialize)]
+struct SerialItemRegistry {
+    block: Vec<Block>,
+    item: Vec<Item>,
 }

@@ -74,6 +74,7 @@ impl<'a> ChunkArea<'a> {
 
 #[derive(Debug)]
 pub struct WorldData {
+    pub seed: String,
     pub air: Arc<Block>,
     pub chunks_tree: BVH<Vector3<i32>, Chunk>,
     pub noise: TerrainGen
@@ -89,7 +90,7 @@ impl WorldData {
             noise_basic
         };
         let mut chunks_tree = BVH::new();
-        WorldData { chunks_tree, noise, air }
+        WorldData { seed: seed.to_owned(), chunks_tree, noise, air }
     }
 
     pub fn block_at_pos(&self, pos: &Vector3<f32>) -> Option<&Arc<Block>> {

@@ -23,14 +23,13 @@ impl PlayerInventory {
         }
     }
 
-    pub fn transfer(&mut self, slot: u32, from: &mut Option<ItemStack>, reg: &Registry) {
+    pub fn transfer(&mut self, slot: u32, from: &mut Option<ItemStack>, reg: &Registry, cr: &CraftingRegistry) {
         match slot {
             0..=8 => ItemStack::transfer(from, &mut self.hotbar[slot as usize]),
             9..=35 => ItemStack::transfer(from, &mut self.inventory[slot as usize - 9]),
             36..=44 => {
                 ItemStack::transfer(from, &mut self.crafting[slot as usize - 36]);
-                let cr = CraftingRegistry;
-                self.crafting[9] = cr.get_output(&self.crafting[..9], reg);
+                self.crafting[9] = cr.search(&self.crafting[..9]).cloned();
             },
             45 => {
                 if from.is_none() {

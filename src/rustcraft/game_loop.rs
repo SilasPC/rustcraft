@@ -1,4 +1,6 @@
 
+use crate::make_crafting_registry;
+use crate::crafting::CraftingRegistry;
 use crate::registry::Registry;
 use crate::block::Block;
 use std::sync::Arc;
@@ -97,6 +99,8 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     display.video.text_input().start();
 
     data.world.load_around2(&Vector3 {x:50., y: 55., z: 50.}, 40., &data.registry);
+
+    let cr = make_crafting_registry(&data.registry);
 
     'main: loop {
 
@@ -228,7 +232,7 @@ RustCraft dev build
 "#,
                     pos,
                     position_to_chunk_coordinates(&pos.pos),
-                    raycast_hit.and_then(|(_,hit)| w.block_at_pos(&hit)).map(|b| b.name),
+                    raycast_hit.and_then(|(_,hit)| w.block_at_pos(&hit)).map(|b| &b.name),
                     1. / data.delta,
                 )
             );
@@ -315,7 +319,7 @@ RustCraft dev build
                         let slot = pgui.determine_hovered_slot(data.input.mouse_pos());
                         println!("{:?}",slot);
                         if let Some(slot) = slot {
-                            pdata.inventory.transfer(slot, picked_item, &data.registry);
+                            pdata.inventory.transfer(slot, picked_item, &data.registry, &cr);
                         }
                     }
                     if let Some(picked_item) = picked_item {

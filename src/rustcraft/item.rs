@@ -2,14 +2,14 @@
 use std::sync::Arc;
 use crate::rustcraft::block::*;
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Hash, serde::Deserialize)]
 pub struct Item {
     pub id: usize,
-    pub name: &'static str,
+    pub name: String,
     pub texture: usize,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub enum ItemLike {
     Block(Arc<Block>),
     Item(Arc<Item>)
@@ -33,10 +33,10 @@ impl ItemLike {
             Self::Item(inner) => inner.id,
         }
     }
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> &str {
         match self {
-            Self::Block(inner) => inner.name,
-            Self::Item(inner) => inner.name,
+            Self::Block(inner) => &inner.name,
+            Self::Item(inner) => &inner.name,
         }
     }
     pub fn as_block(&self) -> Option<&Arc<Block>> {

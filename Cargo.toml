@@ -6,12 +6,15 @@ edition = "2018"
 [dependencies]
 sdl2 = { version = "*", features = ["bundled", "static-link"] }
 gl = "*"
-cgmath = "*"
+cgmath = { version = "*", features = ["serde"] }
 image = "*"
-hecs = "*"
+hecs = { version = "*", features = ["column-serialize"] }
 rand = { version = "*", features = ["small_rng"] }
 # perlin_noise = "*"
 #https://docs.rs/fart-aabb/0.4.0/fart_aabb/struct.AabbTree.html
 #https://github.com/lukebitts/aabb-tree
 aabb-tree = { path = "./aabb-tree" }
 regex = "*"
+serde = "*"
+bincode = "*"
+toml = "*"

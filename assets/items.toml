@@ -1,0 +1,51 @@
+
+[[block]]
+id = 0
+name = "Air"
+no_render = true
+transparent = true
+solid = false
+texture = [0, 0, 0]
+
+[[block]]
+id = 1
+name = "Stone"
+texture = [0, 0, 0]
+drops = 1
+
+[[block]]
+id = 2
+name = "Dirt"
+texture = [1, 1, 1]
+drops = 2
+
+[[block]]
+id = 3
+name = "Grass"
+texture = [3, 2, 1]
+drops = 2
+
+[[block]]
+id = 4
+name = "Wood"
+texture = [5, 4, 5]
+drops = 4
+
+[[block]]
+id = 5
+name = "Sand"
+has_gravity = true
+texture = [6, 6, 6]
+drops = 5
+
+[[block]]
+id = 6
+name = "Leaves"
+transparent = true
+texture = [7, 7, 7]
+drops = 7
+
+[[item]]
+id = 7
+name = "Stick"
+texture = 15
