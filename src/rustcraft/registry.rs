@@ -10,6 +10,7 @@ use crate::block::Block;
 pub struct Registry {
     pub blocks: Vec<Arc<Block>>,
     pub items: Vec<Arc<Item>>,
+    pub items_offset: usize,
     pub texture_atlas: Rc<TextureAtlas>,
     pub iso_block_vao: VAO,
     pub item_vao: VAO,
@@ -17,14 +18,14 @@ pub struct Registry {
 
 impl Registry {
     pub fn get(&self, idx: usize) -> ItemLike {
-        if idx >= self.blocks.len() {
-            self.items[idx-self.blocks.len()].clone().into()
+        if idx >= self.items_offset {
+            self.items[idx-self.items_offset].clone().into()
         } else {
             self.blocks[idx].clone().into()
         }
     }
     pub fn item(&self, idx: usize) -> &Arc<Item> {
-        &self.items[idx+self.blocks.len()]
+        &self.items[idx+self.items_offset]
     }
 }
 

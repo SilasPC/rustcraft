@@ -27,7 +27,7 @@ drops = 2
 
 [[block]]
 id = 4
-name = "Wood"
+name = "Log"
 texture = [5, 4, 5]
 drops = 4
 
@@ -43,9 +43,15 @@ id = 6
 name = "Leaves"
 transparent = true
 texture = [7, 7, 7]
+drops = 8
+
+[[block]]
+id = 7
+name = "Planks"
+texture = [8, 8, 8]
 drops = 7
 
 [[item]]
-id = 7
+id = 8
 name = "Stick"
 texture = 15

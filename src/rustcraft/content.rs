@@ -33,13 +33,16 @@ pub fn make_registry(texture_atlas: Rc<TextureAtlas>) -> Registry {
     let mut x: SerialItemRegistry = toml::from_str(&std::fs::read_to_string("assets/items.toml").unwrap()).unwrap();
     x.block.sort_by_key(|a| a.id);
     x.item.sort_by_key(|a| a.id);
-    let blocks = x.block.into_iter().map(std::sync::Arc::new).collect();
+    assert!(x.block.last().unwrap().id < x.item.first().unwrap().id);
+    let blocks: Vec<_> = x.block.into_iter().map(std::sync::Arc::new).collect();
     let items = x.item.into_iter().map(std::sync::Arc::new).collect();
+    let items_offset = blocks.len();
     Registry {
         item_vao: gen_item_vao(&items, &texture_atlas),
         iso_block_vao: gen_block_vao(&blocks, &texture_atlas),
         blocks,
         items,
+        items_offset,
         texture_atlas,
     }
 }
@@ -47,8 +50,16 @@ pub fn make_registry(texture_atlas: Rc<TextureAtlas>) -> Registry {
 pub fn make_crafting_registry(reg: &Registry) -> CraftingRegistry {
     let mut cr = CraftingRegistry::new();
     cr.register(
-        true, &[
-            reg.get(1).into(), None, None,
+        true, &[ // planks => sticks
+            reg.get(7).into(), None, None,
+            None, None, None,
+            None, None, None,
+        ],
+        ItemStack::of(reg.get(8), 4)
+    );
+    cr.register(
+        true, &[ // logs => planks
+            reg.get(4).into(), None, None,
             None, None, None,
             None, None, None,
         ],
