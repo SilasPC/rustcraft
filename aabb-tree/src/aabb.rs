@@ -28,8 +28,8 @@ pub trait Aabb: ::std::fmt::Debug {
 
     /// Returns a new AABB from two tuples.
     fn with_params(
-        (Self::Precision, Self::Precision, Self::Precision),
-        (Self::Precision, Self::Precision, Self::Precision),
+        x: (Self::Precision, Self::Precision, Self::Precision),
+        y: (Self::Precision, Self::Precision, Self::Precision),
     ) -> Self
     where
         Self: Sized;

@@ -122,9 +122,9 @@ where
             false
         }
     }
-    fn is_parent(&self) -> bool {
+    /* fn is_parent(&self) -> bool {
         !self.is_leaf()
-    }
+    } */
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -213,7 +213,7 @@ where
     }
 
     fn extended_aabb(aabb: &MinMaxTuple<P>, extension: P) -> MinMaxTuple<P> {
-        use aabb::Aabb;
+        // use aabb::Aabb;
         let min = (
             aabb.min().0 - extension,
             aabb.min().1 - extension,
@@ -264,7 +264,7 @@ where
     fn free_node(&mut self, proxy: Proxy) {
         assert!(proxy.v < self.nodes.len());
 
-        let mut nodes = &mut self.nodes;
+        let /* mut */ nodes = &mut self.nodes;
         let free_list = self.free_list;
 
         self.free_list = nodes.get_mut(proxy.v).and_then(|node| {
@@ -676,7 +676,7 @@ where
     /// `None` if the `proxy_id` is invalid.
     pub fn user_data_mut(&mut self, proxy: Proxy) -> Option<&mut T> {
         self.nodes.get_mut(proxy.v).and_then(
-            |mut node| match node.status {
+            |/* mut */ node| match node.status {
                 NodeStatus::Leaf(Some(ref mut t)) => Some(t),
                 _ => None,
             },
