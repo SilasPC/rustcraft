@@ -42,9 +42,22 @@ pub struct ChunkArea<'a> {
 }
 
 impl<'a> ChunkArea<'a> {
+    pub fn center_word_pos_i32(&self) -> Vector3<i32> {
+        self.world_data.chunks_tree[self.area[9*2+3*2+2]].world_pos_i32()
+    }
+    pub fn center_mut(&mut self) -> &mut Chunk {
+        &mut self.world_data.chunks_tree[self.area[9*2+3*2+2]]
+    }
+    pub fn center_state(&self) -> ChunkState {
+        self.world_data.chunks_tree[self.area[9*2+3*2+2]].chunk_state
+    }
+    pub fn set_block_at(&mut self, x: i32, y: i32, z: i32, block: &Arc<Block>) -> bool {
+        self.world_data.chunks_tree[
+            self.area[( (x-self.pos.x*16)/16 * 9 + (y-self.pos.y*16)/16 * 3 + (z-self.pos.z*16)/16 ) as usize]].set_at(x,y,z,block)
+    }
     pub fn block_at(&self, x: i32, y: i32, z: i32) -> &Arc<Block> {
         self.world_data.chunks_tree[
-            self.area[((x-self.pos.x*16) * 9 + (y-self.pos.y*16) * 3 + (z-self.pos.z*16)) as usize]].block_at(x,y,z)
+            self.area[( (x-self.pos.x*16)/16 * 9 + (y-self.pos.y*16)/16 * 3 + (z-self.pos.z*16)/16 ) as usize]].block_at(x,y,z)
     }
     pub fn block_at_pos(&self, pos: &Vector3<f32>) -> &Arc<Block> {
         let cc = position_to_chunk_coordinates(pos) - self.pos;
@@ -138,6 +151,9 @@ impl WorldData {
         }.into()
     }
 
+    fn area_from_proxy(&mut self, proxy: Proxy) -> Option<ChunkArea<'_>> {
+        self.area(&self.chunks_tree[proxy].world_pos_center())
+    }
     fn fill_empty_around(&mut self, pos: &Vector3<f32>, rad: f32) {
 
         let mut aabb = AABB::radius(pos, rad);
@@ -211,21 +227,50 @@ impl WorldData {
                 }
             }
             if can_upgrade {
-                let mut c = &mut self.chunks_tree[x.2];
-                match c.chunk_state {
-                    ChunkState::Empty => c.gen_terrain(&self.noise, reg),
-                    ChunkState::Filled => c.gen_detail(),
-                    ChunkState::Done => {},
-                }
+                x.1.0 = match x.1.0 {
+                    ChunkState::Empty => {
+                        self.chunks_tree[x.2].gen_terrain(&self.noise, reg);
+                        ChunkState::Filled
+                    },
+                    ChunkState::Filled => {
+                        let mut area = self.area_from_proxy(x.2).unwrap();
+                        gen_detail(&mut area, &reg);
+                        ChunkState::Done
+                    }
+                    ChunkState::Done => {
+                        x.1.0
+                    }
+                };
                 heap.pop();
-                if c.chunk_state != x.0.0 {
-                    x.1 = Rev(c.chunk_state);
+                if x.1.0 != x.0.0 {
                     heap.push(x);
                 }
             }
         }
     }
 
+}
+
+fn gen_detail(area: &mut ChunkArea, reg: &Registry) {
+    let Vector3 {x,y,z} = area.center_word_pos_i32();
+    /* for x in x..x+16 {
+        for y in y..y+16 {
+            for z in z..z+16 {
+                
+            }
+        }    
+    } */
+    let log = &reg[4];
+    let leaves = &reg[6];
+    area.set_block_at(x, y, z, log);
+    area.set_block_at(x, y+1, z, log);
+    area.set_block_at(x, y+2, z, log);
+    area.set_block_at(x, y+3, z, leaves);
+    area.set_block_at(x+1, y+2, z, leaves);
+    area.set_block_at(x-1, y+2, z, leaves);
+    area.set_block_at(x, y+2, z+1, leaves);
+    area.set_block_at(x, y+2, z-1, leaves);
+    area.center_mut().chunk_state = ChunkState::Done;
 }
 
 pub fn update_light(area: &mut ChunkArea) {

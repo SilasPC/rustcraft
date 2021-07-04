@@ -150,7 +150,10 @@ pub fn position_to_chunk_coordinates(pos: &Vector3<f32>) -> Vector3<i32> {
     pos.map(|x| (x / 16.).floor() as i32)
 }
 pub fn position_to_sub_coordinates(pos: &Vector3<f32>) -> Vector3<i32> {
-    pos.map(|x| (x % 16.).floor() as i32).map(|x| x.max((x+16)%16))
+    pos.map(|x| (x % 16.).floor() as i32).map(|x| (x+16)%16)
+}
+pub fn sub_coords_from_i32(x: i32, y: i32, z: i32) -> Vector3<i32> {
+    Vector3 {x,y,z}.map(|x| x % 16).map(|x| (x+16)%16)
 }
 
 pub fn gen_block_vao(b: &Vec<Arc<Block>>, a: &TextureAtlas) -> VAO {

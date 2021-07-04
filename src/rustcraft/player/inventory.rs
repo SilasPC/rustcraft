@@ -32,9 +32,12 @@ impl PlayerInventory {
                 self.crafting[9] = cr.search(&self.crafting[..9]).cloned();
             },
             45 => {
-                if from.is_none() {
-                    ItemStack::transfer(from, &mut self.crafting[9]);
-                    self.crafting.fill(None);
+                if self.crafting[9].is_some() {
+                    ItemStack::transfer_no_swap(&mut self.crafting[9], from);
+                    for stack in self.crafting.iter_mut().take(9) {
+                        ItemStack::deduct(stack, 1);
+                    }
+                    self.crafting[9] = cr.search(&self.crafting[..9]).cloned();
                 }
             },
             _ => panic!("Invalid slot no. {}", slot)

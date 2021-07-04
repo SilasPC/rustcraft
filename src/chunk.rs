@@ -1,4 +1,5 @@
 
+use crate::util::sub_coords_from_i32;
 use crate::registry::Registry;
 use std::sync::Arc;
 use crate::util::position_to_sub_coordinates;
@@ -55,6 +56,17 @@ impl Chunk {
         Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
     }
 
+    pub fn world_pos(&self) -> Vector3<f32> {
+        self.world_pos_i32().map(|x| x as f32)
+    }
+    pub fn world_pos_i32(&self) -> Vector3<i32> {
+        self.pos.map(|x| x * 16)
+    }
+
+    pub fn world_pos_center(&self) -> Vector3<f32> {
+        self.pos.map(|x| (x * 16 + 8) as f32)
+    }
+
     pub fn block_at(&self, x: i32, y: i32, z: i32) -> &Arc<Block> {
         &self.data[x.rem_euclid(16) as usize][y.rem_euclid(16) as usize][z.rem_euclid(16) as usize]
     }
@@ -68,6 +80,17 @@ impl Chunk {
         &self.data[sc.x][sc.y][sc.z]
     }
     
+    pub fn set_at(&mut self, x: i32, y: i32, z: i32, block: &Arc<Block>) -> bool {
+        let sc = sub_coords_from_i32(x,y,z).map(|c| c as usize);
+        let b = &mut self.data[sc.x][sc.y][sc.z];
+        if Arc::ptr_eq(b, block) {
+            false
+        } else {
+            *b = block.clone();
+            self.needs_refresh = true;
+            true
+        }
+    }
     pub fn set_at_pos(&mut self, pos: &Vector3<f32>, block: &Arc<Block>) -> bool {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
         let b = &mut self.data[sc.x][sc.y][sc.z];
@@ -269,7 +292,7 @@ fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
                 let zc = z as isize;
 
                 // y+ face
-                if y == 15 || data[x][y+1][z].transparent != t {
+                if y == 15 || data[x][y+1][z].transparent /* != t */ {
                     verts.extend_from_slice(&[
                         xc, yc, zc,
                         xc, yc, zc+1,
@@ -291,7 +314,7 @@ fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
                 }
 
                 // y- face
-                if y == 0 || data[x][y-1][z].transparent != t {
+                if y == 0 || data[x][y-1][z].transparent /* != t */ {
                     let yc = yc - 1;
                     verts.extend_from_slice(&[
                         xc, yc, zc,
@@ -318,7 +341,7 @@ fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
                 let (uh,vh) = (u+uv_dif,v+uv_dif);
 
                 // x- face
-                if x == 0 || data[x-1][y][z].transparent != t {
+                if x == 0 || data[x-1][y][z].transparent /* != t */ {
                     verts.extend_from_slice(&[
                         xc, yc, zc,
                         xc, yc-1, zc,
@@ -338,7 +361,7 @@ fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
                 }
 
                 // x+ face
-                if x == 15 || data[x+1][y][z].transparent != t {
+                if x == 15 || data[x+1][y][z].transparent /* != t */ {
                     let xc = xc + 1;
                     verts.extend_from_slice(&[
                         xc, yc, zc,
@@ -359,7 +382,7 @@ fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
                 }
 
                 // z- face
-                if z == 0 || data[x][y][z-1].transparent != t {
+                if z == 0 || data[x][y][z-1].transparent /* != t */ {
                     let yc = yc - 1; //?
                     verts.extend_from_slice(&[
                         xc, yc, zc,
@@ -380,7 +403,7 @@ fn make_mesh(data: &Data, reg: &Registry) -> (Vec<f32>, Vec<f32>) {
                 }
 
                 // z+ face
-                if z == 15 || data[x][y][z+1].transparent != t {
+                if z == 15 || data[x][y][z+1].transparent /* != t */ {
                     let yc = yc - 1;//?
                     let zc = zc + 1;
                     verts.extend_from_slice(&[

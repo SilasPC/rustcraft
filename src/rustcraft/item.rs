@@ -131,6 +131,23 @@ impl ItemStack {
         }
     }
 
+    pub fn transfer_no_swap(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
+        if from.is_some() && into.is_some() {
+            let a = from.as_mut().unwrap();
+            let b = into.as_mut().unwrap();
+            if a.item == b.item {
+                let to_move = a.count.min(64-b.count);
+                b.count += to_move;
+                a.count -= to_move;
+                if a.count == 0 {
+                    *from = None
+                }
+            }
+        } else if into.is_none() {
+            std::mem::swap(from, into)
+        }
+    }
+
     pub fn merge(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
         if from.is_none() {return}
         match into {

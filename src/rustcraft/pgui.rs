@@ -133,97 +133,58 @@ impl GUI {
             r.square.draw();
         }
 
+        macro_rules! draw {
+            (grid : $from:expr, width=$w:expr) => {
+                for (i, s) in ($from).enumerate() {
+                    if i % $w == 0 && i > 0 {
+                        r.move_pixels(-($w)*20, -20);
+                    }
+        
+                    draw!(single : s);
+        
+                    r.move_pixels(20, 0);
+                }
+            };
+            (single : $from:expr) => {
+                if let Some(s) = $from {
+                    r.set_uniforms(16, 16);
+                    match &s.item {
+                        ItemLike::Item(inner) => {
+                            reg.item_vao.bind();
+                            reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
+                        },
+                        ItemLike::Block(inner) => {
+                            reg.iso_block_vao.bind();
+                            reg.iso_block_vao.draw_18(inner.id as i32);
+                        }
+                    }
+                }
+            }
+        }
+
         // items
         reg.texture_atlas.texture().bind();
         reg.iso_block_vao.bind();
         r.set_pixels(hw, 0); // hotbar
         r.move_pixels(-90, 0);
         r.move_pixels(2, 2);
-        for s in &inv.hotbar {
+        draw!(grid : inv.hotbar.iter(), width = 9);
 
-            if let Some(s) = s {
-                r.set_uniforms(16, 16);
-                match &s.item {
-                    ItemLike::Item(inner) => {
-                        reg.item_vao.bind();
-                        reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
-                    },
-                    ItemLike::Block(inner) => {
-                        reg.iso_block_vao.bind();
-                        reg.iso_block_vao.draw_18(inner.id as i32);
-                    }
-                }
-            }
-
-            r.move_pixels(20, 0);
-        }
         if show_inventory {
             r.set_pixels(hw, hh); // inventory
             r.move_pixels(-90, -70);
             r.move_pixels(2, 2);
             r.move_pixels(0, 2*20);
-            for (i, s) in inv.inventory.iter().enumerate() {
-                if i % 9 == 0 && i > 0 {
-                    r.move_pixels(-9*20, -20);
-                }
-    
-                if let Some(s) = s {
-                    r.set_uniforms(16, 16);
-                    match &s.item {
-                        ItemLike::Item(inner) => {
-                            reg.item_vao.bind();
-                            reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
-                        },
-                        ItemLike::Block(inner) => {
-                            reg.iso_block_vao.bind();
-                            reg.iso_block_vao.draw_18(inner.id as i32);
-                        }
-                    }
-                }
-    
-                r.move_pixels(20, 0);
-            }
+            draw!(grid : inv.inventory.iter(), width = 9);
 
             r.set_pixels(hw, hh); // crafting
             r.move_pixels(-90, -70);
             r.move_pixels(2, 2);
             r.move_pixels(2*20, 6*20);
-            for (i, s) in inv.crafting.iter().take(9).enumerate() {
-                if i % 3 == 0 && i > 0 {
-                    r.move_pixels(-3*20, -20);
-                }
-    
-                if let Some(s) = s {
-                    r.set_uniforms(16, 16);
-                    match &s.item {
-                        ItemLike::Item(inner) => {
-                            reg.item_vao.bind();
-                            reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
-                        },
-                        ItemLike::Block(inner) => {
-                            reg.iso_block_vao.bind();
-                            reg.iso_block_vao.draw_18(inner.id as i32);
-                        }
-                    }
-                }
-    
-                r.move_pixels(20, 0);
-            }
+            draw!(grid : inv.crafting.iter().take(9), width = 3);
 
             r.move_pixels(20, 20);
-            if let Some(s) = &inv.crafting[9] {
-                r.set_uniforms(16, 16);
-                match &s.item {
-                    ItemLike::Item(inner) => {
-                        reg.item_vao.bind();
-                        reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
-                    },
-                    ItemLike::Block(inner) => {
-                        reg.iso_block_vao.bind();
-                        reg.iso_block_vao.draw_18(inner.id as i32);
-                    }
-                }
-            }
+            draw!(single : &inv.crafting[9]);
 
         }
         
