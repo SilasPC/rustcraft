@@ -9,14 +9,38 @@ pub struct Item {
     pub texture: usize,
 }
 
+pub struct Itemx(Arc<(Item,bool)>);
+
+impl Itemx {
+    pub fn new_registered_as_shared(data: Item) -> Self {
+        Self(Arc::new((data,true)))
+    }
+    pub fn new_not_shared(data: Item) -> Self {
+        Self(Arc::new((data,false)))
+    }
+    pub fn mutate(&mut self) -> &mut Item {
+        let mt = Arc::make_mut(&mut self.0);
+        mt.1 = false;
+        &mut mt.0
+    }
+    pub fn is_shared(&self) -> bool {self.0.1}
+    pub fn ptr_eq(&self, rhs: &Self) -> bool {Arc::ptr_eq(&self.0, &rhs.0)}
+    pub unsafe fn inc_arc_count(&self) {
+        Arc::increment_strong_count(&self.0)
+    }
+    pub unsafe fn dec_arc_count(&self) {
+        Arc::decrement_strong_count(&self.0)
+    }
+}
+
 #[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub enum ItemLike {
-    Block(Arc<Block>),
+    Block(Block),
     Item(Arc<Item>)
 }
 
-impl From<Arc<Block>> for ItemLike {
-    fn from(arc: Arc<Block>) -> Self {
+impl From<Block> for ItemLike {
+    fn from(arc: Block) -> Self {
         Self::Block(arc)
     }
 }
@@ -39,7 +63,7 @@ impl ItemLike {
             Self::Item(inner) => &inner.name,
         }
     }
-    pub fn as_block(&self) -> Option<&Arc<Block>> {
+    pub fn as_block(&self) -> Option<&Block> {
         match self {
             Self::Block(inner) => Some(inner),
             Self::Item(_) => None
@@ -51,7 +75,7 @@ impl ItemLike {
             Self::Block(_) => None
         }
     }
-    pub fn as_block_mut(&mut self) -> Option<&mut Arc<Block>> {
+    pub fn as_block_mut(&mut self) -> Option<&mut Block> {
         match self {
             Self::Block(inner) => Some(inner),
             Self::Item(_) => None

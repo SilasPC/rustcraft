@@ -10,3 +10,4 @@ pub mod pgui;
 pub mod content;
 pub mod registry;
 pub mod crafting;
+pub mod updates;

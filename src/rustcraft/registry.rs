@@ -8,10 +8,10 @@ use std::sync::Arc;
 use crate::block::Block;
 
 pub struct Registry {
-    pub blocks: Vec<Arc<Block>>,
+    pub blocks: Vec<Block>,
     pub items: Vec<Arc<Item>>,
     pub items_offset: usize,
-    pub texture_atlas: Rc<TextureAtlas>,
+    pub texture_atlas: Arc<TextureAtlas>,
     pub iso_block_vao: VAO,
     pub item_vao: VAO,
 }
@@ -30,7 +30,7 @@ impl Registry {
 }
 
 impl std::ops::Index<usize> for Registry {
-    type Output = Arc<Block>;
+    type Output = Block;
     fn index(&self, index: usize) -> &Self::Output {
         &self.blocks[index]
     }

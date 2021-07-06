@@ -4,6 +4,7 @@ id = 0
 name = "Air"
 no_render = true
 transparent = true
+replacable = true
 solid = false
 texture = [0, 0, 0]
 
@@ -42,6 +43,7 @@ drops = 5
 id = 6
 name = "Leaves"
 transparent = true
+replacable = true
 texture = [7, 7, 7]
 drops = 8
 

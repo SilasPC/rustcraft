@@ -7,6 +7,7 @@ mod chunk;
 mod engine;
 mod rustcraft;
 mod perlin;
+use std::sync::Arc;
 use crate::registry::Registry;
 use crate::util::BVH;
 use crate::content::*;
@@ -35,8 +36,8 @@ pub struct Data {
     pub delta: f32,
     pub world: world::WorldData,
     pub ecs: hecs::World,
-    pub registry: Registry,
-    pub atlas: std::rc::Rc<TextureAtlas>,
+    pub registry: Arc<Registry>,
+    pub atlas: Arc<TextureAtlas>,
     pub ent_tree: BVH<hecs::Entity, ()>,
 }
 

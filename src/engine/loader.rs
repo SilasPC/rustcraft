@@ -1,13 +1,13 @@
 
-use std::rc::Rc;
+use std::sync::Arc;
 use super::texture::*;
 use super::text::font::*;
 
 
 pub struct Loader {
-    textures: Vec<Rc<Texture>>,
-    atlases: Vec<Rc<TextureAtlas>>,
-    fonts: Vec<Rc<Font>>,
+    textures: Vec<Arc<Texture>>,
+    atlases: Vec<Arc<TextureAtlas>>,
+    fonts: Vec<Arc<Font>>,
 }
 
 impl Loader {
@@ -20,14 +20,14 @@ impl Loader {
         }
     }
 
-    pub fn load_texture(&mut self, path: &str) -> Rc<Texture> {
-        let text = Rc::new(Texture::from_path(path));
+    pub fn load_texture(&mut self, path: &str) -> Arc<Texture> {
+        let text = Arc::new(Texture::from_path(path));
         self.textures.push(text.clone());
         text
     }
     
-    pub fn load_texture_atlas(&mut self, path: &str, size: usize) -> Rc<TextureAtlas> {
-        let text = Rc::new(
+    pub fn load_texture_atlas(&mut self, path: &str, size: usize) -> Arc<TextureAtlas> {
+        let text = Arc::new(
             TextureAtlas::new(
                 Texture::from_path(path),
                 size
@@ -37,8 +37,8 @@ impl Loader {
         text
     }
 
-    pub fn load_font(&mut self, atlas_file: &str, fnt_file: &str) -> Rc<Font> {
-        let font = Rc::new(Font::from_font_files(atlas_file, fnt_file));
+    pub fn load_font(&mut self, atlas_file: &str, fnt_file: &str) -> Arc<Font> {
+        let font = Arc::new(Font::from_font_files(atlas_file, fnt_file));
         self.fonts.push(font.clone());
         font
     }

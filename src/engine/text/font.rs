@@ -1,4 +1,5 @@
 
+use std::sync::Arc;
 use cgmath::Vector2;
 use crate::engine::texture::Texture;
 use std::rc::Rc;
@@ -48,7 +49,7 @@ pub struct Font {
 
 impl Font {
 
-    pub fn build_text(self: &Rc<Self>, text: String) -> Text {
+    pub fn build_text(self: &Arc<Self>, text: String) -> Text {
         Text::new(text, self.clone())
     }
 

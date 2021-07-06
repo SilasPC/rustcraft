@@ -1,4 +1,6 @@
 
+use crate::updates::Updates;
+use crate::chunk::Chunk;
 use crate::make_crafting_registry;
 use crate::crafting::CraftingRegistry;
 use crate::registry::Registry;
@@ -79,6 +81,11 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let mut block_updates = Updates::default();
 
     let mut pgui = GUI::new();
+
+    let worker_data = WorkerData {
+        registry: data.registry.clone()
+    };
+    let mut worker = JobDispatcher::new(worker_data);
 
     let mut last_tick = Instant::now();
     let tick_duration = Duration::from_millis(50);
@@ -216,6 +223,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
             raycast_hit = raycast(pos.pos+view.offset(), &pos.heading(), 5., &data.registry, &data.world);
             if do_chunk_load {
+                /* worker.send(WorkerJob::SaveChunk(
+                    data.world.take_chunk()
+                )); */
                 data.world.load_around2(&pos.pos, 30., &data.registry);
             }
 
@@ -248,7 +258,7 @@ RustCraft dev build
                 if data.input.clicked_primary() {
                     if let Some(hit) = raycast_hit {
                         let block = data.world.block_at_pos(&hit.1).unwrap().clone();
-                        if set_block(&mut data.world, &data.ent_tree, &hit.1, &data.registry[0], true) {
+                        if data.world.set_block_at_pos(&hit.1, &data.registry[0]) {
                             if let Some(drop_id) = block.drops {
                                 let stack = ItemStack::of(data.registry.get(drop_id), 1);
                                 pdata.inventory.merge(Some(stack));
@@ -263,7 +273,7 @@ RustCraft dev build
                         let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
                         let mut success = false;
                         if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
-                            if set_block(&mut data.world, &data.ent_tree, &hit.0, &block, /* false */true) {
+                            if data.world.set_block_at_pos(&hit.0, &block) {
                                 success = true;
                                 block_updates.add_area(hit.0);
                                 block_updates.add_single(hit.0);
@@ -386,70 +396,6 @@ RustCraft dev build
 
 }
 
-#[derive(Default)]
-struct Updates {
-    pub area1: Vec<Vector3<f32>>,
-    pub area2: Vec<Vector3<f32>>,
-    pub def1: Vec<Vector3<f32>>,
-    pub def2: Vec<Vector3<f32>>,
-}
-
-impl Updates {
-    pub fn add_area(&mut self, pos: Vector3<f32>) {
-        self.area2.push(pos);
-    }
-    pub fn add_single(&mut self, pos: Vector3<f32>) {
-        self.def2.push(pos);
-    }
-    pub fn update(&mut self, data: &mut Data) {
-        macro_rules! update {
-            ($pos:expr) => {
-                let pos: Vector3<f32> = $pos;
-                if let Some(block) = data.world.block_at_pos(&pos) {
-                    let block = block.clone();
-                    if block.has_gravity {
-                        if let Some(below) = data.world.block_at_pos(&(pos - Vector3::unit_y())) {
-                            let below = below.as_ref();
-                            if !below.solid {
-                                set_block(&mut data.world, &data.ent_tree, &pos, &data.registry[0], true);
-                                let fall_pos = pos.map(|v| v.floor());
-                                let fall_size = Vector3 {
-                                    x: 1.,
-                                    y: 1.,
-                                    z: 1.,
-                                };
-                                let pos_comp = Position::from(fall_pos);
-                                let phys = Physics::new(fall_size);
-                                let aabb = phys.get_aabb(&pos_comp);
-                                let falling_block = data.ecs.spawn((
-                                    pos_comp, phys, FallingBlock::of(block)
-                                ));
-                                data.ent_tree.insert(falling_block, (), &aabb);
-                                self.area2.push(pos);
-                            }
-                        }
-                    }
-                }
-            };
-        }
-        for pos in &mut self.area1 {
-            let pos = *pos;
-            update!(pos+Vector3::unit_x());
-            update!(pos-Vector3::unit_x());
-            update!(pos+Vector3::unit_y());
-            update!(pos-Vector3::unit_y());
-            update!(pos+Vector3::unit_z());
-            update!(pos-Vector3::unit_z());
-        }
-        for pos in self.def1.iter() {
-            update!(*pos);
-        }
-        self.def1.clear();
-        self.area1.clear();
-        std::mem::swap(&mut self.def1, &mut self.def2);
-        std::mem::swap(&mut self.area1, &mut self.area2);
-    }
-}
 
 fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &crate::engine::vao::VAO, bbox: &crate::engine::texture::Texture) {
     program.enable();
@@ -509,21 +455,64 @@ fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &R
     }
 }
 
-pub fn set_block(w: &mut crate::world::WorldData, t: &crate::util::BVH<hecs::Entity, ()>, pos: &Vector3<f32>, val: &Arc<Block>, ignore_ents: bool) -> bool {
-    if !ignore_ents {
-        // TODO: not working properly?
-        const EPSILON: f32 = 0.1;
-        let bpos = pos.map(|v| v.floor());
-        let mut aabb = AABB::from_corner(&bpos, 1.);
-        aabb.extend_radius(-EPSILON);
-        if t.any_overlaps(&aabb) {
-            return false
+struct WorkerData {
+    registry: Arc<Registry>,
+}
+
+use std::sync::mpsc::*;
+
+struct JobDispatcher {
+    tx: Sender<WorkerJob>,
+    rx: Receiver<WorkerResponse>,
+}
+
+impl JobDispatcher {
+
+    pub fn iter_responses(&mut self) -> TryIter<'_, WorkerResponse> {
+        self.rx.try_iter()
+    }
+
+    pub fn new(wdata: WorkerData) -> Self {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (dtx, drx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            worker_thread(rx, dtx, wdata)
+        });
+        JobDispatcher {
+            tx,
+            rx: drx
         }
     }
-    let chunk = w.chunk_at_pos_mut(&pos);
-    if let Some(chunk) = chunk {
-        chunk.set_at_pos(&pos, val)
-    } else {
-        false
+    pub fn send(&self, work: WorkerJob) {
+        self.tx.send(work);
+    }
+}
+
+enum WorkerJob {
+    SaveChunk(Box<Chunk>),
+    LoadChunk(i32,i32,i32),
+}
+enum WorkerResponse {
+    LoadedChunk(Option<Box<Chunk>>),
+}
+fn worker_thread(rx: Receiver<WorkerJob>, tx: Sender<WorkerResponse>, data: WorkerData) {
+    'work: loop {
+        let job = match rx.recv() {
+            Err(_) => {break 'work}
+            Ok(job) => job
+        };
+        use WorkerJob::*;
+        match job {
+            SaveChunk(chunk) => {
+                std::fs::write(format!("save/{:x}_{:x}_{:x}.chunk", chunk.pos.x, chunk.pos.y, chunk.pos.z), chunk.save());
+            },
+            LoadChunk(x,y,z) => {
+                tx.send(
+                    WorkerResponse::LoadedChunk(
+                        Chunk::load(x, y, z, data.registry.as_ref()).map(Box::new)
+                    )
+                ).unwrap();
+            }
+        };
     }
 }

@@ -90,9 +90,12 @@ impl<K: Copy + Eq + std::hash::Hash, T> BVH<K,T> {
         let proxy = self.keys[&key];
         self.tree.set_aabb(proxy, &aabb.0);
     }
-    pub fn remove(&mut self, key: K) {
+    pub fn remove(&mut self, key: K) -> Option<T> {
         if let Some(proxy) = self.keys.remove(&key) {
             self.tree.destroy_proxy(proxy);
+            self.vals.remove(&proxy)
+        } else {
+            None
         }
     }
     pub fn any_overlaps(&self, aabb: &AABB) -> bool {
@@ -156,7 +159,7 @@ pub fn sub_coords_from_i32(x: i32, y: i32, z: i32) -> Vector3<i32> {
     Vector3 {x,y,z}.map(|x| x % 16).map(|x| (x+16)%16)
 }
 
-pub fn gen_block_vao(b: &Vec<Arc<Block>>, a: &TextureAtlas) -> VAO {
+pub fn gen_block_vao(b: &Vec<Block>, a: &TextureAtlas) -> VAO {
 
     let mut verts = vec![];
     let mut uvs = vec![];

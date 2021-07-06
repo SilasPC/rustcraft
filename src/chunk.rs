@@ -1,4 +1,5 @@
 
+use crate::block::BlockData;
 use crate::util::sub_coords_from_i32;
 use crate::registry::Registry;
 use std::sync::Arc;
@@ -9,7 +10,7 @@ use crate::engine::vao::*;
 use crate::rustcraft::block::Block;
 
 /// Signifies the current state of the chunk
-#[derive(PartialOrd,PartialEq,Eq,Ord,Clone,Copy,Debug)]
+#[derive(PartialOrd,PartialEq,Eq,Ord,Clone,Copy,Debug,serde::Serialize,serde::Deserialize)]
 pub enum ChunkState {
     Empty,
     Filled,
@@ -26,7 +27,7 @@ impl ChunkState {
     }
 }
 
-type Data = Vec<Vec<Vec<Arc<Block>>>>;
+type Data = Vec<Vec<Vec<Block>>>;
 type LightData = [[[u8; 16]; 16]; 16];
 
 pub struct Chunk {
@@ -38,6 +39,34 @@ pub struct Chunk {
     pub mesh: Option<VAO>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+enum SavedBlock {
+    Shared(usize),
+    Unique(BlockData),
+}
+
+impl SavedBlock {
+    pub fn by(block: &Block) -> Self {
+        if block.is_shared() {
+            Self::Shared(block.id)
+        } else {
+            Self::Unique(block.as_ref().clone())
+        }
+    }
+    pub fn to(self, reg: &Registry) -> Block {
+        match self {
+            Self::Shared(id) => reg[id].clone(),
+            Self::Unique(data) => Block::new_not_shared(data)
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct SavedChunk {
+    chunk_state: ChunkState,
+    pos: Vector3<i32>,
+    data: Vec<Vec<Vec<SavedBlock>>>,
+}
 
 impl std::fmt::Debug for Chunk {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -50,7 +79,68 @@ impl std::fmt::Debug for Chunk {
 
 impl Chunk {
 
-    pub fn new(pos: Vector3<i32>, air: Arc<Block>) -> Self {
+    pub fn compare_position(&self, rhs: &Self) -> std::cmp::Ordering {
+        (
+            self.pos.x,
+            self.pos.y,
+            self.pos.z
+        ).cmp(&(
+            rhs.pos.x,
+            rhs.pos.y,
+            rhs.pos.z
+        )).into()
+    }
+
+    pub fn load(x: i32, y: i32, z: i32, reg: &Registry) -> Option<Self> {
+        let SavedChunk {
+            chunk_state,
+            data,
+            pos,
+        } = bincode::deserialize(&std::fs::read(format!("save/{:x}_{:x}_{:x}.chunk",x,y,z)).ok()?).ok()?;
+        let data = data
+            .into_iter()
+            .map(|plane|
+                plane
+                    .into_iter()
+                    .map(|row|
+                        row
+                            .into_iter()
+                            .map(|b| match b {
+                                SavedBlock::Unique(data) => Block::new_not_shared(data),
+                                SavedBlock::Shared(id) => reg[id].clone()
+                            }
+                        )
+                    .collect())
+                .collect())
+            .collect();
+        let light = [[[0; 16]; 16]; 16];
+        println!("Loading chunk {:?}",(x,y,z));
+        Self { chunk_state, data, mesh: None, pos, needs_refresh: true, light }.into()
+    }
+
+    pub fn save(&self) -> Vec<u8> {
+        let mut data = vec![];
+        for x in 0..16 {
+            let mut plane = vec![];
+            for y in 0..16 {
+                let mut row = vec![];
+                for z in 0..16 {
+                    row.push(SavedBlock::by(&self.data[x][y][z]))
+                }
+                plane.push(row)
+            }
+            data.push(plane)
+        }
+        let sc = SavedChunk {
+            data,
+            pos: self.pos,
+            chunk_state: self.chunk_state
+        };
+        println!("Saving chunk {:?}", (self.pos.x, self.pos.y, self.pos.z));
+        bincode::serialize(&sc).unwrap()
+    }
+
+    pub fn new(pos: Vector3<i32>, air: Block) -> Self {
         let data = vec![vec![vec![air;16];16];16];
         let light = [[[0; 16]; 16]; 16];
         Self { chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
@@ -67,23 +157,23 @@ impl Chunk {
         self.pos.map(|x| (x * 16 + 8) as f32)
     }
 
-    pub fn block_at(&self, x: i32, y: i32, z: i32) -> &Arc<Block> {
+    pub fn block_at(&self, x: i32, y: i32, z: i32) -> &Block {
         &self.data[x.rem_euclid(16) as usize][y.rem_euclid(16) as usize][z.rem_euclid(16) as usize]
     }
 
-    pub fn block_at_pos_mut(&mut self, pos: &Vector3<f32>) -> &mut Arc<Block> {
+    pub fn block_at_pos_mut(&mut self, pos: &Vector3<f32>) -> &mut Block {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
         &mut self.data[sc.x][sc.y][sc.z]
     }
-    pub fn block_at_pos(&self, pos: &Vector3<f32>) -> &Arc<Block> {
+    pub fn block_at_pos(&self, pos: &Vector3<f32>) -> &Block {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
         &self.data[sc.x][sc.y][sc.z]
     }
     
-    pub fn set_at(&mut self, x: i32, y: i32, z: i32, block: &Arc<Block>) -> bool {
+    pub fn set_at(&mut self, x: i32, y: i32, z: i32, block: &Block) -> bool {
         let sc = sub_coords_from_i32(x,y,z).map(|c| c as usize);
         let b = &mut self.data[sc.x][sc.y][sc.z];
-        if Arc::ptr_eq(b, block) {
+        if b.ptr_eq(block) {
             false
         } else {
             *b = block.clone();
@@ -91,10 +181,10 @@ impl Chunk {
             true
         }
     }
-    pub fn set_at_pos(&mut self, pos: &Vector3<f32>, block: &Arc<Block>) -> bool {
+    pub fn set_at_pos(&mut self, pos: &Vector3<f32>, block: &Block) -> bool {
         let sc = position_to_sub_coordinates(&pos).map(|c| c as usize);
         let b = &mut self.data[sc.x][sc.y][sc.z];
-        if Arc::ptr_eq(b, block) {
+        if b.ptr_eq(block) {
             false
         } else {
             *b = block.clone();

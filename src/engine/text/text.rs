@@ -1,17 +1,18 @@
 
+use std::sync::Arc;
 use crate::engine::vao::VAO;
 use std::rc::Rc;
 use super::font::*;
 
 pub struct Text {
-    pub font: Rc<Font>,
+    pub font: Arc<Font>,
     text: String,
     pub vao: VAO,
 }
 
 impl Text {
     
-    pub fn new(text: String, font: Rc<Font>) -> Self {
+    pub fn new(text: String, font: Arc<Font>) -> Self {
         let size = font.atlas.size();
         let size = (size.0 as f32, size.1 as f32);
         let (verts, uvs) = Self::build(text.as_ref(), font.as_ref(), size);
