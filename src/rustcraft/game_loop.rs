@@ -320,7 +320,7 @@ RustCraft dev build
         }
         // STOP SYSTEMS
 
-        data.world.load(&data.registry);
+        data.world.load(&data.registry, 100);
 
         // START RENDERING
         render(&program, data, &view_mat, &cube, &bbox);
@@ -430,7 +430,7 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
         area.center_mut().refresh(&data.registry);
     } */
 
-    for chunk in data.world.chunks.values_mut().filter(|c| c.renderable_after_refresh())
+    for chunk in data.world.chunks.values_mut().filter(|c| c.renderable())
     {
 
         /* println!("{:?}", chunk.pos); */

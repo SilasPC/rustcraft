@@ -129,6 +129,9 @@ impl WorldData {
     pub fn block_at(&self, pos: &impl Coord) -> Option<&Block> {
         self.chunk_at(pos.as_chunk()).map(|c| c.block_at(pos))
     }
+    pub fn block_at_any_state(&self, pos: &impl Coord) -> Option<&Block> {
+        self.chunks.get(&pos.as_chunk()).map(|c| c.block_at(pos))
+    }
     #[deprecated]
     pub fn block_at_mut(&mut self, pos: &impl Coord) -> Option<&mut Block> {
         self.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(pos))
@@ -138,8 +141,24 @@ impl WorldData {
             .map(|c| c.set_at(pos, block))
             .unwrap_or(false)
     }
+    pub fn set_block_at_any_state(&mut self, pos: &impl Coord, block: &Block) -> bool {
+        self.chunks.get_mut(&pos.as_chunk())
+            .map(|c| c.set_at(pos, block))
+            .unwrap_or(false)
+    }
     pub fn replace_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
         if let Some(c) = self.chunk_at_mut(pos.as_chunk()) {
+            if c.block_at(pos).replacable {
+                c.set_at(pos, block)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+    pub fn replace_at_any_state(&mut self, pos: &impl Coord, block: &Block) -> bool {
+        if let Some(c) = self.chunks.get_mut(&pos.as_chunk()) {
             if c.block_at(pos).replacable {
                 c.set_at(pos, block)
             } else {
@@ -160,10 +179,10 @@ impl WorldData {
     }
 
     pub fn chunk_at(&self, pos: ChunkPos) -> Option<&Chunk> {
-        self.chunks.get(&pos)/* .filter(|c| c.chunk_state == ChunkState::Done) */.map(Box::as_ref)
+        self.chunks.get(&pos).filter(|c| c.chunk_state >= ChunkState::Detailed).map(Box::as_ref)
     }
     pub fn chunk_at_mut(&mut self, pos: ChunkPos) -> Option<&mut Chunk> {
-        self.chunks.get_mut(&pos)/* .filter(|c| c.chunk_state == ChunkState::Done) */.map(Box::as_mut)
+        self.chunks.get_mut(&pos).filter(|c| c.chunk_state >= ChunkState::Detailed).map(Box::as_mut)
     }
 
     /* pub fn chunk_iter_mut(&mut self) -> impl std::iter::Iterator<Item=&mut Chunk> {
@@ -225,19 +244,21 @@ impl WorldData {
     pub fn load_around(&mut self, pos: &impl Coord) {
         let (x,y,z) = pos.as_chunk().as_tuple();
         
-        self.to_load.push_back(Loading::Filling(0, (x-3,y-3,z-3).into()))
+        self.to_load.push_back(Loading::Filling(0, (x-5,y-5,z-5).into()))
     }
 
-    pub fn load(&mut self, reg: &Registry) {
+    pub fn load(&mut self, reg: &Registry, max_work: usize) {
         if let Some(mut loading) = self.to_load.pop_front() {
+            let mut work = 0;
             match loading {
                 Loading::Filling(ref mut i, pos) => {
                     let (x,y,z) = pos.as_tuple();
-                    while *i < 6*6*6 {
+                    const RAD: i32 = 10;
+                    while *i < RAD*RAD*RAD && work < max_work {
                         let p = (
-                            x + *i / (6*6),
-                            y + (*i / 6) % 6,
-                            z + *i % 6
+                            x + *i / (RAD*RAD),
+                            y + (*i / RAD) % RAD,
+                            z + *i % RAD
                         ).into();
                         if let Some(c) = self.chunks.get_mut(&p) {
                             if c.chunk_state == ChunkState::Empty {
@@ -249,31 +270,49 @@ impl WorldData {
                             self.chunks.insert(p, c);
                         }
                         // println!("generated for {:?}",p);
+                        work += 1;
                         *i += 1;
                     }
-                    if *i == 6*6*6 {
+                    if *i == RAD*RAD*RAD {
                         loading = Loading::Detailing(0, pos + Vector3{x:1,y:1,z:1}.into());
                     }
                 },
                 Loading::Detailing(ref mut i, pos) => {
                     let (x,y,z) = pos.as_tuple();
-                    while *i < 4*4*4 {
+                    const RAD: i32 = 8;
+                    while *i < RAD*RAD*RAD && work < max_work {
                         let p = (
-                            x + *i / (4*4),
-                            y + (*i / 4) % 4,
-                            z + *i % 4
+                            x + *i / (RAD*RAD),
+                            y + (*i / RAD) % RAD,
+                            z + *i % RAD
                         ).into();
                         gen_detail(p, self, reg);
                         // println!("detailed for {:?}",p);
+                        work += 1;
                         *i += 1;
                     }
-                    if *i == 4*4*4 {
-                        loading = Loading::Meshing(0, pos);
+                    if *i == RAD*RAD*RAD {
+                        loading = Loading::Meshing(0, pos + Vector3{x:1,y:1,z:1}.into());
                     }
                 },
-                _ => {
-                    return
-                }
+                Loading::Meshing(ref mut i, pos) => {
+                    let (x,y,z) = pos.as_tuple();
+                    const RAD: i32 = 6;
+                    while *i < RAD*RAD*RAD && work < max_work {
+                        let p = (
+                            x + *i / (RAD*RAD),
+                            y + (*i / RAD) % RAD,
+                            z + *i % RAD
+                        ).into();
+                        self.chunks.get_mut(&p).unwrap().refresh(reg);
+                        // println!("detailed for {:?}",p);
+                        work += 1;
+                        *i += 1;
+                    }
+                    if *i == RAD*RAD*RAD {
+                        return
+                    }
+                },
             }
             self.to_load.push_front(loading);
         }
@@ -342,7 +381,7 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
         for z in z..z+16 {
             for y in y..y+16 {
                 let below: WorldPos<i32> = (x,y-1,z).into();
-                if world.block_at(&below).unwrap().id == 3 {
+                if world.block_at_any_state(&below).unwrap().id == 3 {
                     let nx = x as f64 / 1.3;
                     let nz = z as f64 / 1.3;
                     let n = world.noise.noise_basic.get2d([nx,nz]);
@@ -354,19 +393,19 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
                                 let h = 3 + (2. * world.noise.noise_basic.get2d([nx,nz])) as i32;
                                 for y in y..=y+h {
                                     let here: WorldPos<i32> = (x,y,z).into();
-                                    world.set_block_at(&here, log);
+                                    world.set_block_at_any_state(&here, log);
                                 }
                                 for dx in -2..=2 {
                                     for dz in -2..=2 {
                                         if dx == 0 && dz == 0 {continue}
                                         for y in y+h-3..=y+h {
                                             let here: WorldPos<i32> = (x+dx,y+4,z+dz).into();
-                                            world.replace_at(&here, leaves);
+                                            world.replace_at_any_state(&here, leaves);
                                         }
                                     }
                                 }
                                 let here: WorldPos<i32> = (x,y+h,z).into();
-                                world.replace_at(&here, leaves);
+                                world.replace_at_any_state(&here, leaves);
                             }
                     }
                     break;
@@ -374,8 +413,8 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
             }
         }    
     }
-    let center = world.chunk_at_mut(pos).unwrap();
-    center.chunk_state = ChunkState::Done;
+    let center = world.chunks.get_mut(&pos).unwrap();
+    center.chunk_state = ChunkState::Detailed;
     center.needs_refresh = true;
 }
 

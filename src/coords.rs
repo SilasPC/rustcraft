@@ -119,6 +119,12 @@ pub trait Coord {
     fn as_chunk(&self) -> ChunkPos;
     #[inline(always)]
     fn as_sub(&self) -> Vector3<usize>;
+    fn is_on_chunk_border(&self) -> bool {
+        let sub = self.as_sub();
+        sub.x == 0 || sub.x == 15 ||
+        sub.y == 0 || sub.y == 15 ||
+        sub.z == 0 || sub.z == 15
+    }
 }
 
 pub trait AsCoord<T: cgmath::BaseNum> {

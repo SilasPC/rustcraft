@@ -17,10 +17,11 @@ use crate::rustcraft::block::Block;
 pub enum ChunkState {
     Empty,
     Filled,
-    Done,
+    Detailed,
+    Rendered,
 }
 
-impl ChunkState {
+/* impl ChunkState {
     pub fn prev(self) -> Self {
         match self {
             ChunkState::Done => ChunkState::Filled,
@@ -28,7 +29,7 @@ impl ChunkState {
             ChunkState::Empty => ChunkState::Empty,
         }
     }
-}
+} */
 
 pub type BlocksData = Vec<Vec<Vec<Block>>>;
 pub type LightData = [[[u8; 16]; 16]; 16];
@@ -236,12 +237,8 @@ impl Chunk {
         self.chunk_state = ChunkState::Filled;
     }
 
-    pub fn gen_detail(&mut self) {
-        self.chunk_state = ChunkState::Done;
-    }
-
-    pub fn renderable_after_refresh(&self) -> bool {
-        self.chunk_state == ChunkState::Done
+    pub fn renderable(&self) -> bool {
+        self.chunk_state == ChunkState::Rendered
     }
 
     pub fn aabb(&self) -> AABB { AABB::from_corner(&self.pos.map(|x| x as f32 * 16.), 16.) }
@@ -255,6 +252,7 @@ impl Chunk {
             self.mesh = Some(VAO::textured_lit(&verts, &uvs, &lights));
         }
         self.needs_refresh = false;
+        self.chunk_state = ChunkState::Rendered;
     }
 
     pub fn bind_and_draw(&self) {
