@@ -45,7 +45,7 @@ name = "Leaves"
 transparent = true
 replacable = true
 texture = [7, 7, 7]
-drops = 8
+drops = 6
 
 [[block]]
 id = 7
@@ -53,7 +53,14 @@ name = "Planks"
 texture = [8, 8, 8]
 drops = 7
 
-[[item]]
+[[block]]
 id = 8
+name = "Glowstone"
+texture = [9, 9, 9]
+drops = 8
+light = 15
+
+[[item]]
+id = 9
 name = "Stick"
 texture = 15

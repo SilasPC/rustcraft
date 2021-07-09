@@ -111,6 +111,10 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     let cr = make_crafting_registry(&data.registry);
 
+    if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
+        pdata.inventory.merge(ItemStack::stack_of(data.registry.get(8)).into());
+    }
+
     'main: loop {
 
         let mut do_chunk_load = false;
@@ -320,6 +324,7 @@ RustCraft dev build
         }
         // STOP SYSTEMS
 
+        data.world.refresh(&data.registry);
         data.world.load(&data.registry, 100);
 
         // START RENDERING
@@ -438,7 +443,7 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
             chunk.pos.as_pos_f32().0
         ));
 
-        chunk.refresh(&data.registry);
+        // chunk.refresh(&data.registry);
 
         chunk.bind_and_draw();
 

@@ -15,6 +15,6 @@ out float light;
 void main()
 {
     uv = uvIn;
-    light = min(globLight,lightIn);
+    light = max(globLight,lightIn);
     gl_Position = project * view * transform * vec4(vert, 1.0);
 }

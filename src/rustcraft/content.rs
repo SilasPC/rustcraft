@@ -70,7 +70,7 @@ pub fn make_crafting_registry(reg: &Registry) -> CraftingRegistry {
             None, None, None,
             None, None, None,
         ],
-        ItemStack::of(reg.get(8), 4)
+        ItemStack::of(reg.get(9), 4)
     );
     cr.register(
         true, &[ // logs => planks

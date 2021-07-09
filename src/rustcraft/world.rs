@@ -1,4 +1,5 @@
 
+use std::collections::HashSet;
 use crate::vao::VAO;
 use std::collections::VecDeque;
 use std::collections::HashMap;
@@ -113,6 +114,7 @@ pub struct WorldData {
     pub noise: TerrainGen,
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
+    pub changed_chunks: HashSet<ChunkPos>,
 }
 
 impl WorldData {
@@ -124,7 +126,7 @@ impl WorldData {
             noise,
             noise_basic
         };
-        WorldData { to_load: VecDeque::new(), seed: seed.to_owned(), chunks: HashMap::new(), noise, air, ticks: 0 }
+        WorldData { changed_chunks: HashSet::new(), to_load: VecDeque::new(), seed: seed.to_owned(), chunks: HashMap::new(), noise, air, ticks: 0 }
     }
 
     pub fn block_at(&self, pos: &impl Coord) -> Option<&Block> {
@@ -138,14 +140,22 @@ impl WorldData {
         self.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(pos))
     }
     pub fn set_block_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
-        self.chunk_at_mut(pos.as_chunk())
+        let success = self.chunk_at_mut(pos.as_chunk())
             .map(|c| c.set_at(pos, block))
-            .unwrap_or(false)
+            .unwrap_or(false);
+        if success {
+            self.changed_chunks.insert(pos.as_chunk());
+        }
+        success
     }
     pub fn set_block_at_any_state(&mut self, pos: &impl Coord, block: &Block) -> bool {
-        self.chunks.get_mut(&pos.as_chunk())
+        let success = self.chunks.get_mut(&pos.as_chunk())
             .map(|c| c.set_at(pos, block))
-            .unwrap_or(false)
+            .unwrap_or(false);
+        if success {
+            self.changed_chunks.insert(pos.as_chunk());
+        }
+        success
     }
     pub fn replace_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
         if let Some(c) = self.chunk_at_mut(pos.as_chunk()) {
@@ -184,6 +194,37 @@ impl WorldData {
     }
     pub fn chunk_at_mut(&mut self, pos: ChunkPos) -> Option<&mut Chunk> {
         self.chunks.get_mut(&pos).filter(|c| c.chunk_state >= ChunkState::Detailed).map(Box::as_mut)
+    }
+
+    pub fn refresh(&mut self, reg: &Registry) {
+        let mut cc = std::mem::take(&mut self.changed_chunks);
+        cc.retain(|x| self.chunk_at(*x).map(Chunk::renderable).unwrap_or(false));
+        // println!("refresh {:?}",cc);
+        for cp in &cc {
+            calc_light(*cp, self);
+        }
+        for cp in cc {
+            for x in -1..=1 {
+                for y in -1..=1 {
+                    for z in -1..=1 {
+                        let p = Vector3 {
+                            x: x + cp.x,
+                            y: y + cp.y,
+                            z: z + cp.z,
+                        };
+                        let (verts, uvs, lights) = make_mesh2(p.into(), self, reg);
+                        let c = self.chunks.get_mut(&p.into()).unwrap();
+                        if let Some(mesh) = &mut c.mesh {
+                            mesh.update_lit(&verts, &uvs, &lights);
+                        } else {
+                            c.mesh = Some(VAO::textured_lit(&verts, &uvs, &lights));
+                        }
+                        c.needs_refresh = false;
+                        c.chunk_state = ChunkState::Rendered;
+                    }
+                }
+            }
+        }
     }
 
     /* pub fn chunk_iter_mut(&mut self) -> impl std::iter::Iterator<Item=&mut Chunk> {
