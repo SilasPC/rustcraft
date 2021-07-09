@@ -1,4 +1,5 @@
 
+use crate::vao::VAO;
 use std::collections::VecDeque;
 use std::collections::HashMap;
 use crate::coords::*;
@@ -243,7 +244,7 @@ impl WorldData {
 
     pub fn load_around(&mut self, pos: &impl Coord) {
         let (x,y,z) = pos.as_chunk().as_tuple();
-        
+        println!("Filling...");
         self.to_load.push_back(Loading::Filling(0, (x-5,y-5,z-5).into()))
     }
 
@@ -274,6 +275,7 @@ impl WorldData {
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
+                        println!("Detailing...");
                         loading = Loading::Detailing(0, pos + Vector3{x:1,y:1,z:1}.into());
                     }
                 },
@@ -292,6 +294,7 @@ impl WorldData {
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
+                        println!("Meshing...");
                         loading = Loading::Meshing(0, pos + Vector3{x:1,y:1,z:1}.into());
                     }
                 },
@@ -304,12 +307,24 @@ impl WorldData {
                             y + (*i / RAD) % RAD,
                             z + *i % RAD
                         ).into();
-                        self.chunks.get_mut(&p).unwrap().refresh(reg);
+                        {
+                            let (verts, uvs, lights) = super::super::chunk::make_mesh2(p, self, reg);
+                            let c = self.chunks.get_mut(&p).unwrap();
+                            if let Some(mesh) = &mut c.mesh {
+                                mesh.update_lit(&verts, &uvs, &lights);
+                            } else {
+                                c.mesh = Some(VAO::textured_lit(&verts, &uvs, &lights));
+                            }
+                            c.needs_refresh = false;
+                            c.chunk_state = ChunkState::Rendered;
+                        }
+                        // self.chunks.get_mut(&p).unwrap().refresh(reg);
                         // println!("detailed for {:?}",p);
                         work += 1;
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
+                        println!("Done loading");
                         return
                     }
                 },

@@ -6,7 +6,9 @@ mod ai;
 mod falling_block;
 mod item;
 mod player;
+mod model;
 
+pub use model::*;
 pub use falling_block::*;
 pub use physics::*;
 pub use position::*;

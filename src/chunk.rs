@@ -530,6 +530,193 @@ fn make_mesh(data: &BlocksData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>
 
 }
 
+
+pub fn make_mesh2(pos: ChunkPos, w: &mut WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+
+        let block_map = &reg.blocks;
+        let atlas = &reg.texture_atlas;
+    
+        let mut verts = vec![];
+        let mut uvs = vec![];
+        let mut light = vec![];
+    
+        let uv_dif = atlas.uv_dif();
+
+        let (bx,by,bz) = pos.as_pos_i32().as_tuple();
+    
+        for x in 0..16i32 {
+            for y in 0..16i32 {
+                for z in 0..16i32 {
+
+                    macro_rules! get {
+                        ($x:expr, $y:expr, $z:expr) => {{
+                            let p: WorldPos<i32> = ($x+bx, $y+by, $z+bz).into();
+                            w.block_at_any_state(&p)
+                                .or_else(|| panic!("{:?} {:?}",pos,p)).unwrap()
+                        }};
+                    }
+    
+                    let block = get!(x,y,z);
+    
+                    let t = block.transparent;
+    
+                    if block.no_render {continue};
+    
+                    let xc = x as isize;
+                    let yc = y as isize + 1;
+                    let zc = z as isize;
+    
+                    // y+ face
+                    if get!(x,y+1,z).transparent /* != t */ {
+                        light.extend(&[1.,1.,1.,1.,1.,1.,]);
+                        verts.extend_from_slice(&[
+                            xc, yc, zc,
+                            xc, yc, zc+1,
+                            xc+1, yc, zc,
+                            xc, yc, zc+1,
+                            xc+1, yc, zc+1,
+                            xc+1, yc, zc,
+                        ]);
+                        let (u,v) = atlas.get_uv(block.texture.0);
+                        let (uh,vh) = (u+uv_dif,v+uv_dif);
+                        uvs.extend_from_slice(&[
+                            u, v,
+                            u, vh,
+                            uh, v,
+                            u, vh,
+                            uh, vh,
+                            uh, v,
+                        ]);
+                    }
+    
+                    // y- face
+                    if get!(x,y-1,z).transparent /* != t */ {
+                        let yc = yc - 1;
+                        light.extend(&[1.,1.,1.,1.,1.,1.,]);
+                        verts.extend_from_slice(&[
+                            xc, yc, zc,
+                            xc+1, yc, zc,
+                            xc, yc, zc+1,
+                            xc, yc, zc+1,
+                            xc+1, yc, zc,
+                            xc+1, yc, zc+1,
+                        ]);
+                        let (u,v) = atlas.get_uv(block.texture.2);
+                        let (uh,vh) = (u+uv_dif,v+uv_dif);
+                        uvs.extend_from_slice(&[
+                            u, v,
+                            uh, v,
+                            u, vh,
+                            u, vh,
+                            uh, v,
+                            uh, vh,
+                        ]);
+                    }
+    
+                    // side faces are the same
+                    let (u,v) = atlas.get_uv(block.texture.1);
+                    let (uh,vh) = (u+uv_dif,v+uv_dif);
+    
+                    // x- face
+                    if get!(x-1,y,z).transparent /* != t */ {
+                        light.extend(&[1.,1.,1.,1.,1.,1.,]);
+                        verts.extend_from_slice(&[
+                            xc, yc, zc,
+                            xc, yc-1, zc,
+                            xc, yc, zc+1,
+                            xc, yc-1, zc,
+                            xc, yc-1, zc+1,
+                            xc, yc, zc+1,
+                        ]);
+                        uvs.extend_from_slice(&[
+                            u, v,
+                            u, vh,
+                            uh, v,
+                            u, vh,
+                            uh, vh,
+                            uh, v,
+                        ]);
+                    }
+    
+                    // x+ face
+                    if get!(x+1,y,z).transparent /* != t */ {
+                        let xc = xc + 1;
+                        light.extend(&[1.,1.,1.,1.,1.,1.,]);
+                        verts.extend_from_slice(&[
+                            xc, yc, zc,
+                            xc, yc, zc+1,
+                            xc, yc-1, zc,
+                            xc, yc-1, zc,
+                            xc, yc, zc+1,
+                            xc, yc-1, zc+1,
+                        ]);
+                        uvs.extend_from_slice(&[
+                            u, v,
+                            uh, v,
+                            u, vh,
+                            u, vh,
+                            uh, v,
+                            uh, vh,
+                        ]);
+                    }
+    
+                    // z- face
+                    if get!(x,y,z-1).transparent /* != t */ {
+                        let yc = yc - 1; //?
+                        light.extend(&[1.,1.,1.,1.,1.,1.,]);
+                        verts.extend_from_slice(&[
+                            xc, yc, zc,
+                            xc, yc+1, zc,
+                            xc+1, yc, zc,
+                            xc+1, yc, zc,
+                            xc, yc+1, zc,
+                            xc+1, yc+1, zc,
+                        ]);
+                        uvs.extend_from_slice(&[
+                            uh, vh,
+                            uh, v,
+                            u, vh,
+                            u, vh,
+                            uh, v,
+                            u, v,
+                        ]);
+                    }
+    
+                    // z+ face
+                    if get!(x,y,z+1).transparent /* != t */ {
+                        let yc = yc - 1;//?
+                        let zc = zc + 1;
+                        light.extend(&[1.,1.,1.,1.,1.,1.,]);
+                        verts.extend_from_slice(&[
+                            xc, yc, zc,
+                            xc+1, yc, zc,
+                            xc, yc+1, zc,
+                            xc+1, yc, zc,
+                            xc+1, yc+1, zc,
+                            xc, yc+1, zc,
+                        ]);
+                        uvs.extend_from_slice(&[
+                            uh, vh,
+                            u, vh,
+                            uh, v,
+                            u, vh,
+                            u, v,
+                            uh, v,
+                        ]);
+                    }
+                    
+                }
+            }
+        }
+    
+        let verts = verts.into_iter().map(|v: isize| v as f32).collect::<Vec<_>>();
+    
+        (verts, uvs, light)
+    
+    }
+    
+
+
 pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
     let Vector3 {x, y, z} = pos.into();
     let (mut removal_queue, mut queue) = world.chunk_at_mut(pos).map(|c| (
