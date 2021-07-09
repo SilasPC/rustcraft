@@ -2,6 +2,7 @@
 use crate::world::WorldData;
 use crate::block::Block;
 use cgmath::*;
+use crate::coords::*;
 use super::*;
 
 #[derive(Clone)]
@@ -82,21 +83,21 @@ impl Physics {
 
         if self.gravity {self.vel.y -= 10. * delta;}
         
-        let mut new_pos = pos.pos + self.vel * delta;
+        let mut new_pos = pos.pos.0 + self.vel * delta;
 
         if !self.no_clip {
             macro_rules! test_it {
                 ($x:expr, $y:expr, $z:expr) => {
                     if self.vel.x != 0. && check_hit(world, &Vector3 {
                         x: new_pos.x + $x * self.size.x,
-                        ..pos.pos
+                        ..pos.pos.0
                     }) {
                         new_pos.x = pos.pos.x;
                         self.vel.x = 0.;
                     }
                     if self.vel.y != 0. && check_hit(world, &Vector3 {
                         y: new_pos.y + $y * self.size.y,
-                        ..pos.pos
+                        ..pos.pos.0
                     }) {
                         new_pos.y = pos.pos.y;
                         if self.vel.y < 0. {
@@ -109,7 +110,7 @@ impl Physics {
                     }
                     if self.vel.x != 0. && check_hit(world, &Vector3 {
                         z: new_pos.z + $z * self.size.z,
-                        ..pos.pos
+                        ..pos.pos.0
                     }) {
                         new_pos.z = pos.pos.z;
                         self.vel.z = 0.;
@@ -126,7 +127,7 @@ impl Physics {
             test_it!(1.,1.,1.); */
         }
 
-        pos.pos = new_pos;
+        pos.pos = new_pos.into();
 
         // ?
         let fric = 0.06; // if self.grounded {0.06} else {0.01};
@@ -140,7 +141,7 @@ impl Physics {
         return true;
 
         fn check_hit(w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
-            w.block_at_pos(pos)
+            w.block_at(&pos.as_coord())
                 .map(|b| b.solid)
                 .unwrap_or(true)
         }

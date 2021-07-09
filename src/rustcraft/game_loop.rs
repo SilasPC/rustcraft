@@ -1,4 +1,5 @@
 
+use crate::chunk::calc_light;
 use crate::updates::Updates;
 use crate::chunk::Chunk;
 use crate::make_crafting_registry;
@@ -20,6 +21,7 @@ use std::time::{Instant, Duration};
 use crate::texture::Texture;
 use crate::rustcraft::player::inventory::PlayerInventory;
 use crate::rustcraft::item::{ItemStack,Item,ItemLike};
+use crate::coords::*;
 
 pub enum GameState {
     Inventory {
@@ -69,7 +71,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let program = Program::load(
         include_str!("vert.glsl"),
         include_str!("frag.glsl"),
-        vec!["project","view","transform"]
+        vec!["project","view","transform","globLight"]
     );
 
     let bbox = data.loader.load_texture("assets/bbox.png");
@@ -105,7 +107,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     display.video.text_input().start();
 
-    data.world.load_around2(&Vector3 {x:50., y: 55., z: 50.}, 40., &data.registry);
+    data.world.load_around(&WorldPos::from(Vector3 {x:50., y: 55., z: 50.}));
 
     let cr = make_crafting_registry(&data.registry);
 
@@ -122,6 +124,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
             if !state.is_paused() {
                 block_updates.update(data);
                 crate::rustcraft::component::Item::system_tick_age_items(data);
+                data.world.ticks += 1;
             }    
 
         }
@@ -221,12 +224,12 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
         if let Ok((pos, phys, view, pdata)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(data.cam) {
 
-            raycast_hit = raycast(pos.pos+view.offset(), &pos.heading(), 5., &data.registry, &data.world);
+            raycast_hit = raycast(pos.pos+view.offset().into(), &pos.heading(), 5., &data.registry, &data.world);
             if do_chunk_load {
                 /* worker.send(WorkerJob::SaveChunk(
                     data.world.take_chunk()
                 )); */
-                data.world.load_around2(&pos.pos, 30., &data.registry);
+                data.world.load_around(&pos.pos);
             }
 
             let w = &data.world;
@@ -242,7 +245,7 @@ RustCraft dev build
 "#,
                     pos,
                     position_to_chunk_coordinates(&pos.pos),
-                    raycast_hit.and_then(|(_,hit)| w.block_at_pos(&hit)).map(|b| &b.name),
+                    raycast_hit.and_then(|(_,hit)| w.block_at(&hit)).map(|b| &b.name),
                     1. / data.delta,
                 )
             );
@@ -257,14 +260,14 @@ RustCraft dev build
     
                 if data.input.clicked_primary() {
                     if let Some(hit) = raycast_hit {
-                        let block = data.world.block_at_pos(&hit.1).unwrap().clone();
-                        if data.world.set_block_at_pos(&hit.1, &data.registry[0]) {
+                        let block = data.world.block_at(&hit.1).unwrap().clone();
+                        if data.world.set_block_at(&hit.1, &data.registry[0]) {
                             if let Some(drop_id) = block.drops {
                                 let stack = ItemStack::of(data.registry.get(drop_id), 1);
                                 pdata.inventory.merge(Some(stack));
                             }
-                            block_updates.add_area(hit.1);
-                            block_updates.add_single(hit.1);
+                            block_updates.add_area(hit.1.0);
+                            block_updates.add_single(hit.1.0);
                         }
                     }
                 } else if data.input.clicked_secondary() {
@@ -273,13 +276,13 @@ RustCraft dev build
                         let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
                         let mut success = false;
                         if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
-                            if data.world.set_block_at_pos(&hit.0, &block) {
+                            if data.world.set_block_at(&hit.0, &block) {
                                 success = true;
-                                block_updates.add_area(hit.0);
-                                block_updates.add_single(hit.0);
+                                block_updates.add_area(hit.0.0);
+                                block_updates.add_single(hit.0.0);
                             }
                         } else {
-                            let b = data.world.block_at_pos_mut(&hit.1).unwrap();
+                            let b = data.world.block_at_mut(&hit.1).unwrap();
                             if let Some(on_use) = b.behavior.as_ref().and_then(|b| b.on_use) {
                                 on_use(b);
                             }
@@ -300,7 +303,7 @@ RustCraft dev build
                 phys.apply_force_continuous(data.delta, &force);
             }
 
-            view_mat = Matrix4::from(pos.rot) * Matrix4::from_translation(-pos.pos-view.offset());
+            view_mat = Matrix4::from(pos.rot) * Matrix4::from_translation(-pos.pos.0-view.offset());
 
             /* let aabb = phys.get_aabb(pos);
             //println!("Player: {:?}",aabb);
@@ -317,6 +320,7 @@ RustCraft dev build
         }
         // STOP SYSTEMS
 
+        data.world.load(&data.registry);
 
         // START RENDERING
         render(&program, data, &view_mat, &cube, &bbox);
@@ -412,17 +416,30 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
     
     program.load_mat4(0, &Matrix4::from(data.fov));
     program.load_mat4(1, view_mat);
+    let light = (data.world.ticks as f32 / 200. * std::f32::consts::TAU).sin();
+    program.load_f32(3, light.max(1./16.));
     
-    for chunk in data.world
-        .chunk_iter_mut()
-        .filter(|c| c.renderable_after_refresh())
+    /* for p in
+        data.world.chunks_tree.proxy_entries()
+            .filter(|(_,c)| c.needs_refresh)
+            .map(|(p,_)| *p)
+            .collect::<Vec<_>>()
     {
-        
+        let mut area = data.world.area_from_proxy(p).unwrap();
+        calc_light(&mut area);
+        area.center_mut().refresh(&data.registry);
+    } */
+
+    for chunk in data.world.chunks.values_mut().filter(|c| c.renderable_after_refresh())
+    {
+
+        /* println!("{:?}", chunk.pos); */
         program.load_mat4(2, &Matrix4::from_translation(
-            chunk.pos.map(|x| x as f32 * 16.)
+            chunk.pos.as_pos_f32().0
         ));
 
         chunk.refresh(&data.registry);
+
         chunk.bind_and_draw();
 
     }
@@ -434,22 +451,22 @@ fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &cr
 
 }
 
-fn raycast(mut pos: Vector3<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &Registry, w: &super::world::WorldData) -> Option<(Vector3<f32>,Vector3<f32>)> {
+fn raycast(mut pos: WorldPos<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &Registry, w: &super::world::WorldData) -> Option<(WorldPos<f32>,WorldPos<f32>)> {
     
     let mut dist = 0.;
     while dist < max_dist && !check_hit(&reg, w, &pos) {
         dist += 0.1;
-        pos += 0.1 * heading;
+        pos.0 += 0.1 * heading;
     }
 
     if dist < max_dist {
-        return Some((pos-0.1*heading,pos))
+        return Some(((pos.0-0.1*heading).into(),pos))
     } else {
         return None
     }
 
     fn check_hit(reg: &Registry, w: &super::world::WorldData, pos: &Vector3<f32>) -> bool {
-        w.block_at_pos(pos)
+        w.block_at(&pos.as_coord())
             .map(|b| b.solid)
             .unwrap_or(false)
     }

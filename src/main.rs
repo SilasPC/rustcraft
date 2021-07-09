@@ -5,6 +5,7 @@
 mod util;
 mod chunk;
 mod engine;
+mod coords;
 mod rustcraft;
 mod perlin;
 use std::sync::Arc;

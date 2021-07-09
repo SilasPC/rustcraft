@@ -9,7 +9,7 @@ use crate::block::Block;
 
 pub struct Registry {
     pub blocks: Vec<Block>,
-    pub items: Vec<Arc<Item>>,
+    pub items: Vec<Item>,
     pub items_offset: usize,
     pub texture_atlas: Arc<TextureAtlas>,
     pub iso_block_vao: VAO,
@@ -24,7 +24,7 @@ impl Registry {
             self.blocks[idx].clone().into()
         }
     }
-    pub fn item(&self, idx: usize) -> &Arc<Item> {
+    pub fn item(&self, idx: usize) -> &Item {
         &self.items[idx+self.items_offset]
     }
 }

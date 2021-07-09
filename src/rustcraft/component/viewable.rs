@@ -13,5 +13,5 @@ impl From<Vector3<f32>> for View {
 }
 
 impl View {
-    pub fn offset(&self) -> &Vector3<f32> {&self.offset}
+    pub fn offset(&self) -> Vector3<f32> {self.offset}
 }

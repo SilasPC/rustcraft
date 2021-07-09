@@ -4,6 +4,7 @@ use cgmath::Vector3;
 use std::cmp::Reverse;
 use crate::Data;
 use std::collections::BinaryHeap;
+use crate::coords::*;
 
 #[derive(Default)]
 pub struct Updates {
@@ -36,20 +37,21 @@ impl Updates {
     pub fn update(&mut self, data: &mut Data) {
         macro_rules! update {
             ($x:expr,$y:expr,$z:expr) => {
-                if let Some(block) = data.world.block_at($x,$y,$z) {
+                let here: WorldPos<i32> = ($x,$y,$z).into();
+                if let Some(block) = data.world.block_at(&here) {
                     let block = block.clone();
                     if block.has_gravity {
-                        if let Some(below) = data.world.block_at($x,$y-1,$z) {
+                        let below: WorldPos<i32> = ($x,$y-1,$z).into();
+                        if let Some(below) = data.world.block_at(&below) {
                             let below = below.as_ref();
                             if !below.solid {
-                                data.world.set_block_at($x,$y,$z, &data.registry[0]);
-                                let fall_pos = Vector3 {x:$x,y:$y,z:$z}.map(|x| x as f32);
+                                data.world.set_block_at(&here, &data.registry[0]);
                                 let fall_size = Vector3 {
                                     x: 1.,
                                     y: 1.,
                                     z: 1.,
                                 };
-                                let pos_comp = Position::from(fall_pos);
+                                let pos_comp = Position::from(here.as_pos_f32());
                                 let phys = Physics::new(fall_size);
                                 let aabb = phys.get_aabb(&pos_comp);
                                 let falling_block = data.ecs.spawn((

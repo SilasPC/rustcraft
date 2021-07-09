@@ -1,4 +1,5 @@
 
+use crate::item::ItemData;
 use std::collections::HashMap;
 use crate::item::ItemStack;
 use crate::crafting::CraftingRegistry;
@@ -11,9 +12,10 @@ use crate::TextureAtlas;
 use std::sync::Arc;
 use cgmath::*;
 use crate::rustcraft::component::{Physics,Position,PlayerData,View};
+use crate::coords::*;
 
 pub fn make_player() -> (impl hecs::DynamicBundle, AABB) {
-    let pos = Position::from(Vector3 {x:50., y: 55., z: 50.});
+    let pos = Position::from(Vector3 {x:50., y: 55., z: 50.}.as_coord());
     let mut phys = Physics::new(Vector3 {
         x: 0.8,
         y: 1.9,
@@ -35,7 +37,7 @@ pub fn make_registry(texture_atlas: Arc<TextureAtlas>) -> Arc<Registry> {
     x.item.sort_by_key(|a| a.id);
     assert!(x.block.last().unwrap().id < x.item.first().unwrap().id);
     let blocks: Vec<_> = x.block.into_iter().map(Block::new_registered_as_shared).collect();
-    let items: Vec<_> = x.item.into_iter().map(std::sync::Arc::new).collect();
+    let items: Vec<_> = x.item.into_iter().map(Item::new_registered_as_shared).collect();
     for block in &blocks {
         // by incrementing the count to at least 2, these can never be mutated via Arc::make_mut
         // remember to decrement on Register Drop
@@ -84,5 +86,5 @@ pub fn make_crafting_registry(reg: &Registry) -> CraftingRegistry {
 #[derive(serde::Deserialize)]
 struct SerialItemRegistry {
     block: Vec<BlockData>,
-    item: Vec<Item>,
+    item: Vec<ItemData>,
 }

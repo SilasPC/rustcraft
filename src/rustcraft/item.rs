@@ -3,22 +3,23 @@ use std::sync::Arc;
 use crate::rustcraft::block::*;
 
 #[derive(Eq, PartialEq, Clone, Debug, Hash, serde::Deserialize)]
-pub struct Item {
+pub struct ItemData {
     pub id: usize,
     pub name: String,
     pub texture: usize,
 }
 
-pub struct Itemx(Arc<(Item,bool)>);
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Item(Arc<(ItemData,bool)>);
 
-impl Itemx {
-    pub fn new_registered_as_shared(data: Item) -> Self {
+impl Item {
+    pub fn new_registered_as_shared(data: ItemData) -> Self {
         Self(Arc::new((data,true)))
     }
-    pub fn new_not_shared(data: Item) -> Self {
+    pub fn new_not_shared(data: ItemData) -> Self {
         Self(Arc::new((data,false)))
     }
-    pub fn mutate(&mut self) -> &mut Item {
+    pub fn mutate(&mut self) -> &mut ItemData {
         let mt = Arc::make_mut(&mut self.0);
         mt.1 = false;
         &mut mt.0
@@ -33,10 +34,18 @@ impl Itemx {
     }
 }
 
+
+impl std::ops::Deref for Item {
+    type Target = ItemData;
+    fn deref(&self) -> &Self::Target {
+        &self.0.0
+    }
+}
+
 #[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub enum ItemLike {
     Block(Block),
-    Item(Arc<Item>)
+    Item(Item)
 }
 
 impl From<Block> for ItemLike {
@@ -44,8 +53,8 @@ impl From<Block> for ItemLike {
         Self::Block(arc)
     }
 }
-impl From<Arc<Item>> for ItemLike {
-    fn from(arc: Arc<Item>) -> Self {
+impl From<Item> for ItemLike {
+    fn from(arc: Item) -> Self {
         Self::Item(arc)
     }
 }
@@ -69,7 +78,7 @@ impl ItemLike {
             Self::Item(_) => None
         }
     }
-    pub fn as_item(&self) -> Option<&Arc<Item>> {
+    pub fn as_item(&self) -> Option<&Item> {
         match self {
             Self::Item(inner) => Some(inner),
             Self::Block(_) => None
@@ -81,7 +90,7 @@ impl ItemLike {
             Self::Item(_) => None
         }
     }
-    pub fn as_item_mut(&mut self) -> Option<&mut Arc<Item>> {
+    pub fn as_item_mut(&mut self) -> Option<&mut Item> {
         match self {
             Self::Item(inner) => Some(inner),
             Self::Block(_) => None

@@ -18,7 +18,7 @@ pub fn make_cstr(len: usize) -> CString {
 }
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
-pub struct AABB(AABBTuple);
+pub struct AABB(pub AABBTuple);
 pub type AABBTuple = ((f32,f32,f32,),(f32,f32,f32,));
 
 impl From<AABBTuple> for AABB {
@@ -118,6 +118,10 @@ impl<K: Copy + Eq + std::hash::Hash, T> BVH<K,T> {
 
     pub fn values_mut(&mut self) -> impl std::iter::Iterator<Item=&mut T> {
         self.vals.values_mut()
+    }
+
+    pub fn proxy_entries(&self) -> impl std::iter::Iterator<Item=(&Proxy, &T)> {
+        self.vals.iter()
     }
 
     pub fn query(&self, aabb: &AABB) -> Vec<Proxy> {
@@ -225,7 +229,7 @@ pub fn gen_block_vao(b: &Vec<Block>, a: &TextureAtlas) -> VAO {
 
 }
 
-pub fn gen_item_vao(items: &Vec<Arc<Item>>, a: &TextureAtlas) -> VAO {
+pub fn gen_item_vao(items: &Vec<Item>, a: &TextureAtlas) -> VAO {
 
     let mut verts = vec![];
     let mut uvs = vec![];

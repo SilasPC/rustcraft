@@ -12,6 +12,7 @@ pub struct VAO {
     id: uint,
     verts: uint,
     uvs: uint,
+    light: uint,
     vertex_count: i32,
     kind: RenderKind,
 }
@@ -40,6 +41,7 @@ impl VAO {
                 id,
                 verts: verts_id,
                 uvs: 0,
+                light: 0,
                 vertex_count: verts.len() as i32,
                 kind: RenderKind::Lines,
             }
@@ -57,6 +59,25 @@ impl VAO {
             gl::BindVertexArray(self.id);
             transfer_to_array_buffer(self.verts, verts);
             transfer_to_array_buffer(self.uvs, uvs);
+            gl::BindVertexArray(0);
+        }
+        self.vertex_count = verts.len() as i32;
+    }
+
+    pub fn update_lit(&mut self, verts: &[f32], uvs: &[f32], light: &[f32]) {
+
+        if verts.len() / 3 != uvs.len() / 2 {
+            panic!("UVs - VERTs count mismatch ({} != {})", uvs.len() / 3, verts.len() / 2);
+        }
+        if verts.len() / 3 != light.len() {
+            panic!("VERTs - LIGHTs count mismatch ({} != {})", verts.len() / 3, light.len());
+        }
+
+        unsafe {
+            gl::BindVertexArray(self.id);
+            transfer_to_array_buffer(self.verts, verts);
+            transfer_to_array_buffer(self.uvs, uvs);
+            transfer_to_array_buffer(self.light, light);
             gl::BindVertexArray(0);
         }
         self.vertex_count = verts.len() as i32;
@@ -84,6 +105,7 @@ impl VAO {
                 id,
                 verts: ids[0],
                 uvs: ids[1],
+                light: 0,
                 vertex_count: 0,
                 kind: RenderKind::Triangles,
             }
@@ -122,6 +144,53 @@ impl VAO {
                 id,
                 verts: verts_id,
                 uvs: uvs_id,
+                light: 0,
+                vertex_count: verts.len() as i32,
+                kind: RenderKind::Triangles,
+            }
+
+        }
+    }
+
+    pub fn textured_lit(verts: &[f32], uvs: &[f32], light: &[f32]) -> Self {
+        unsafe {
+
+            if verts.len() / 3 != uvs.len() / 2 {
+                panic!("UVs - VERTs count mismatch ({} != {})", uvs.len() / 3, verts.len() / 2);
+            }
+            if verts.len() / 3 != light.len() {
+                panic!("VERTs - LIGHTs count mismatch ({} != {})", verts.len() / 3, light.len());
+            }
+            
+            let mut id = 0;
+
+            gl::GenVertexArrays(1, &mut id);
+            gl::BindVertexArray(id);
+
+            assert!(id != 0);
+            
+            let mut verts_id = 0;
+            gl::GenBuffers(1, &mut verts_id);
+            configure_float_vbo(verts_id, 0, 3);
+            transfer_to_array_buffer(verts_id, verts);
+
+            let mut uvs_id = 0;
+            gl::GenBuffers(1, &mut uvs_id);
+            configure_float_vbo(uvs_id, 1, 2);
+            transfer_to_array_buffer(uvs_id, uvs);
+
+            let mut lights_id = 0;
+            gl::GenBuffers(1, &mut lights_id);
+            configure_float_vbo(lights_id, 2, 1);
+            transfer_to_array_buffer(lights_id, light);
+
+            gl::BindVertexArray(0);
+
+            Self {
+                id,
+                verts: verts_id,
+                uvs: uvs_id,
+                light: lights_id,
                 vertex_count: verts.len() as i32,
                 kind: RenderKind::Triangles,
             }

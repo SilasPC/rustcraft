@@ -1,6 +1,7 @@
 
 use crate::block::Block;
 use std::sync::Arc;
+use crate::coords::*;
 use super::*;
 
 pub struct FallingBlock {
@@ -14,7 +15,7 @@ impl FallingBlock {
         for (ent, (pos, phys, this)) in data.ecs.query_mut::<(&mut Position, &mut Physics, &FallingBlock)>() {
             if phys.is_grounded() {
                 // spawn item if fail:
-                data.world.set_block_at_pos(&pos.pos, &this.block);
+                data.world.set_block_at(&pos.pos, &this.block);
                 data.ent_tree.remove(ent);
                 to_destroy.push(ent);
             }
