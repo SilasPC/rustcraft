@@ -1,4 +1,5 @@
 
+use crate::cmd::Cmd;
 use crate::chunk::calc_light;
 use crate::updates::Updates;
 use crate::chunk::Chunk;
@@ -111,10 +112,6 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     let cr = make_crafting_registry(&data.registry);
 
-    if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
-        pdata.inventory.merge(ItemStack::stack_of(data.registry.get(8)).into());
-    }
-
     'main: loop {
 
         let mut do_chunk_load = false;
@@ -190,7 +187,11 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
                 KeyDown {keycode: Some(Return), ..} => {
                     state = match state {
                         GameState::Chat { text, .. } => {
-                            println!("{}", text.text());
+                            let cmd: Option<Cmd> = text.text().parse().ok();
+                            println!("{}\n => {:?}",text.text(),cmd);
+                            if let Some(cmd) = cmd {
+                                cmd.exec(data);
+                            }
                             display.set_mouse_capture(true);
                             GameState::Playing
                         },

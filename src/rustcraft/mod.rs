@@ -11,3 +11,4 @@ pub mod content;
 pub mod registry;
 pub mod crafting;
 pub mod updates;
+pub mod cmd;
