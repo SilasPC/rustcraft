@@ -258,9 +258,6 @@ impl Chunk {
 
 }
 
-    
-
-
 pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
     let Vector3 {x, y, z} = pos.into();
     let (mut removal_queue, mut queue) = world.chunk_at_mut(pos).map(|c| (

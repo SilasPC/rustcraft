@@ -24,14 +24,16 @@ pub fn make_registry(texture_atlas: Arc<TextureAtlas>) -> Arc<Registry> {
     let mut x: SerialItemRegistry = toml::from_str(&std::fs::read_to_string("assets/items.toml").unwrap()).unwrap();
     x.block.sort_by_key(|a| a.id);
     x.item.sort_by_key(|a| a.id);
+
+    x.block[3].behavior = Some(Box::new(Behavior {
+        on_rnd_tick: Some(grass_update),
+        .. Default::default()
+    }));
+    assert_eq!(x.block[3].id, 3);
+
     assert!(x.block.last().unwrap().id < x.item.first().unwrap().id);
     let blocks: Vec<_> = x.block.into_iter().map(Block::new_registered_as_shared).collect();
     let items: Vec<_> = x.item.into_iter().map(Item::new_registered_as_shared).collect();
-    for block in &blocks {
-        // by incrementing the count to at least 2, these can never be mutated via Arc::make_mut
-        // remember to decrement on Register Drop
-        //! unsafe { block.inc_arc_count() } CAUSES ILLEGAL INSTRUCTION???
-    }
     let items_offset = blocks.len();
     Arc::new(Registry {
         item_vao: util::gen_item_vao(&items, &texture_atlas),
@@ -43,20 +45,11 @@ pub fn make_registry(texture_atlas: Arc<TextureAtlas>) -> Arc<Registry> {
     })
 }
 
-impl Drop for Registry {
-    fn drop(&mut self) {
-        for block in &self.blocks {
-            //! unsafe { block.dec_arc_count() }
-        }
-    }
-}
-
 #[derive(serde::Deserialize)]
 struct SerialItemRegistry {
     block: Vec<BlockData>,
     item: Vec<ItemData>,
 }
-
 
 pub fn load_recipies(reg: &Registry) -> CraftingRegistry {
     let tomlstr = std::fs::read_to_string("assets/recipies.toml").unwrap();
@@ -89,3 +82,15 @@ struct SavedRecipe {
 }
 
 const fn one() -> usize {1}
+
+fn grass_update(mut pos: WorldPos<i32>, data: &mut Data) {
+    pos.0.y += 1;
+    let mut turn_to_dirt = false;
+    if let Some(block) = data.world.block_at(&pos) {
+        turn_to_dirt = block.solid || !block.transparent;
+    }
+    if turn_to_dirt {
+        pos.0.y -= 1;
+        data.world.set_block_at(&pos, &data.registry[2]);
+    }
+}

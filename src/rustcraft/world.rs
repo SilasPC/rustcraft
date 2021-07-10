@@ -1,4 +1,20 @@
 
+#[macro_export]
+macro_rules! time_it {
+    ($name:expr, $x:expr) => {{
+        let now = Instant::now();
+        let ret = $x;
+        println!("{:?} took {:?} ms", $name, now.elapsed().as_millis());
+        ret
+    }};
+    ($x:expr) => {{
+        let now = Instant::now();
+        let ret = $x;
+        println!("{:?} took {:?} ms", stringify!($x), now.elapsed().as_millis());
+        ret
+    }}
+}
+
 use crate::prelude::*;
 
 #[derive(Debug)]
@@ -149,6 +165,7 @@ impl WorldData {
         for cp in &cc {
             calc_light(*cp, self);
         }
+        println!("{}",cc.len());
         for cp in cc {
             for x in -1..=1 {
                 for y in -1..=1 {
@@ -158,13 +175,13 @@ impl WorldData {
                             y: y + cp.y,
                             z: z + cp.z,
                         };
-                        let (verts, uvs, lights) = meshing::make_mesh(p.into(), self, reg);
+                        // ! make_mesh is too slow, old version almost fast enough
+                        // ! need to make another solution here
+                        // ! need to make a hybrid version as well
+                        let (verts, uvs, lights) = time_it!(meshing::make_mesh_old(p.into(), self, reg));
                         let c = self.chunks.get_mut(&p.into()).unwrap();
-                        if let Some(mesh) = &mut c.mesh {
-                            mesh.update_lit(&verts, &uvs, &lights);
-                        } else {
-                            c.mesh = Some(VAO::textured_lit(&verts, &uvs, &lights));
-                        }
+                        if !c.renderable() {continue}
+                        c.mesh.as_mut().unwrap().update_lit(&verts, &uvs, &lights);
                         c.needs_refresh = false;
                         c.chunk_state = ChunkState::Rendered;
                     }
@@ -175,17 +192,19 @@ impl WorldData {
 
     pub fn load_around(&mut self, pos: &impl Coord) {
         let (x,y,z) = pos.as_chunk().as_tuple();
-        println!("Filling...");
-        self.to_load.push_back(Loading::Filling(0, (x-5,y-5,z-5).into()))
+        let p = (x-5,y-5,z-5).into();
+        println!("Filling from {:?}...", p);
+        self.to_load.push_back(Loading::Filling(0, p))
     }
 
     pub fn load(&mut self, reg: &Registry, max_work: usize) {
+        const DIAMETER: i32 = 10;
         if let Some(mut loading) = self.to_load.pop_front() {
             let mut work = 0;
             match loading {
                 Loading::Filling(ref mut i, pos) => {
                     let (x,y,z) = pos.as_tuple();
-                    const RAD: i32 = 10;
+                    const RAD: i32 = DIAMETER;
                     while *i < RAD*RAD*RAD && work < max_work {
                         let p = (
                             x + *i / (RAD*RAD),
@@ -207,13 +226,14 @@ impl WorldData {
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
-                        println!("Detailing...");
-                        loading = Loading::Detailing(0, pos + Vector3{x:1,y:1,z:1}.into());
+                        let pos = pos + Vector3{x:1,y:1,z:1}.into();
+                        println!("Detailing from {:?}...",pos);
+                        loading = Loading::Detailing(0, pos);
                     }
                 },
                 Loading::Detailing(ref mut i, pos) => {
                     let (x,y,z) = pos.as_tuple();
-                    const RAD: i32 = 8;
+                    const RAD: i32 = DIAMETER-2;
                     while *i < RAD*RAD*RAD && work < max_work {
                         let p = (
                             x + *i / (RAD*RAD),
@@ -228,13 +248,14 @@ impl WorldData {
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
-                        println!("Meshing...");
-                        loading = Loading::Meshing(0, pos + Vector3{x:1,y:1,z:1}.into());
+                        let pos = pos + Vector3{x:1,y:1,z:1}.into();
+                        println!("Meshing from {:?}...", pos);
+                        loading = Loading::Meshing(0, pos);
                     }
                 },
                 Loading::Meshing(ref mut i, pos) => {
                     let (x,y,z) = pos.as_tuple();
-                    const RAD: i32 = 6;
+                    const RAD: i32 = DIAMETER-4;
                     while *i < RAD*RAD*RAD && work < max_work {
                         let p = (
                             x + *i / (RAD*RAD),
@@ -271,6 +292,7 @@ impl WorldData {
 
 fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
     let (x,y,z) = pos.as_pos_i32().as_tuple();
+    let dirt = &reg[2];
     let log = &reg[4];
     let leaves = &reg[6];
     for x in x..x+16 {
@@ -286,6 +308,7 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
                         const INV: f64 = 1./1.3;
                         if world.noise.noise_basic.get2d([nx-INV,nz]) <= CUTOFF &&
                             world.noise.noise_basic.get2d([nx,nz-INV]) <= CUTOFF {
+                                world.set_block_at(&below, dirt);
                                 let h = 3 + (2. * world.noise.noise_basic.get2d([nx,nz])) as i32;
                                 for y in y..=y+h {
                                     let here: WorldPos<i32> = (x,y,z).into();

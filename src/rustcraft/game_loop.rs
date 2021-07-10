@@ -122,11 +122,13 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
             let keys = data.world.chunks.iter().filter(|(_,c)| c.renderable()).map(|(k,_)| k.clone()).collect::<Vec<_>>();
             for cp in keys {
+                // println!("{:?}",cp);
                 for _ in 0..RANDOM_TICK_SPEED {
                     let random = rng.gen::<(i32,i32,i32)>();
                     let pos = cp.as_pos_i32() + Vector3::from(random).map(|x| x.abs() % 16).into();
+                    assert_eq!(cp, pos.as_chunk());
                     if let Some(on_rnd_tick) = data.world.block_at(&pos).map(|b| b.behavior.clone()).flatten().map(|beh| beh.on_rnd_tick).flatten() {
-                        on_rnd_tick(pos, &mut data.world)
+                        on_rnd_tick(pos, data)
                     }
                 }
             }
@@ -230,6 +232,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
         pgui.scroll(-data.input.scroll());
 
         let mut raycast_hit = None;
+        let mut on_use = None;
 
         if let Ok((pos, phys, view, pdata)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(data.cam) {
 
@@ -294,9 +297,7 @@ RustCraft dev build
                             }
                         } else {
                             let b = data.world.block_at(&hit.1).unwrap();
-                            if let Some(on_use) = b.behavior.as_ref().and_then(|b| b.on_use) {
-                                on_use(hit.1.as_pos_i32(), &mut data.world);
-                            }
+                            on_use = b.behavior.as_ref().and_then(|b| b.on_use.map(|f| (hit.1,f)));
                         }
                         if success {
                             ItemStack::deduct(maybe_item, 1);
@@ -323,6 +324,10 @@ RustCraft dev build
             
         }
 
+        if let Some((p,f)) = on_use {
+            f(p.as_pos_i32(), data);
+        }
+
         // interact with inventory
         if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
             match state {
@@ -347,6 +352,7 @@ RustCraft dev build
         }
         // ! STOP SYSTEMS
 
+        // TODO this is waaay to slow
         data.world.refresh(&data.registry);
         data.world.load(&data.registry, 100);
 
@@ -454,10 +460,6 @@ RustCraft dev build
                 _ => {}
             }
         }
-
-        chunk_renderer.program.load_mat4(0, &Matrix4::one());
-        chunk_renderer.program.load_mat4(1, &Matrix4::one());
-        chunk_renderer.program.load_mat4(2, &Matrix4::from_translation(-Vector3::unit_z()));
 
         if let Some(hit) = raycast_hit {
             let hit = hit.1.map(|v| v.floor());
