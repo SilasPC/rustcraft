@@ -1,7 +1,6 @@
 
 use std::sync::{Arc, mpsc::*};
-use crate::Registry;
-use crate::chunk::chunk::Chunk;
+use crate::prelude::*;
 
 pub struct WorkerData {
     pub registry: Arc<Registry>,

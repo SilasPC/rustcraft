@@ -2,19 +2,15 @@
 #![allow(unused)]
 #![feature(box_patterns)]
 
-mod util;
-mod engine;
-mod coords;
-mod rustcraft;
-mod perlin;
+pub mod util;
+pub mod engine;
+pub mod coords;
+pub mod rustcraft;
+pub mod perlin;
 use crate::lines::box_vao;
-use crate::chunk::meshing::cube_mesh;
 use crate::crafting::CraftingRegistry;
 use crate::text::font::Font;
-use crate::vao::VAO;
 use crate::display::GLDisplay;
-use std::sync::Arc;
-use crate::registry::Registry;
 use crate::util::BVH;
 use crate::content::*;
 use engine::program::*;
@@ -25,6 +21,25 @@ use crate::rustcraft::input::Input;
 use crate::engine::texture::*;
 use engine::*;
 use rustcraft::*;
+
+pub mod prelude {
+    pub use util;
+    pub use engine;
+    pub use rustcraft as game;
+    pub use crate::rustcraft::world::{self, WorldData};
+    pub use crate::rustcraft::item::*;
+    pub use crate::*;
+    pub use crate::rustcraft::component;
+    pub use crate::rustcraft::chunk::chunk::*;
+    pub use cgmath::*;
+    pub use crate::registry::Registry;
+    pub use crate::coords::*;
+    pub use std::collections::{HashSet, HashMap, VecDeque};
+    pub use crate::vao::VAO;
+    pub use crate::rustcraft::chunk::{chunk::{self, Chunk}, meshing};
+    pub use std::sync::Arc;
+}
+use crate::prelude::*;
 
 pub struct Settings {
     pub fov: Deg<f32>,
@@ -43,7 +58,7 @@ impl RenderData {
     pub fn new(data: &mut Data) -> Self {
         let bbox = data.loader.load_texture("assets/bbox.png");
         let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
-        let cube = cube_mesh();
+        let cube = meshing::cube_mesh();
         let view_mat = Matrix4::one();
         let line_box = box_vao();
         Self {

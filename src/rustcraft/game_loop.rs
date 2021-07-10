@@ -1,29 +1,21 @@
 
 use crate::worker::*;
-use crate::RenderData;
-use crate::chunk::meshing::ChunkRenderer;
-use crate::chunk::chunk::*;
+use meshing::ChunkRenderer;
 use crate::cmd::Cmd;
 use crate::updates::Updates;
 use crate::crafting::CraftingRegistry;
-use crate::registry::Registry;
-use crate::block::Block;
-use std::sync::Arc;
 use crate::util::position_to_chunk_coordinates;
 use crate::util::AABB;
 use crate::text::text::Text;
-use crate::rustcraft::pgui::GUI;
+use game::pgui::GUI;
 use crate::gui::render::GUIRenderer;
 use crate::display::GLDisplay;
-use crate::Program;
-use crate::Data;
 use crate::component::*;
-use cgmath::*;
 use std::time::{Instant, Duration};
 use crate::texture::Texture;
-use crate::rustcraft::player::inventory::PlayerInventory;
-use crate::rustcraft::item::{ItemStack,Item,ItemLike};
-use crate::coords::*;
+use game::player::inventory::PlayerInventory;
+
+use crate::prelude::*;
 
 const TICK_DURATION: Duration = Duration::from_millis(50);
 
@@ -119,7 +111,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
             if !state.is_paused() {
                 block_updates.update(data);
-                crate::rustcraft::component::Item::system_tick_age_items(data);
+                crate::rustcraft::component::ItemCmp::system_tick_age_items(data);
                 data.world.ticks += 1;
             }    
 
@@ -282,9 +274,9 @@ RustCraft dev build
                                 block_updates.add_single(hit.0.0);
                             }
                         } else {
-                            let b = data.world.block_at_mut(&hit.1).unwrap();
+                            let b = data.world.block_at(&hit.1).unwrap();
                             if let Some(on_use) = b.behavior.as_ref().and_then(|b| b.on_use) {
-                                on_use(b);
+                                on_use(hit.1.as_pos_i32(), &mut data.world);
                             }
                         }
                         if success {

@@ -1,7 +1,4 @@
 
-use crate::block::Block;
-use std::sync::Arc;
-use crate::coords::*;
 use super::*;
 
 pub struct FallingBlock {

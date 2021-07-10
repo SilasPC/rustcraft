@@ -1,5 +1,4 @@
 
-use crate::item::ItemStack;
 use crate::player::inventory::PlayerInventory;
 
 #[derive(Default)]

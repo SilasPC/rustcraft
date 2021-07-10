@@ -8,6 +8,7 @@ mod item;
 mod player;
 mod model;
 
+pub use crate::prelude::*;
 pub use model::*;
 pub use falling_block::*;
 pub use physics::*;

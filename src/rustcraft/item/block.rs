@@ -1,11 +1,20 @@
 
-use crate::item::Item;
-use std::rc::Rc;
-use crate::vao::VAO;
-use crate::TextureAtlas;
-use std::sync::Arc;
+use crate::prelude::*;
 
-pub type BehaviorFn = fn(&mut Block);
+#[derive(Debug, Clone)]
+pub enum Value {
+    Num(f32),
+    Str(String),
+    Dict(HashMap<String,Value>),
+    Arr(Vec<Value>),
+    Item(ItemLike)
+}
+
+fn no_data() -> Option<Value> {
+    None
+}
+
+pub type BehaviorFn = fn(pos: WorldPos<i32>, data: &mut WorldData);
 
 #[derive(Clone, Default)]
 pub struct Behavior {
@@ -15,7 +24,7 @@ pub struct Behavior {
     pub on_update: Option<BehaviorFn>,
     pub on_break: Option<BehaviorFn>,
 }
-
+/* 
 impl std::hash::Hash for Behavior {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {}
 }
@@ -23,7 +32,7 @@ impl std::hash::Hash for Behavior {
 impl Eq for Behavior {}
 impl PartialEq for Behavior {
     fn eq(&self, rhs: &Self) -> bool {true}
-}
+} */
 
 impl std::fmt::Debug for Behavior {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -31,8 +40,20 @@ impl std::fmt::Debug for Behavior {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub struct Block(Arc<(BlockData,bool)>);
+
+impl Eq for Block {}
+impl PartialEq for Block {
+    fn eq(&self, rhs: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &rhs.0)
+    }
+}
+impl std::hash::Hash for Block {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.0.as_ref(), state);
+    }
+}
 
 impl std::ops::Deref for Block {
     type Target = BlockData;
@@ -60,7 +81,7 @@ impl Block {
         &mut mt.0
     }
     pub fn is_shared(&self) -> bool {self.0.1}
-    pub fn ptr_eq(&self, rhs: &Self) -> bool {Arc::ptr_eq(&self.0, &rhs.0)}
+    // pub fn ptr_eq(&self, rhs: &Self) -> bool {Arc::ptr_eq(&self.0, &rhs.0)}
     pub fn render_eq(&self, rhs: &Self) -> bool {self.0.0.render_eq(&rhs.0.0)}
     pub unsafe fn inc_arc_count(&self) {
         Arc::increment_strong_count(&self.0)
@@ -70,7 +91,7 @@ impl Block {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct BlockData {
     pub id: usize,
     pub name: String,
@@ -91,6 +112,8 @@ pub struct BlockData {
     pub drops: Option<usize>,
     #[serde(skip)]
     pub behavior: Option<Box<Behavior>>,
+    #[serde(skip)]
+    pub data: Option<Value>,
 }
 
 impl BlockData {

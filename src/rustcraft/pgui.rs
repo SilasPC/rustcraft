@@ -1,13 +1,10 @@
 
 use crate::registry::Registry;
-use std::rc::Rc;
-use crate::item::*;
-use std::sync::Arc;
-use crate::block::Block;
 use crate::player::inventory::PlayerInventory;
 use crate::engine::texture::Texture;
 use crate::engine::gui::{gui::*, render::*};
-use cgmath::*;
+
+use crate::prelude::*;
 
 pub struct GUI {
     pub toolbar: Texture,

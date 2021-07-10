@@ -1,11 +1,6 @@
 
-use crate::item::ItemLike;
-use crate::vao::VAO;
 use crate::TextureAtlas;
-use std::rc::Rc;
-use crate::item::Item;
-use std::sync::Arc;
-use crate::block::Block;
+use crate::prelude::*;
 
 pub struct Registry {
     pub blocks: Vec<Block>,

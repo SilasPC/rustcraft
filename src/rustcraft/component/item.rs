@@ -1,17 +1,16 @@
 
-use super::super::item::ItemStack;
 use super::*;
 
-pub struct Item {
+pub struct ItemCmp {
     pub item: ItemStack,
     pub age: usize,
 }
 
-impl Item {
+impl ItemCmp {
 
     pub fn system_tick_age_items(data: &mut crate::Data) {
         let mut despawn = vec![];
-        for (ent, item) in data.ecs.query_mut::<&mut Item>() {
+        for (ent, item) in data.ecs.query_mut::<&mut ItemCmp>() {
             item.age += 1;
             if item.age > 20 * 10 { // seconds
                 despawn.push(ent);

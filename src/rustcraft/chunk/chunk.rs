@@ -1,16 +1,8 @@
 
-use crate::world::WorldData;
-use crate::coords::*;
-use std::collections::VecDeque;
-use crate::block::BlockData;
+use crate::prelude::*;
 use crate::util::sub_coords_from_i32;
-use crate::registry::Registry;
-use std::sync::Arc;
 use crate::util::position_to_sub_coordinates;
 use crate::util::AABB;
-use cgmath::*;
-use crate::engine::vao::*;
-use crate::rustcraft::block::Block;
 
 /// Signifies the current state of the chunk
 #[derive(PartialOrd,PartialEq,Eq,Ord,Clone,Copy,Debug,serde::Serialize,serde::Deserialize)]
@@ -177,9 +169,7 @@ impl Chunk {
     pub fn set_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
         let sc = pos.as_sub();
         let b = &mut self.data[sc.x][sc.y][sc.z];
-        if b.ptr_eq(block) {
-            false
-        } else {
+        if b != block {
             if /* b.light != block.light */ true {
                 let remove = b.light >= block.light;
                 let val = pos.as_pos_i32();
@@ -193,6 +183,8 @@ impl Chunk {
             *b = block.clone();
             self.needs_refresh = true;
             true
+        } else {
+            false
         }
     }
 

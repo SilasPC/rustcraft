@@ -1,20 +1,5 @@
 
-use crate::chunk::meshing::make_mesh;
-use std::collections::HashSet;
-use crate::vao::VAO;
-use std::collections::VecDeque;
-use std::collections::HashMap;
-use crate::coords::*;
-use crate::registry::Registry;
-use std::sync::Arc;
-use crate::util::position_to_chunk_coordinates;
-use crate::util::Proxy;
-use crate::util::AABB;
-use crate::BVH;
-use aabb_tree::AabbTree;
-use crate::block::Block;
-use crate::rustcraft::chunk::chunk::*;
-use cgmath::*;
+use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct TerrainGen {
@@ -217,7 +202,7 @@ impl WorldData {
                             y: y + cp.y,
                             z: z + cp.z,
                         };
-                        let (verts, uvs, lights) = make_mesh(p.into(), self, reg);
+                        let (verts, uvs, lights) = meshing::make_mesh(p.into(), self, reg);
                         let c = self.chunks.get_mut(&p.into()).unwrap();
                         if let Some(mesh) = &mut c.mesh {
                             mesh.update_lit(&verts, &uvs, &lights);
@@ -357,7 +342,7 @@ impl WorldData {
                             z + *i % RAD
                         ).into();
                         {
-                            let (verts, uvs, lights) = make_mesh(p, self, reg);
+                            let (verts, uvs, lights) = meshing::make_mesh(p, self, reg);
                             let c = self.chunks.get_mut(&p).unwrap();
                             if let Some(mesh) = &mut c.mesh {
                                 mesh.update_lit(&verts, &uvs, &lights);

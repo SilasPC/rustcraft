@@ -1,8 +1,4 @@
 
-use crate::world::WorldData;
-use crate::block::Block;
-use cgmath::*;
-use crate::coords::*;
 use super::*;
 
 #[derive(Clone)]

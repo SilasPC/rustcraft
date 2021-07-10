@@ -1,7 +1,4 @@
 
-use crate::vao::VAO;
-use std::sync::Arc;
-use cgmath::*;
 use rand::prelude::*;
 use super::*;
 

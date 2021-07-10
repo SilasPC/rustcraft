@@ -1,8 +1,5 @@
 
 use crate::Program;
-use crate::vao::VAO;
-use cgmath::*;
-use crate::coords::*;
 use super::*;
 
 #[derive(Clone)]
