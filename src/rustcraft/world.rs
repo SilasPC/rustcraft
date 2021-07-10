@@ -1,4 +1,5 @@
 
+use crate::chunk::meshing::make_mesh;
 use std::collections::HashSet;
 use crate::vao::VAO;
 use std::collections::VecDeque;
@@ -12,7 +13,7 @@ use crate::util::AABB;
 use crate::BVH;
 use aabb_tree::AabbTree;
 use crate::block::Block;
-use crate::chunk::*;
+use crate::rustcraft::chunk::chunk::*;
 use cgmath::*;
 
 #[derive(Debug)]
@@ -196,6 +197,10 @@ impl WorldData {
         self.chunks.get_mut(&pos).filter(|c| c.chunk_state >= ChunkState::Detailed).map(Box::as_mut)
     }
 
+    pub fn time_of_day(&self) -> f32 {
+        (self.ticks as f32 / 200.) % 1.
+    }
+
     pub fn refresh(&mut self, reg: &Registry) {
         let mut cc = std::mem::take(&mut self.changed_chunks);
         cc.retain(|x| self.chunk_at(*x).map(Chunk::renderable).unwrap_or(false));
@@ -212,7 +217,7 @@ impl WorldData {
                             y: y + cp.y,
                             z: z + cp.z,
                         };
-                        let (verts, uvs, lights) = make_mesh2(p.into(), self, reg);
+                        let (verts, uvs, lights) = make_mesh(p.into(), self, reg);
                         let c = self.chunks.get_mut(&p.into()).unwrap();
                         if let Some(mesh) = &mut c.mesh {
                             mesh.update_lit(&verts, &uvs, &lights);
@@ -305,14 +310,15 @@ impl WorldData {
                         if let Some(c) = self.chunks.get_mut(&p) {
                             if c.chunk_state == ChunkState::Empty {
                                 c.gen_terrain(&self.noise, reg);
+                                work += 1;
                             }
                         } else {
                             let mut c = Box::new(Chunk::new(p, self.air.clone()));
                             c.gen_terrain(&self.noise, reg);
                             self.chunks.insert(p, c);
+                            work += 1;
                         }
                         // println!("generated for {:?}",p);
-                        work += 1;
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
@@ -329,9 +335,11 @@ impl WorldData {
                             y + (*i / RAD) % RAD,
                             z + *i % RAD
                         ).into();
-                        gen_detail(p, self, reg);
+                        if self.chunks.get(&p).unwrap().chunk_state == ChunkState::Filled {
+                            gen_detail(p, self, reg);
+                            work += 1;
+                        }
                         // println!("detailed for {:?}",p);
-                        work += 1;
                         *i += 1;
                     }
                     if *i == RAD*RAD*RAD {
@@ -349,7 +357,7 @@ impl WorldData {
                             z + *i % RAD
                         ).into();
                         {
-                            let (verts, uvs, lights) = super::super::chunk::make_mesh2(p, self, reg);
+                            let (verts, uvs, lights) = make_mesh(p, self, reg);
                             let c = self.chunks.get_mut(&p).unwrap();
                             if let Some(mesh) = &mut c.mesh {
                                 mesh.update_lit(&verts, &uvs, &lights);

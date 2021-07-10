@@ -12,3 +12,5 @@ pub mod registry;
 pub mod crafting;
 pub mod updates;
 pub mod cmd;
+pub mod chunk;
+pub mod worker;

@@ -1,8 +1,10 @@
 
+use crate::worker::*;
+use crate::RenderData;
+use crate::chunk::meshing::ChunkRenderer;
+use crate::chunk::chunk::*;
 use crate::cmd::Cmd;
-use crate::chunk::calc_light;
 use crate::updates::Updates;
-use crate::chunk::Chunk;
 use crate::make_crafting_registry;
 use crate::crafting::CraftingRegistry;
 use crate::registry::Registry;
@@ -23,6 +25,8 @@ use crate::texture::Texture;
 use crate::rustcraft::player::inventory::PlayerInventory;
 use crate::rustcraft::item::{ItemStack,Item,ItemLike};
 use crate::coords::*;
+
+const TICK_DURATION: Duration = Duration::from_millis(50);
 
 pub enum GameState {
     Inventory {
@@ -54,7 +58,7 @@ impl GameState {
     }
 }
 
-pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
+pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderData) {
 
     display.refresh();
 
@@ -69,17 +73,13 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         gl::CullFace(gl::BACK);
     }
 
-    let program = Program::load(
-        include_str!("vert.glsl"),
-        include_str!("frag.glsl"),
-        vec!["project","view","transform","globLight"]
-    );
+    let chunk_renderer = ChunkRenderer::new();
 
-    let bbox = data.loader.load_texture("assets/bbox.png");
-    let cube = crate::chunk::cube_mesh();
+    /* let bbox = data.loader.load_texture("assets/bbox.png");
+    let cube = crate::rustcraft::chunk::meshing::cube_mesh(); */
     let mut guirend = GUIRenderer::new(display.size_i32());
 
-    let mut view_mat = Matrix4::one();
+    /* let mut view_mat = Matrix4::one(); */
 
     let mut block_updates = Updates::default();
 
@@ -91,11 +91,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
     let mut worker = JobDispatcher::new(worker_data);
 
     let mut last_tick = Instant::now();
-    let tick_duration = Duration::from_millis(50);
 
-    let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
     let text_rend = crate::engine::text::font::TextRenderer::new();
-    let mut debug_text = font.build_text("RustCraft dev build".into());
+    let mut debug_text = rdata.font.build_text("RustCraft dev build".into());
 
     use crate::engine::lines::*;
     let box_vao = box_vao();
@@ -110,8 +108,6 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
 
     data.world.load_around(&WorldPos::from(Vector3 {x:50., y: 55., z: 50.}));
 
-    let cr = make_crafting_registry(&data.registry);
-
     'main: loop {
 
         let mut do_chunk_load = false;
@@ -119,8 +115,8 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
         data.delta = data.frame_time.elapsed().as_secs_f32().min(0.1);
         data.frame_time = Instant::now();
 
-        if last_tick.elapsed() > tick_duration {
-            last_tick += tick_duration;
+        if last_tick.elapsed() > TICK_DURATION {
+            last_tick += TICK_DURATION;
 
             if !state.is_paused() {
                 block_updates.update(data);
@@ -202,7 +198,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data) {
                     state = match state {
                         GameState::Playing => {
                             display.set_mouse_capture(false);
-                            GameState::Chat { text: font.build_text("".into()), start_frame: data.frame_time }
+                            GameState::Chat { text: rdata.font.build_text("".into()), start_frame: data.frame_time }
                         },
                         _ => state
                     };
@@ -308,13 +304,29 @@ RustCraft dev build
                 phys.apply_force_continuous(data.delta, &force);
             }
 
-            view_mat = Matrix4::from(pos.rot) * Matrix4::from_translation(-pos.pos.0-view.offset());
+            rdata.view_mat = Matrix4::from(pos.rot) * Matrix4::from_translation(-pos.pos.0-view.offset());
 
             /* let aabb = phys.get_aabb(pos);
             //println!("Player: {:?}",aabb);
 
             data.ent_tree.set(data.cam, &aabb); */
             
+        }
+
+        // interact with inventory
+        if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
+            match state {
+                GameState::Inventory { ref mut picked_item } => {
+                    if data.input.clicked_primary() {
+                        let slot = pgui.determine_hovered_slot(data.input.mouse_pos());
+                        // println!("{:?}",slot);
+                        if let Some(slot) = slot {
+                            pdata.inventory.transfer(slot, picked_item, &data.registry, &data.crafting);
+                        }
+                    }
+                },
+                _ => {}
+            }
         }
         
         // START SYSTEMS
@@ -329,19 +341,35 @@ RustCraft dev build
         data.world.load(&data.registry, 100);
 
         // START RENDERING
-        render(&program, data, &view_mat, &cube, &bbox);
 
-        if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
+        chunk_renderer.program.enable();
+        unsafe {
+            gl::Clear(
+                gl::COLOR_BUFFER_BIT |
+                gl::DEPTH_BUFFER_BIT
+            );
+            gl::Enable(gl::DEPTH_TEST);
+            gl::ActiveTexture(gl::TEXTURE0);
+        }
+        
+        // render chunks
+        data.atlas.texture().bind();
+        chunk_renderer.load_proj(&Matrix4::from(data.fov));
+        chunk_renderer.load_view(&rdata.view_mat);
+        let light = ((data.world.time_of_day() * std::f32::consts::TAU).sin() + 0.5).max(1./16.);
+        chunk_renderer.load_glob_light(light);
+        chunk_renderer.render(&data.world);
+
+        // render bounding boxes
+        rdata.cube.bind();
+        rdata.bbox.bind();
+        Position::system_draw_bounding_boxes(data, &chunk_renderer.program, &rdata.cube); // ! change
+
+        // render inventory
+        if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
             pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos());
             match state {
-                GameState::Inventory { ref mut picked_item } => {
-                    if data.input.clicked_primary() {
-                        let slot = pgui.determine_hovered_slot(data.input.mouse_pos());
-                        println!("{:?}",slot);
-                        if let Some(slot) = slot {
-                            pdata.inventory.transfer(slot, picked_item, &data.registry, &cr);
-                        }
-                    }
+                GameState::Inventory { ref picked_item } => {
                     if let Some(picked_item) = picked_item {
                         let m = data.input.mouse_pos();
                         guirend.set_pixels(m.0, display.size_i32().1 - m.1);
@@ -369,15 +397,15 @@ RustCraft dev build
             }
         }
 
-        program.load_mat4(0, &Matrix4::one());
-        program.load_mat4(1, &Matrix4::one());
-        program.load_mat4(2, &Matrix4::from_translation(-Vector3::unit_z()));
+        chunk_renderer.program.load_mat4(0, &Matrix4::one());
+        chunk_renderer.program.load_mat4(1, &Matrix4::one());
+        chunk_renderer.program.load_mat4(2, &Matrix4::from_translation(-Vector3::unit_z()));
 
         if let Some(hit) = raycast_hit {
             let hit = hit.1.map(|v| v.floor());
             lines.program.enable();
             lines.program.load_mat4(0, &Matrix4::from_translation(hit));
-            lines.program.load_mat4(1, &view_mat);
+            lines.program.load_mat4(1, &rdata.view_mat);
             lines.program.load_mat4(2, &Matrix4::from(data.fov));
             lines.program.load_vec4(3, &Vector4 {
                 x: 0.2,
@@ -475,67 +503,5 @@ fn raycast(mut pos: WorldPos<f32>, heading: &Vector3<f32>, max_dist: f32, reg: &
         w.block_at(&pos.as_coord())
             .map(|b| b.solid)
             .unwrap_or(false)
-    }
-}
-
-struct WorkerData {
-    registry: Arc<Registry>,
-}
-
-use std::sync::mpsc::*;
-
-struct JobDispatcher {
-    tx: Sender<WorkerJob>,
-    rx: Receiver<WorkerResponse>,
-}
-
-impl JobDispatcher {
-
-    pub fn iter_responses(&mut self) -> TryIter<'_, WorkerResponse> {
-        self.rx.try_iter()
-    }
-
-    pub fn new(wdata: WorkerData) -> Self {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let (dtx, drx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            worker_thread(rx, dtx, wdata)
-        });
-        JobDispatcher {
-            tx,
-            rx: drx
-        }
-    }
-    pub fn send(&self, work: WorkerJob) {
-        self.tx.send(work);
-    }
-}
-
-enum WorkerJob {
-    SaveChunk(Box<Chunk>),
-    LoadChunk(i32,i32,i32),
-}
-enum WorkerResponse {
-    LoadedChunk(Option<Box<Chunk>>),
-}
-fn worker_thread(rx: Receiver<WorkerJob>, tx: Sender<WorkerResponse>, data: WorkerData) {
-    'work: loop {
-        let job = match rx.recv() {
-            Err(_) => {break 'work}
-            Ok(job) => job
-        };
-        use WorkerJob::*;
-        match job {
-            SaveChunk(chunk) => {
-                std::fs::write(format!("save/{:x}_{:x}_{:x}.chunk", chunk.pos.x, chunk.pos.y, chunk.pos.z), chunk.save());
-            },
-            LoadChunk(x,y,z) => {
-                tx.send(
-                    WorkerResponse::LoadedChunk(
-                        Chunk::load(x, y, z, data.registry.as_ref()).map(Box::new)
-                    )
-                ).unwrap();
-            }
-        };
     }
 }

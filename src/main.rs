@@ -3,11 +3,16 @@
 #![feature(box_patterns)]
 
 mod util;
-mod chunk;
 mod engine;
 mod coords;
 mod rustcraft;
 mod perlin;
+use crate::lines::box_vao;
+use crate::chunk::meshing::cube_mesh;
+use crate::crafting::CraftingRegistry;
+use crate::text::font::Font;
+use crate::vao::VAO;
+use crate::display::GLDisplay;
 use std::sync::Arc;
 use crate::registry::Registry;
 use crate::util::BVH;
@@ -26,7 +31,33 @@ pub struct Settings {
     pub mouse_sensitivity: f32,
 }
 
+pub struct RenderData {
+    pub bbox: Arc<Texture>,
+    pub cube: VAO,
+    pub line_box: VAO,
+    pub view_mat: Matrix4<f32>,
+    pub font: Arc<Font>,
+}
+
+impl RenderData {
+    pub fn new(data: &mut Data) -> Self {
+        let bbox = data.loader.load_texture("assets/bbox.png");
+        let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
+        let cube = cube_mesh();
+        let view_mat = Matrix4::one();
+        let line_box = box_vao();
+        Self {
+            bbox,
+            cube,
+            font,
+            view_mat,
+            line_box
+        }
+    }
+}
+
 pub struct Data {
+    pub crafting: CraftingRegistry,
     pub loader: crate::engine::loader::Loader,
     pub paused: bool,
     pub settings: Settings,
@@ -62,7 +93,9 @@ impl Data {
         };
         let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
         let registry = make_registry(atlas.clone());
+        let crafting = make_crafting_registry(&registry);
         Data {
+            crafting,
             loader,
             paused: false,
             settings,
@@ -102,7 +135,8 @@ fn main() {
     };
     
     let mut data = Data::new(settings);
+    let mut rdata = RenderData::new(&mut data);
 
-    game_loop::game_loop(&mut display, &mut data);
+    game_loop::game_loop(&mut display, &mut data, &mut rdata);
     
 }
