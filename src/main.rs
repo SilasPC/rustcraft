@@ -23,6 +23,7 @@ use engine::*;
 use rustcraft::*;
 
 pub mod prelude {
+    pub use game::settings::Settings;
     pub use util;
     pub use engine;
     pub use rustcraft as game;
@@ -40,11 +41,6 @@ pub mod prelude {
     pub use std::sync::Arc;
 }
 use crate::prelude::*;
-
-pub struct Settings {
-    pub fov: Deg<f32>,
-    pub mouse_sensitivity: f32,
-}
 
 pub struct RenderData {
     pub bbox: Arc<Texture>,
@@ -144,10 +140,7 @@ fn main() {
         gl::CullFace(gl::BACK);
     }
 
-    let settings = Settings {
-        fov: Deg(90.),
-        mouse_sensitivity: 0.5,
-    };
+    let settings = Settings::load();
     
     let mut data = Data::new(settings);
     let mut rdata = RenderData::new(&mut data);

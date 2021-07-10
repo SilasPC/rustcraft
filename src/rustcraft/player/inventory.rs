@@ -44,8 +44,10 @@ impl PlayerInventory {
         }
     }
 
-    #[must_use]
-    pub fn merge(&mut self, stack: Option<ItemStack>) -> Option<ItemStack> {
+    pub fn merge(&mut self, stack: &mut Option<ItemStack>) {
+        *stack = self.merge_priv(std::mem::take(stack));
+    }
+    fn merge_priv(&mut self, stack: Option<ItemStack>) -> Option<ItemStack> {
         let mut stack = stack?;
         for place in self.hotbar.iter_mut().filter(|p| p.is_some()) {
             if place.as_ref().unwrap().item == stack.item {

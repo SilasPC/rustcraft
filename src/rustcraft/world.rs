@@ -33,66 +33,6 @@ impl TerrainGen {
         &self.palettes[if n < 0.5 {0} else {1}]
     } 
 }
-/* 
-pub struct ChunkArea<'a> {
-    world_data: &'a mut WorldData,
-    pos: ChunkPos,
-    area: Vec<Proxy>,
-}
-
-impl<'a> ChunkArea<'a> {
-    pub fn edge_world_pos_i32(&self) -> WorldPos<i32> {
-        self.world_data.chunks_tree[self.area[0]].world_pos_i32().into()
-    }
-    pub fn center_world_pos_i32(&self) -> WorldPos<i32> {
-        self.world_data.chunks_tree[self.area[9*1+3*1+1]].world_pos_i32().into()
-    }
-    pub fn center_mut(&mut self) -> &mut Chunk {
-        &mut self.world_data.chunks_tree[self.area[9*1+3*1+1]]
-    }
-    pub fn center(&self) -> &Chunk {
-        &self.world_data.chunks_tree[self.area[9*1+3*1+1]]
-    }
-    pub fn center_state(&self) -> ChunkState {
-        self.world_data.chunks_tree[self.area[9*2+3*2+1]].chunk_state
-    }
-    pub fn replace_at(&mut self, x: i32, y: i32, z: i32, block: &Block) -> bool {
-        let c = &mut self.world_data.chunks_tree[
-            self.area[( (x-self.pos.x*16)/16 * 9 + (y-self.pos.y*16)/16 * 3 + (z-self.pos.z*16)/16 ) as usize]];
-        if c.block_at(x,y,z).replacable {
-            c.set_at(x,y,z,block)
-        } else {
-            false
-        }
-    }
-    pub fn set_block_at(&mut self, x: i32, y: i32, z: i32, block: &Block) -> bool {
-        self.world_data.chunks_tree[
-            self.area[( (x-self.pos.x*16)/16 * 9 + (y-self.pos.y*16)/16 * 3 + (z-self.pos.z*16)/16 ) as usize]].set_at(x,y,z,block)
-    }
-    pub fn block_at(&self, x: i32, y: i32, z: i32) -> &Block {
-        self.world_data.chunks_tree[
-            self.area[( (x-self.pos.x*16)/16 * 9 + (y-self.pos.y*16)/16 * 3 + (z-self.pos.z*16)/16 ) as usize]].block_at(x,y,z)
-    }
-    pub fn block_at_pos(&self, pos: &Vector3<f32>) -> &Block {
-        let cc: Vector3<i32> = position_to_chunk_coordinates(pos) - self.pos.0;
-        self.world_data.chunks_tree[self.area[(cc.x * 9 + cc.y * 3 + cc.z) as usize]].block_at_pos(pos)
-    }
-    pub fn light_at(&self, mut x: i32, mut y: i32, mut z: i32) -> u8 {
-        let wp = WorldPos::from((x,y,z));
-        let cp = wp.as_chunk() - self.pos;
-        let sp = wp.as_sub();
-        self.world_data.chunks_tree[self.area[(cp.x * 9 + cp.y * 3 + cp.z) as usize]].light[sp.x][sp.y][sp.z]
-    }
-    pub fn set_light_at(&mut self, mut x: i32, mut y: i32, mut z: i32, val: u8) {
-        let wp = WorldPos::from((x,y,z));
-        let cp = wp.as_chunk() - self.pos;
-        let sp = wp.as_sub();
-        let c = &mut self.world_data.chunks_tree[self.area[(cp.x * 9 + cp.y * 3 + cp.z) as usize]];
-        c.light[sp.x][sp.y][sp.z] = val;
-        c.needs_refresh = true;
-    }
-} */
-
 #[derive(Debug)]
 pub enum Loading {
     Filling(i32, ChunkPos),
@@ -230,62 +170,6 @@ impl WorldData {
         }
     }
 
-    /* pub fn chunk_iter_mut(&mut self) -> impl std::iter::Iterator<Item=&mut Chunk> {
-        self.chunks_tree.values_mut().filter(|c| c.chunk_state == ChunkState::Done).map(Box::as_mut)
-    } */
-
-    /* pub fn area_exclusive(&self, proxy: Proxy) -> Vec<Proxy> {
-        self.chunks_tree
-            .query(&self.chunks_tree[proxy].aabb())
-            .into_iter()
-            .filter(|p| *p != proxy)
-            .collect::<Vec<_>>()
-    }
-
-    pub fn area(&mut self, pos: &Vector3<f32>) -> Option<ChunkArea<'_>> {
-        let mut area = self.chunks_tree
-            .query(&AABB::radius(pos, 16.));
-        if area.len() != 27 {
-            return None
-        }
-        let mut area: Vec<_> = area.iter().map(|p| (&self.chunks_tree[*p], p)).collect();
-        area.sort_unstable_by(|a,b| a.0.compare_position(&b.0));
-        // println!("{:?}",area);
-        let area = area.iter().map(|(_,p)| **p).collect::<Vec<_>>();
-        ChunkArea {
-            world_data: self,
-            area,
-            pos: (position_to_chunk_coordinates(pos) - Vector3 { x: 1, y: 1, z: 1}).into()
-        }.into()
-    }
-
-    pub fn area_from_proxy(&mut self, proxy: Proxy) -> Option<ChunkArea<'_>> {
-        self.area(&self.chunks_tree[proxy].world_pos_center())
-    } */
-    /* fn fill_around(&mut self, pos: &Vector3<f32>, rad: f32, reg: &Registry) {
-
-        let low = position_to_chunk_coordinates(&(pos - Vector3 { x: rad, y: rad, z: rad, }));
-        let high = position_to_chunk_coordinates(&(pos + Vector3 { x: rad, y: rad, z: rad, }));
-
-        for cx in low.x..=high.x {
-            for cy in low.y..=high.y {
-                for cz in low.z..=high.z {
-                    if !self.chunks.contains_key(&(cx,cy,cz).into()) {
-                        // result.insert(i, (cx, cy, cz));
-                        if let Some(chunk) = Chunk::load(cx, cy, cz, reg) {
-                            self.chunks.insert(chunk.pos.into(), Box::new(chunk));
-                        } else {
-                            let pos = (cx,cy,cz).into();
-                            let chunk = Chunk::new(pos, /* self.air.clone() */ reg[0].clone());
-                            self.chunks.insert(pos, Box::new(chunk));
-                        }
-                    }
-                }
-            }
-        }
-
-    } */
-
     pub fn load_around(&mut self, pos: &impl Coord) {
         let (x,y,z) = pos.as_chunk().as_tuple();
         println!("Filling...");
@@ -380,59 +264,6 @@ impl WorldData {
         }
     }
 
-    /* pub fn load_around2(&mut self, pos: &Vector3<f32>, rad: f32, reg: &Registry) {
-        use std::cmp::Reverse as Rev;
-        
-        self.fill_around(pos, rad + 32., reg);
-
-        let mut heap = std::collections::BinaryHeap::new(); // (Rev<target>, Rev<current>, proxy)
-        let aabb = AABB::radius(pos, rad);
-        let min: WorldPos<f32> = aabb.0.0.into();
-        let max: WorldPos<f32> = aabb.0.0.into();
-
-        for proxy in self.chunks_tree.query(&aabb) {
-            let c = &self.chunks_tree[proxy];
-            if c.chunk_state != ChunkState::Done {
-                heap.push((Rev(ChunkState::Done), Rev(c.chunk_state), proxy))
-            }
-        }
-
-        while let Some(mut x) = heap.peek().copied() {
-            let mut aabb = self.chunks_tree[x.2].aabb();
-            aabb.extend_radius(1.);
-            let area = self.area_exclusive(x.2);
-            let mut can_upgrade = true;
-            let new_target = self.chunks_tree[x.2].chunk_state.prev();
-            for proxy in &area {
-                let state = self.chunks_tree[*proxy].chunk_state;
-                if state < new_target {
-                    heap.push((Rev(new_target), Rev(state), *proxy));
-                    can_upgrade = false;
-                }
-            }
-            if can_upgrade {
-                x.1.0 = match x.1.0 {
-                    ChunkState::Empty => {
-                        self.chunks_tree[x.2].gen_terrain(&self.noise, reg);
-                        ChunkState::Filled
-                    },
-                    ChunkState::Filled => {
-                        let mut area = self.area_from_proxy(x.2).unwrap();
-                        gen_detail(&mut area, &reg);
-                        ChunkState::Done
-                    }
-                    ChunkState::Done => {
-                        x.1.0
-                    }
-                };
-                heap.pop();
-                if x.1.0 != x.0.0 {
-                    heap.push(x);
-                }
-            }
-        }
-    } */
-
 }
 
 fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
@@ -457,10 +288,11 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
                                     let here: WorldPos<i32> = (x,y,z).into();
                                     world.set_block_at_any_state(&here, log);
                                 }
-                                for dx in -2..=2 {
-                                    for dz in -2..=2 {
-                                        if dx == 0 && dz == 0 {continue}
-                                        for y in y+h-3..=y+h {
+                                for dx in -2..=2i32 {
+                                    for dz in -2..=2i32 {
+                                        for dy in 0..=3i32 {
+                                            if dx.abs()+dz.abs()+dy.abs() > 5 {continue}
+                                            let y = y + h-3 + dy;
                                             let here: WorldPos<i32> = (x+dx,y+4,z+dz).into();
                                             world.replace_at_any_state(&here, leaves);
                                         }

@@ -55,7 +55,7 @@ impl Cmd {
                     while count > 0 {
                         let rem = count.min(64);
                         count -= rem;
-                        pdata.inventory.merge(ItemStack::of(data.registry.get(*id), rem).into());
+                        pdata.inventory.merge(&mut ItemStack::of(data.registry.get(*id), rem).into());
                     }
                 }
             }

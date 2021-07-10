@@ -13,3 +13,4 @@ pub mod updates;
 pub mod cmd;
 pub mod chunk;
 pub mod worker;
+pub mod settings;

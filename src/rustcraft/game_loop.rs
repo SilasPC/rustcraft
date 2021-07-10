@@ -55,6 +55,8 @@ impl GameState {
 pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderData) {
 
     display.refresh();
+    display.set_mouse_capture(true);
+    display.video.text_input().start();
 
     unsafe {
         gl::ClearColor(
@@ -68,39 +70,25 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     }
 
     let chunk_renderer = ChunkRenderer::new();
-
-    /* let bbox = data.loader.load_texture("assets/bbox.png");
-    let cube = crate::rustcraft::chunk::meshing::cube_mesh(); */
     let mut guirend = GUIRenderer::new(display.size_i32());
-
-    /* let mut view_mat = Matrix4::one(); */
-
     let mut block_updates = Updates::default();
-
     let mut pgui = GUI::new();
-
     let worker_data = WorkerData {
         registry: data.registry.clone()
     };
     let mut worker = JobDispatcher::new(worker_data);
-
     let mut last_tick = Instant::now();
-
     let text_rend = crate::engine::text::font::TextRenderer::new();
     let mut debug_text = rdata.font.build_text("RustCraft dev build".into());
-
     use crate::engine::lines::*;
     let box_vao = box_vao();
     let lines = LineProgram::new();
-
-    display.set_mouse_capture(true);
-
+    let vign = data.loader.load_texture("assets/vign.png");
+    
     let mut state = GameState::Playing;
     let mut event_pump = display.event_pump();
     let mut last_tick_dur = 0.;
-
-    display.video.text_input().start();
-
+    
     data.world.load_around(&WorldPos::from(Vector3 {x:50., y: 55., z: 50.}));
 
     'main: loop {
@@ -277,8 +265,8 @@ RustCraft dev build
                         let block = data.world.block_at(&hit.1).unwrap().clone();
                         if data.world.set_block_at(&hit.1, &data.registry[0]) {
                             if let Some(drop_id) = block.drops {
-                                let stack = ItemStack::of(data.registry.get(drop_id), 1);
-                                pdata.inventory.merge(Some(stack));
+                                let mut stack = ItemStack::of(data.registry.get(drop_id), 1);
+                                pdata.inventory.merge(&mut Some(stack));
                             }
                             block_updates.add_area(hit.1.0);
                             block_updates.add_single(hit.1.0);
@@ -378,6 +366,17 @@ RustCraft dev build
         rdata.bbox.bind();
         Position::system_draw_bounding_boxes(data, &chunk_renderer.program, &rdata.cube); // ! change
 
+        // tmp vignette solution
+        guirend.start();
+        guirend.set_pixels(0, 0);
+        guirend.square.bind();
+        vign.bind();
+        let (w,h) = guirend.screen_size;
+        let ps = guirend.pixel_scale;
+        guirend.set_uniforms(w/ps,h/ps);
+        guirend.square.draw();
+        guirend.stop();
+
         // render inventory
         if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
             pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos());
@@ -444,57 +443,6 @@ RustCraft dev build
         display.window.gl_swap_window();
 
     }
-
-}
-
-
-fn render(program: &Program, data: &mut Data, view_mat: &Matrix4<f32>, cube: &crate::engine::vao::VAO, bbox: &crate::engine::texture::Texture) {
-    program.enable();
-        
-    unsafe {
-        gl::Clear(
-            gl::COLOR_BUFFER_BIT |
-            gl::DEPTH_BUFFER_BIT
-        );
-        gl::Enable(gl::DEPTH_TEST);
-        gl::ActiveTexture(gl::TEXTURE0);
-        data.atlas.texture().bind();
-    }
-    
-    program.load_mat4(0, &Matrix4::from(data.fov));
-    program.load_mat4(1, view_mat);
-    let light = (data.world.ticks as f32 / 200. * std::f32::consts::TAU).sin();
-    program.load_f32(3, light.max(1./16.));
-    
-    /* for p in
-        data.world.chunks_tree.proxy_entries()
-            .filter(|(_,c)| c.needs_refresh)
-            .map(|(p,_)| *p)
-            .collect::<Vec<_>>()
-    {
-        let mut area = data.world.area_from_proxy(p).unwrap();
-        calc_light(&mut area);
-        area.center_mut().refresh(&data.registry);
-    } */
-
-    for chunk in data.world.chunks.values_mut().filter(|c| c.renderable())
-    {
-
-        /* println!("{:?}", chunk.pos); */
-        program.load_mat4(2, &Matrix4::from_translation(
-            chunk.pos.as_pos_f32().0
-        ));
-
-        // chunk.refresh(&data.registry);
-
-        chunk.bind_and_draw();
-
-    }
-
-    cube.bind();
-    bbox.bind();
-
-    Position::system_draw_bounding_boxes(data, &program, &cube);
 
 }
 
