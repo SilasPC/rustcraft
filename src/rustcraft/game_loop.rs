@@ -17,7 +17,10 @@ use game::player::inventory::PlayerInventory;
 
 use crate::prelude::*;
 
+/// Tick interval duration
 const TICK_DURATION: Duration = Duration::from_millis(50);
+/// Number of random ticks per chunk per game tick
+const RANDOM_TICK_SPEED: usize = 3;
 
 pub enum GameState {
     Inventory {
@@ -94,6 +97,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
     let mut state = GameState::Playing;
     let mut event_pump = display.event_pump();
+    let mut last_tick_dur = 0.;
 
     display.video.text_input().start();
 
@@ -109,11 +113,27 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
         if last_tick.elapsed() > TICK_DURATION {
             last_tick += TICK_DURATION;
 
+            let start = Instant::now();
             if !state.is_paused() {
                 block_updates.update(data);
                 crate::rustcraft::component::ItemCmp::system_tick_age_items(data);
                 data.world.ticks += 1;
-            }    
+            }
+
+            let mut rng = rand::thread_rng();
+            use rand::prelude::*;
+
+            let keys = data.world.chunks.iter().filter(|(_,c)| c.renderable()).map(|(k,_)| k.clone()).collect::<Vec<_>>();
+            for cp in keys {
+                for _ in 0..RANDOM_TICK_SPEED {
+                    let random = rng.gen::<(i32,i32,i32)>();
+                    let pos = cp.as_pos_i32() + Vector3::from(random).map(|x| x.abs() % 16).into();
+                    if let Some(on_rnd_tick) = data.world.block_at(&pos).map(|b| b.behavior.clone()).flatten().map(|beh| beh.on_rnd_tick).flatten() {
+                        on_rnd_tick(pos, &mut data.world)
+                    }
+                }
+            }
+            last_tick_dur = start.elapsed().as_secs_f32() * 1000.;
 
         }
 
@@ -234,11 +254,13 @@ RustCraft dev build
     - Chunk {:?}
     - Looking at {:?}
     - fps: {:.0}
+    - tick: {:.1} ms
 "#,
                     pos,
                     position_to_chunk_coordinates(&pos.pos),
                     raycast_hit.and_then(|(_,hit)| w.block_at(&hit)).map(|b| &b.name),
                     1. / data.delta,
+                    last_tick_dur
                 )
             );
 

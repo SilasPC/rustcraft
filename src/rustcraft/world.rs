@@ -5,6 +5,7 @@ use crate::prelude::*;
 pub struct TerrainGen {
     pub noise: crate::perlin::PerlinNoise,
     pub noise_basic: crate::perlin::PerlinNoise,
+    pub palettes: [[usize; 3]; 2],
 }
 
 impl TerrainGen {
@@ -24,6 +25,13 @@ impl TerrainGen {
         let d = d * 0.8 / yf;
         d
     }
+    pub fn palette(&self, x: isize, z: isize) -> &[usize; 3] {
+        let xf = (x.abs() as f64 + 0.5) / 10.;
+        let zf = (z.abs() as f64 + 0.5) / 10.;
+        let n = self.noise_basic.get2d([xf, zf]);
+        
+        &self.palettes[if n < 0.5 {0} else {1}]
+    } 
 }
 /* 
 pub struct ChunkArea<'a> {
@@ -108,9 +116,14 @@ impl WorldData {
     pub fn new(seed: &str, air: Block) -> Self {
         let noise = crate::perlin::PerlinNoise::new(seed.to_owned(), 4, 0.5);
         let noise_basic = crate::perlin::PerlinNoise::new(seed.to_owned(), 1, 1.);
+        let palettes = [
+            [1,2,3],
+            [1,5,5]
+        ];
         let noise = TerrainGen {
             noise,
-            noise_basic
+            noise_basic,
+            palettes
         };
         WorldData { changed_chunks: HashSet::new(), to_load: VecDeque::new(), seed: seed.to_owned(), chunks: HashMap::new(), noise, air, ticks: 0 }
     }

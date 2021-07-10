@@ -190,8 +190,9 @@ impl Chunk {
 
     pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen, reg: &Registry) {
         for x in 0..16 {
-            for y in 0..16 {
-                for z in 0..16 {
+            for z in 0..16 {
+                let palette = noise.palette(x,z);
+                for y in 0..16 {
                     let pos = self.pos.map(|x| x as isize);
 
                     let ax = 16 * pos.x + x;
@@ -206,12 +207,12 @@ impl Chunk {
                     self.data[x as usize][y as usize][z as usize] = 
                     reg[
                         if d > 0.56 {
-                            1
+                            palette[0]
                         } else if d > 0.52 {
                             if da > 0.52 {
-                                2
+                                palette[1]
                             } else {
-                                3
+                                palette[2]
                             }
                         } else {
                             0

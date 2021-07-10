@@ -23,6 +23,7 @@ pub struct Behavior {
     pub on_place: Option<BehaviorFn>,
     pub on_update: Option<BehaviorFn>,
     pub on_break: Option<BehaviorFn>,
+    pub on_rnd_tick: Option<BehaviorFn>,
 }
 /* 
 impl std::hash::Hash for Behavior {
