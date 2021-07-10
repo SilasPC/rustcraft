@@ -5,7 +5,6 @@ use crate::chunk::meshing::ChunkRenderer;
 use crate::chunk::chunk::*;
 use crate::cmd::Cmd;
 use crate::updates::Updates;
-use crate::make_crafting_registry;
 use crate::crafting::CraftingRegistry;
 use crate::registry::Registry;
 use crate::block::Block;

@@ -93,7 +93,7 @@ impl Data {
         };
         let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
         let registry = make_registry(atlas.clone());
-        let crafting = make_crafting_registry(&registry);
+        let crafting = load_recipies(&registry);
         Data {
             crafting,
             loader,

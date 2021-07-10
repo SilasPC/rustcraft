@@ -1,0 +1,14 @@
+
+[[shaped]]
+input = [7]
+output = 9
+count = 4
+
+[[shaped]]
+input = [4]
+output = 7
+count = 4
+
+[[shaped]]
+input = [2]
+output = 3

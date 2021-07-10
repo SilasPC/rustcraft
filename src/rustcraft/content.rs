@@ -62,29 +62,41 @@ impl Drop for Registry {
     }
 }
 
-pub fn make_crafting_registry(reg: &Registry) -> CraftingRegistry {
-    let mut cr = CraftingRegistry::new();
-    cr.register(
-        true, &[ // planks => sticks
-            reg.get(7).into(), None, None,
-            None, None, None,
-            None, None, None,
-        ],
-        ItemStack::of(reg.get(9), 4)
-    );
-    cr.register(
-        true, &[ // logs => planks
-            reg.get(4).into(), None, None,
-            None, None, None,
-            None, None, None,
-        ],
-        ItemStack::of(reg.get(7), 4)
-    );
-    cr
-}
-
 #[derive(serde::Deserialize)]
 struct SerialItemRegistry {
     block: Vec<BlockData>,
     item: Vec<ItemData>,
 }
+
+
+pub fn load_recipies(reg: &Registry) -> CraftingRegistry {
+    let tomlstr = std::fs::read_to_string("assets/recipies.toml").unwrap();
+    let saved: SavedRecipies = toml::from_str(tomlstr.as_str()).unwrap();
+    let mut creg = CraftingRegistry::new();
+    for shaped in saved.shaped {
+        let input = shaped.input
+            .into_iter()
+            .map(|id| reg.get(id))
+            .map(Option::from)
+            .chain([None].iter().cycle().cloned())
+            .take(9)
+            .collect::<Vec<_>>();
+        creg.register(true, input.as_slice(), ItemStack::of(reg.get(shaped.output), 1));
+    }
+    creg
+}
+
+#[derive(serde::Deserialize)]
+struct SavedRecipies {
+    shaped: Vec<SavedRecipe>,
+}
+
+#[derive(serde::Deserialize)]
+struct SavedRecipe {
+    input: Vec<usize>,
+    output: usize,
+    #[serde(default = "one")]
+    count: usize
+}
+
+const fn one() -> usize {1}

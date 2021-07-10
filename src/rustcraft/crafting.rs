@@ -2,9 +2,9 @@
 use crate::item::ItemLike;
 use std::collections::HashMap;
 use crate::item::Item;
-use crate::Registry;
 use std::sync::Arc;
 use crate::item::ItemStack;
+use crate::rustcraft::registry::Registry;
 
 #[derive(Debug)]
 pub enum Node {
