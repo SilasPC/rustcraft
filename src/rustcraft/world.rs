@@ -135,6 +135,9 @@ impl WorldData {
         self.chunks.get_mut(&pos).filter(|c| c.chunk_state >= ChunkState::Detailed).map(Box::as_mut)
     }
 
+    pub fn smooth_light_level(&self) -> f32 {
+        (self.time_of_day() * std::f32::consts::TAU).sin() + 0.5
+    } 
     pub fn time_of_day(&self) -> f32 {
         (self.ticks as f32 / 200.) % 1.
     }

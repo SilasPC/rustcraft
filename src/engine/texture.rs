@@ -22,6 +22,9 @@ impl TextureAtlas {
     pub fn uv_dif(&self) -> f32 {1./self.size as f32}
     pub fn id(&self) -> uint {self.texture.id}
     pub fn texture(&self) -> &Texture {&self.texture}
+    pub fn bind(&self) {
+        self.texture.bind()
+    }
 }
 
 

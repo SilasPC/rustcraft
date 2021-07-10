@@ -47,6 +47,10 @@ impl GUI {
         self.selected_slot = ((self.selected_slot + scroll) % 9 + 9) % 9
     }
 
+    pub fn selected_slot(&self) -> usize {
+        self.selected_slot as usize
+    }
+
     pub fn determine_hovered_slot(&self, mouse: (i32, i32)) -> Option<u32> {
         let pos = (0i32,0);
         let (w, h) = (900, 700);

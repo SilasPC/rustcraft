@@ -64,3 +64,8 @@ light = 15
 id = 9
 name = "Stick"
 texture = 15
+
+[[item]]
+id = 10
+name = "Apple"
+texture = 14

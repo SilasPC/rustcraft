@@ -21,6 +21,10 @@ use crate::prelude::*;
 const TICK_DURATION: Duration = Duration::from_millis(50);
 /// Number of random ticks per chunk per game tick
 const RANDOM_TICK_SPEED: usize = 3;
+/// Sky minimum brightness
+const SKY_MIN_BRIGHTNESS: f32 = 0.4;
+/// Sky color
+const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
 
 pub enum GameState {
     Inventory {
@@ -60,9 +64,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
     unsafe {
         gl::ClearColor(
-            110./256.,
-            160./256.,
-            240./256.,
+            SKY.0,
+            SKY.1,
+            SKY.2,
             1.
         );
         gl::Enable(gl::CULL_FACE);
@@ -84,6 +88,11 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     let box_vao = box_vao();
     let lines = LineProgram::new();
     let vign = data.loader.load_texture("assets/vign.png");
+    let prg = Program::load(
+        include_str!("vert.glsl"),
+        include_str!("frag.glsl"),
+        vec!["project","view","transform","uvScale","uvOffset"]
+    );
     
     let mut state = GameState::Playing;
     let mut event_pump = display.event_pump();
@@ -330,18 +339,28 @@ RustCraft dev build
             }
         }
         
-        // START SYSTEMS
+        // ! START SYSTEMS
         if !state.is_paused() {
             WanderingAI::system_update(data);
             Physics::system_update(data);
             FallingBlock::system_collide_land(data);
         }
-        // STOP SYSTEMS
+        // ! STOP SYSTEMS
 
         data.world.refresh(&data.registry);
         data.world.load(&data.registry, 100);
 
-        // START RENDERING
+        // ! START RENDERING
+
+        unsafe {
+            let lf = (data.world.smooth_light_level() * (1. - SKY_MIN_BRIGHTNESS)) + SKY_MIN_BRIGHTNESS;
+            gl::ClearColor(
+                SKY.0 * lf,
+                SKY.1 * lf,
+                SKY.2 * lf,
+                1.
+            );
+        }
 
         chunk_renderer.program.enable();
         unsafe {
@@ -357,14 +376,41 @@ RustCraft dev build
         data.atlas.texture().bind();
         chunk_renderer.load_proj(&Matrix4::from(data.fov));
         chunk_renderer.load_view(&rdata.view_mat);
-        let light = ((data.world.time_of_day() * std::f32::consts::TAU).sin() + 0.5).max(1./16.);
-        chunk_renderer.load_glob_light(light);
+        chunk_renderer.load_glob_light(data.world.smooth_light_level().max(1./16.));
         chunk_renderer.render(&data.world);
 
         // render bounding boxes
         rdata.cube.bind();
         rdata.bbox.bind();
         Position::system_draw_bounding_boxes(data, &chunk_renderer.program, &rdata.cube); // ! change
+
+        // render item in hand
+        if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
+            if let Some(item) = &pdata.inventory.hotbar[pgui.selected_slot()] {
+                unsafe {
+                    gl::Disable(gl::DEPTH_TEST);
+                }
+                prg.enable();
+                prg.load_mat4(0, &Matrix4::from(data.fov));
+                prg.load_mat4(1, &Matrix4::one());
+                let pos = (0.4, -1.5, -2.).into();
+                let rot = Euler::new(Deg(0.),Deg(-60.),Deg(0.));
+                prg.load_mat4(2, &(Matrix4::from_translation(pos) * Matrix4::from(rot)));
+                data.atlas.bind();
+                match &item.item {
+                    ItemLike::Item(item) => {
+                        data.registry.item_vao.bind();
+                        data.registry.item_vao.draw_6((item.id - data.registry.items_offset) as i32); // hax
+                    }
+                    ItemLike::Block(block) => {
+                        // rdata.cube.draw();
+                    }
+                }
+                unsafe {
+                    gl::Enable(gl::DEPTH_TEST);
+                }
+            }
+        }
 
         // tmp vignette solution
         guirend.start();
@@ -438,7 +484,7 @@ RustCraft dev build
 
         text_rend.render(&debug_text, -0.9, 0.9, display.size());
 
-        // END RENDERING
+        // ! END RENDERING
 
         display.window.gl_swap_window();
 
