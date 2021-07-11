@@ -65,6 +65,7 @@ pub struct WorldData {
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
     pub changed_chunks: HashSet<ChunkPos>,
+    pub to_update: Vec<WorldPos<i32>>,
 }
 
 impl WorldData {
@@ -81,7 +82,7 @@ impl WorldData {
             noise_basic,
             palettes
         };
-        WorldData { changed_chunks: HashSet::new(), to_load: VecDeque::new(), seed: seed.to_owned(), chunks: HashMap::new(), noise, air, ticks: 0 }
+        WorldData { to_update: vec![], changed_chunks: HashSet::new(), to_load: VecDeque::new(), seed: seed.to_owned(), chunks: HashMap::new(), noise, air, ticks: 0 }
     }
 
     pub fn block_at(&self, pos: &impl Coord) -> Option<&Block> {
@@ -89,10 +90,6 @@ impl WorldData {
     }
     pub fn block_at_any_state(&self, pos: &impl Coord) -> Option<&Block> {
         self.chunks.get(&pos.as_chunk()).map(|c| c.block_at(pos))
-    }
-    #[deprecated]
-    pub fn block_at_mut(&mut self, pos: &impl Coord) -> Option<&mut Block> {
-        self.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(pos))
     }
     pub fn set_block_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
         let success = self.chunk_at_mut(pos.as_chunk())
@@ -160,12 +157,13 @@ impl WorldData {
 
     pub fn refresh(&mut self, reg: &Registry) {
         let mut cc = std::mem::take(&mut self.changed_chunks);
+        let mut meshed = HashSet::new();
         cc.retain(|x| self.chunk_at(*x).map(Chunk::renderable).unwrap_or(false));
         // println!("refresh {:?}",cc);
         for cp in &cc {
             calc_light(*cp, self);
         }
-        println!("{}",cc.len());
+        // println!("{}",cc.len());
         for cp in cc {
             for x in -1..=1 {
                 for y in -1..=1 {
@@ -175,15 +173,16 @@ impl WorldData {
                             y: y + cp.y,
                             z: z + cp.z,
                         };
-                        // ! make_mesh is too slow, old version almost fast enough
+                        // ! make_mesh is slow, old version faster
                         // ! need to make another solution here
                         // ! need to make a hybrid version as well
-                        let (verts, uvs, lights) = time_it!(meshing::make_mesh_old(p.into(), self, reg));
+                        if !self.chunks.get(&p.into()).unwrap().renderable() || meshed.contains(&p) {continue}
+                        let (verts, uvs, lights) = (meshing::make_mesh(p.into(), self, reg));
                         let c = self.chunks.get_mut(&p.into()).unwrap();
-                        if !c.renderable() {continue}
                         c.mesh.as_mut().unwrap().update_lit(&verts, &uvs, &lights);
                         c.needs_refresh = false;
                         c.chunk_state = ChunkState::Rendered;
+                        meshed.insert(p);
                     }
                 }
             }
@@ -308,8 +307,8 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
                         const INV: f64 = 1./1.3;
                         if world.noise.noise_basic.get2d([nx-INV,nz]) <= CUTOFF &&
                             world.noise.noise_basic.get2d([nx,nz-INV]) <= CUTOFF {
-                                world.set_block_at(&below, dirt);
                                 let h = 3 + (2. * world.noise.noise_basic.get2d([nx,nz])) as i32;
+                                world.set_block_at_any_state(&below, dirt);
                                 for y in y..=y+h {
                                     let here: WorldPos<i32> = (x,y,z).into();
                                     world.set_block_at_any_state(&here, log);

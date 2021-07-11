@@ -14,6 +14,7 @@ rand = { version = "*", features = ["small_rng"] }
 #https://docs.rs/fart-aabb/0.4.0/fart_aabb/struct.AabbTree.html
 #https://github.com/lukebitts/aabb-tree
 aabb-tree = { path = "./aabb-tree" }
+warn = { path = "./warn" }
 regex = "*"
 serde = "*"
 bincode = "*"
@@ -21,3 +22,6 @@ toml = "*"
 serde_json = "*"
 derive_more = "*"
 scanlex = "*"
+
+[profile.dev]
+opt-level = 3

@@ -151,11 +151,6 @@ impl Chunk {
         let (x,y,z) = pos.as_sub().into();
         &self.data[x][y][z]
     }
-    #[deprecated]
-    pub fn block_at_mut(&mut self, pos: &impl Coord) -> &mut Block {
-        let (x,y,z) = pos.as_sub().into();
-        &mut self.data[x][y][z]
-    }
 
     pub fn light_at(&self, pos: &impl Coord) -> u8 {
         let (x,y,z) = pos.as_sub().into();
@@ -170,8 +165,8 @@ impl Chunk {
         let sc = pos.as_sub();
         let b = &mut self.data[sc.x][sc.y][sc.z];
         if b != block {
-            if /* b.light != block.light */ true {
-                let remove = b.light >= block.light;
+            if b.light != block.light {
+                let remove = b.light > block.light;
                 let val = pos.as_pos_i32();
                 if remove {
                     self.light_remove_updates.push_back((val,b.light));
@@ -259,6 +254,7 @@ impl Chunk {
 }
 
 pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
+    compile_warning!(propagation is broken);
     let Vector3 {x, y, z} = pos.into();
     let (mut removal_queue, mut queue) = world.chunk_at_mut(pos).map(|c| (
         std::mem::take(&mut c.light_remove_updates),

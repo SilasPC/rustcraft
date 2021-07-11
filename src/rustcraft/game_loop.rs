@@ -120,6 +120,12 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
             let mut rng = rand::thread_rng();
             use rand::prelude::*;
 
+            for p in std::mem::take(&mut data.world.to_update) {
+                if let Some(on_update) = data.world.block_at(&p).map(|b| b.behavior.clone()).flatten().map(|beh| beh.on_update).flatten() {
+                    on_update(p, data)
+                }
+            }
+
             let keys = data.world.chunks.iter().filter(|(_,c)| c.renderable()).map(|(k,_)| k.clone()).collect::<Vec<_>>();
             for cp in keys {
                 // println!("{:?}",cp);
@@ -282,6 +288,7 @@ RustCraft dev build
                             }
                             block_updates.add_area(hit.1.0);
                             block_updates.add_single(hit.1.0);
+                            data.world.to_update.push(hit.1.as_pos_i32());
                         }
                     }
                 } else if data.input.clicked_secondary() {
@@ -294,6 +301,7 @@ RustCraft dev build
                                 success = true;
                                 block_updates.add_area(hit.0.0);
                                 block_updates.add_single(hit.0.0);
+                                data.world.to_update.push(hit.0.as_pos_i32());
                             }
                         } else {
                             let b = data.world.block_at(&hit.1).unwrap();

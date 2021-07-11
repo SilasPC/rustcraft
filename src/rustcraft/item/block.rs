@@ -103,6 +103,8 @@ pub struct BlockData {
     #[serde(default)]
     pub replacable: bool,
     #[serde(default)]
+    pub flammable: bool,
+    #[serde(default)]
     pub light: u8,
     #[serde(default)]
     pub no_render: bool,

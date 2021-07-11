@@ -33,7 +33,7 @@ fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
                     return Err(PErr);
                 }
                 let id = id as usize;
-                let count = s.get_integer()?;
+                let count = s.get_integer().unwrap_or(1);
                 if count < 0 {
                     return Err(PErr);
                 }

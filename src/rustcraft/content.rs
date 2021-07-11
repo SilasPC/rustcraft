@@ -29,7 +29,10 @@ pub fn make_registry(texture_atlas: Arc<TextureAtlas>) -> Arc<Registry> {
         on_rnd_tick: Some(grass_update),
         .. Default::default()
     }));
-    assert_eq!(x.block[3].id, 3);
+    /* x.block[8].behavior = Some(Box::new(Behavior {
+        on_update: Some(fire_update),
+        .. Default::default()
+    })); */
 
     assert!(x.block.last().unwrap().id < x.item.first().unwrap().id);
     let blocks: Vec<_> = x.block.into_iter().map(Block::new_registered_as_shared).collect();
@@ -92,5 +95,46 @@ fn grass_update(mut pos: WorldPos<i32>, data: &mut Data) {
     if turn_to_dirt {
         pos.0.y -= 1;
         data.world.set_block_at(&pos, &data.registry[2]);
+    }
+}
+
+fn fire_update(pos: WorldPos<i32>, data: &mut Data) {
+    use rand::Rng;
+    let mut r = rand::thread_rng();
+    if r.gen::<f32>() < 0.9 {
+        data.world.to_update.push(pos);
+        return
+    }
+    let fire = &data.registry[8]; // tmp glowstone
+    macro_rules! test {
+        ($x:expr) => {test!($x, 0.2)};
+        ($x:expr, always) => {{
+            let npos = pos + $x.into();
+            if data.world.block_at(&npos).map(|b| b.flammable).unwrap_or(false) {
+                let above = npos + (0,1,0).into();
+                if data.world.replace_at(&above, fire) {
+                    data.world.to_update.push(above);
+                }
+            }
+        }};
+        ($x:expr, $p:expr) => {{
+            if r.gen::<f32>() < $p {
+                test!($x, always);
+            }
+        }};
+    }
+    for y in -1..=1 {
+        test!((1,y,0));
+        test!((-1,y,0));
+        test!((0,y,1));
+        test!((0,y,-1));
+    }
+    if r.gen::<f32>() < 0.9 {
+        let below = pos + (0,-1,0).into();
+        data.world.set_block_at(&pos, &data.registry[0]);
+        data.world.set_block_at(&below, &data.registry[0]);
+        test!((0,-2,0), 0.5);
+    } else {
+        data.world.to_update.push(pos);
     }
 }

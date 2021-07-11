@@ -29,6 +29,7 @@ drops = 2
 [[block]]
 id = 4
 name = "Log"
+flammable = true
 texture = [5, 4, 5]
 drops = 4
 
@@ -42,6 +43,7 @@ drops = 5
 [[block]]
 id = 6
 name = "Leaves"
+flammable = true
 transparent = true
 replacable = true
 texture = [7, 7, 7]
@@ -50,6 +52,7 @@ drops = 6
 [[block]]
 id = 7
 name = "Planks"
+flammable = true
 texture = [8, 8, 8]
 drops = 7
 

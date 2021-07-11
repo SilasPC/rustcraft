@@ -2,6 +2,9 @@
 #![allow(unused)]
 #![feature(box_patterns)]
 
+#[macro_use]
+extern crate warn;
+
 pub mod util;
 pub mod engine;
 pub mod coords;
