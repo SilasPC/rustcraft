@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused)]
-#![feature(box_patterns)]
+#![allow(dead_code, unused)]
+#![feature(box_patterns, generators, generator_trait)]
 
 #[macro_use]
 extern crate warn;
