@@ -3,7 +3,6 @@ use super::*;
 
 #[derive(Clone)]
 pub struct Physics {
-    size: Vector3<f32>,
     gravity: bool,
     force: Vector3<f32>,
     vel: Vector3<f32>,
@@ -13,10 +12,9 @@ pub struct Physics {
 
 impl Physics {
 
-    pub fn new(size: Vector3<f32>) -> Self {
+    pub fn new() -> Self {
         let zero = Vector3 {x: 0., y: 0., z: 0.};
         Physics {
-            size,
             gravity: true,
             grounded: true,
             force: zero,
@@ -30,31 +28,13 @@ impl Physics {
         self.gravity = !flying;
     }
 
-    pub fn set_size(&mut self, size: &Vector3<f32>) {
-        self.size = *size;
-    }
-
     pub fn try_jump(&mut self) {
         if self.grounded {
             self.vel.y += 5.;
         }
     }
 
-    pub fn get_aabb(&self, pos: &Position) -> crate::util::AABB {
-        const E: f32 = 0.;// 0.01; // 10. * std::f32::EPSILON;
-        ((
-            pos.pos.x+E,
-            pos.pos.y+E,
-            pos.pos.z+E,
-        ),(
-            pos.pos.x+self.size.x-E,
-            pos.pos.y+self.size.y-E,
-            pos.pos.z+self.size.z-E,
-        )).into()
-    }
-
     pub fn is_grounded(&self) -> bool {self.grounded}
-    pub fn size(&self) -> &Vector3<f32> {&self.size}
 
     pub fn apply_force_once(&mut self, f: &Vector3<f32>) {
         self.vel += *f;
@@ -85,14 +65,14 @@ impl Physics {
             macro_rules! test_it {
                 ($x:expr, $y:expr, $z:expr) => {
                     if self.vel.x != 0. && check_hit(world, &Vector3 {
-                        x: new_pos.x + $x * self.size.x,
+                        x: new_pos.x + $x * pos.size.x,
                         ..pos.pos.0
                     }) {
                         new_pos.x = pos.pos.x;
                         self.vel.x = 0.;
                     }
                     if self.vel.y != 0. && check_hit(world, &Vector3 {
-                        y: new_pos.y + $y * self.size.y,
+                        y: new_pos.y + $y * pos.size.y,
                         ..pos.pos.0
                     }) {
                         new_pos.y = pos.pos.y;
@@ -105,7 +85,7 @@ impl Physics {
                         self.grounded = false;
                     }
                     if self.vel.x != 0. && check_hit(world, &Vector3 {
-                        z: new_pos.z + $z * self.size.z,
+                        z: new_pos.z + $z * pos.size.z,
                         ..pos.pos.0
                     }) {
                         new_pos.z = pos.pos.z;
@@ -146,7 +126,7 @@ impl Physics {
     pub fn system_update(data: &mut crate::Data) {
         for (ent, (pos, phys)) in data.ecs.query_mut::<(&mut Position, &mut Physics)>() {
             if phys.update(pos, data.delta, &data.world) {
-                data.ent_tree.update(ent, &phys.get_aabb(&pos));
+                data.ent_tree.update(ent, &pos.get_aabb());
             }
         }
     }

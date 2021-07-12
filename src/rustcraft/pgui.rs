@@ -1,4 +1,5 @@
 
+use crate::render_gui::ItemGUIRenderer;
 use crate::registry::Registry;
 use crate::player::inventory::PlayerInventory;
 use crate::engine::texture::Texture;
@@ -97,7 +98,8 @@ impl GUI {
         reg: &Registry,
         inv: &PlayerInventory,
         show_inventory: bool,
-        mouse_pos: (i32, i32)
+        mouse_pos: (i32, i32),
+        iren: &ItemGUIRenderer,
     ) {
         r.start();
         r.square.bind();
@@ -149,23 +151,13 @@ impl GUI {
             (single : $from:expr) => {
                 if let Some(s) = $from {
                     r.set_uniforms(16, 16);
-                    match &s.item {
-                        ItemLike::Item(inner) => {
-                            reg.item_vao.bind();
-                            reg.item_vao.draw_6((inner.id - reg.blocks.len()) as i32);
-                        },
-                        ItemLike::Block(inner) => {
-                            reg.iso_block_vao.bind();
-                            reg.iso_block_vao.draw_18(inner.id as i32);
-                        }
-                    }
+                    iren.draw(&s.item);
                 }
             }
         }
 
         // items
         reg.texture_atlas.texture().bind();
-        reg.iso_block_vao.bind();
         r.set_pixels(hw, 0); // hotbar
         r.move_pixels(-90, 0);
         r.move_pixels(2, 2);

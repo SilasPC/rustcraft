@@ -47,7 +47,7 @@ fn worker_thread(rx: Receiver<WorkerJob>, tx: Sender<WorkerResponse>, data: Work
             Ok(job) => job
         };
         use WorkerJob::*;
-        match job {
+        /* match job {
             SaveChunk(chunk) => {
                 std::fs::write(format!("save/{:x}_{:x}_{:x}.chunk", chunk.pos.x, chunk.pos.y, chunk.pos.z), chunk.save());
             },
@@ -58,6 +58,6 @@ fn worker_thread(rx: Receiver<WorkerJob>, tx: Sender<WorkerResponse>, data: Work
                     )
                 ).unwrap();
             }
-        };
+        }; */
     }
 }

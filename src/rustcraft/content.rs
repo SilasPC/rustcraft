@@ -4,26 +4,20 @@ use crate::rustcraft::component::{Physics,Position,PlayerData,View};
 use crate::prelude::*;
 
 pub fn make_player() -> (impl hecs::DynamicBundle, util::AABB) {
-    let pos = Position::from(Vector3 {x:50., y: 55., z: 50.}.as_coord());
-    let mut phys = Physics::new(Vector3 {
-        x: 0.8,
-        y: 1.9,
-        z: 0.8,
-    });
-    //cam_phys.set_flying(true);
-    let aabb = phys.get_aabb(&pos);
+    let pos = Position::new(Vector3 {x:50., y: 55., z: 50.}.as_coord(), (0.8,1.9,0.8).into());
+    let aabb = pos.get_aabb();
     let view = View::from(Vector3 {
         x: 0.5,
         y: 1.8,
         z: 0.5,
     });
-    ((pos, phys, view, PlayerData::new()), aabb)
+    ((pos, Physics::new(), view, PlayerData::new()), aabb)
 }
 
 pub fn make_registry(texture_atlas: Arc<TextureAtlas>) -> Arc<Registry> {
     let mut x: SerialItemRegistry = toml::from_str(&std::fs::read_to_string("assets/items.toml").unwrap()).unwrap();
-    x.block.sort_by_key(|a| a.id);
-    x.item.sort_by_key(|a| a.id);
+    x.block.sort_by_cached_key(|a| a.id.clone());
+    x.item.sort_by_cached_key(|a| a.id.clone());
 
     x.block[3].behavior = Some(Box::new(Behavior {
         on_rnd_tick: Some(grass_update),
@@ -33,17 +27,20 @@ pub fn make_registry(texture_atlas: Arc<TextureAtlas>) -> Arc<Registry> {
         on_update: Some(fire_update),
         .. Default::default()
     })); */
-
-    assert!(x.block.last().unwrap().id < x.item.first().unwrap().id);
-    let blocks: Vec<_> = x.block.into_iter().map(Block::new_registered_as_shared).collect();
-    let items: Vec<_> = x.item.into_iter().map(Item::new_registered_as_shared).collect();
-    let items_offset = blocks.len();
+    
+    let items = x.block.into_iter()
+        .map(Block::new_registered_as_shared)
+        .map(ItemLike::from)
+        .map(|il| (il.id().to_owned(), il))
+        .chain(
+            x.item.into_iter()
+                .map(Item::new_registered_as_shared)
+                .map(ItemLike::from)
+                .map(|il| (il.id().to_owned(), il))
+        ).collect::<HashMap<String, ItemLike>>();
+    
     Arc::new(Registry {
-        item_vao: util::gen_item_vao(&items, &texture_atlas),
-        iso_block_vao: util::gen_block_vao(&blocks, &texture_atlas),
-        blocks,
         items,
-        items_offset,
         texture_atlas,
     })
 }
@@ -61,12 +58,12 @@ pub fn load_recipies(reg: &Registry) -> CraftingRegistry {
     for shaped in saved.shaped {
         let input = shaped.input
             .into_iter()
-            .map(|id| reg.get(id))
+            .map(|id| reg.get(&id).clone())
             .map(Option::from)
             .chain([None].iter().cycle().cloned())
             .take(9)
             .collect::<Vec<_>>();
-        creg.register(true, input.as_slice(), ItemStack::of(reg.get(shaped.output), 1));
+        creg.register(true, input.as_slice(), ItemStack::of(reg.get(&shaped.output).clone(), 1));
     }
     creg
 }
@@ -78,8 +75,8 @@ struct SavedRecipies {
 
 #[derive(serde::Deserialize)]
 struct SavedRecipe {
-    input: Vec<usize>,
-    output: usize,
+    input: Vec<String>,
+    output: String,
     #[serde(default = "one")]
     count: usize
 }
@@ -94,7 +91,7 @@ fn grass_update(mut pos: WorldPos<i32>, data: &mut Data) {
     }
     if turn_to_dirt {
         pos.0.y -= 1;
-        data.world.set_block_at(&pos, &data.registry[2]);
+        data.world.set_block_at(&pos, data.registry.get("dirt").as_block().unwrap());
     }
 }
 
@@ -105,7 +102,8 @@ fn fire_update(pos: WorldPos<i32>, data: &mut Data) {
         data.world.to_update.push(pos);
         return
     }
-    let fire = &data.registry[8]; // tmp glowstone
+    let fire = data.registry.get("glowstone").as_block().unwrap(); // tmp glowstone
+    let air = data.registry.get("air").as_block().unwrap();
     macro_rules! test {
         ($x:expr) => {test!($x, 0.2)};
         ($x:expr, always) => {{
@@ -131,8 +129,8 @@ fn fire_update(pos: WorldPos<i32>, data: &mut Data) {
     }
     if r.gen::<f32>() < 0.9 {
         let below = pos + (0,-1,0).into();
-        data.world.set_block_at(&pos, &data.registry[0]);
-        data.world.set_block_at(&below, &data.registry[0]);
+        data.world.set_block_at(&pos, &air);
+        data.world.set_block_at(&below, &air);
         test!((0,-2,0), 0.5);
     } else {
         data.world.to_update.push(pos);

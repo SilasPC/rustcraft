@@ -26,6 +26,7 @@ use rustcraft::*;
 
 pub mod prelude {
     pub use game::settings::Settings;
+    pub use util::ArcStr;
     pub use util;
     pub use engine;
     pub use rustcraft as game;
@@ -46,7 +47,7 @@ use crate::prelude::*;
 
 pub struct RenderData {
     pub bbox: Arc<Texture>,
-    pub cube: VAO,
+    pub cube: Arc<VAO>,
     pub line_box: VAO,
     pub view_mat: Matrix4<f32>,
     pub font: Arc<Font>,
@@ -56,7 +57,7 @@ impl RenderData {
     pub fn new(data: &mut Data) -> Self {
         let bbox = data.loader.load_texture("assets/bbox.png");
         let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
-        let cube = meshing::cube_mesh();
+        let cube = meshing::cube_mesh().into();
         let view_mat = Matrix4::one();
         let line_box = box_vao();
         Self {
@@ -79,7 +80,7 @@ pub struct Data {
     pub input: Input,
     pub frame_time: Instant,
     pub delta: f32,
-    pub world: world::WorldData,
+    pub world: WorldData,
     pub ecs: hecs::World,
     pub registry: Arc<Registry>,
     pub atlas: Arc<TextureAtlas>,
@@ -116,7 +117,7 @@ impl Data {
             input: Input::default(),
             cam,
             frame_time: Instant::now(),
-            world: world::WorldData::new("seed!", registry[0].clone()),
+            world: WorldData::new("seed!", registry.get("air").to_block().unwrap()),
             registry,
             atlas,
             delta: 0.,

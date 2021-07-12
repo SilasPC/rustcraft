@@ -6,6 +6,37 @@ use std::ffi::CString;
 
 use crate::prelude::*;
 
+use derive_more::*;
+#[derive(Deref, DerefMut, From, Into, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub struct ArcStr(Arc<String>);
+
+impl serde::Serialize for ArcStr {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>  {
+        serializer.serialize_str(self.0.as_ref())
+    }
+}
+impl<'de> serde::Deserialize<'de> for ArcStr {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error>
+    {
+        Ok(Self(Arc::new(deserializer.deserialize_str(StrVisit)?)))
+    }
+}
+
+struct StrVisit;
+
+impl<'de> serde::de::Visitor<'de> for StrVisit {
+    type Value = String;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a string")
+    }
+
+    fn visit_str<E: serde::de::Error>(self, s: &str) -> Result<Self::Value, E>
+    {
+        Ok(s.to_owned())
+    }
+}
+
 pub fn make_cstr(len: usize) -> CString {
     let mut buffer: Vec<u8> = Vec::with_capacity(len + 1);
     buffer.extend([b' '].iter().cycle().take(len));
@@ -158,101 +189,6 @@ pub fn sub_coords_from_i32(x: i32, y: i32, z: i32) -> Vector3<i32> {
     Vector3 {x,y,z}.map(|x| x % 16).map(|x| (x+16)%16)
 }
 
-pub fn gen_block_vao(b: &Vec<Block>, a: &TextureAtlas) -> VAO {
-
-    let mut verts = vec![];
-    let mut uvs = vec![];
-
-    // six triangles per block item
-    for b in b {
-        verts.extend_from_slice(&[
-            // top
-            0.5, 1., 0.,
-            0., 0.75, 0.,
-            1., 0.75, 0.,
-            0., 0.75, 0.,
-            0.5, 0.5, 0.,
-            1., 0.75, 0.,
-            // left
-            0., 0.75, 0.,
-            0.5, 0., 0.,
-            0.5, 0.5, 0.,
-            0.5, 0., 0.,
-            0., 0.75, 0.,
-            0.0, 0.25, 0.,
-            // right
-            0.5, 0.5, 0.,
-            0.5, 0., 0.,
-            1., 0.75, 0.,
-            0.5, 0., 0.,
-            1., 0.25, 0.,
-            1., 0.75, 0.,
-        ]);
-        let (t,s,_) = b.texture;
-        let (u,v) = a.get_uv(t);
-        let d = a.uv_dif();
-        uvs.extend_from_slice(&[
-            // top
-            u, v,
-            u, v+d,
-            u+d, v,
-            u, v+d,
-            u+d, v+d,
-            u+d, v,
-        ]);
-        let (u,v) = a.get_uv(s);
-        let d = a.uv_dif();
-        uvs.extend_from_slice(&[
-            // left
-            u, v,
-            u+d, v+d,
-            u+d, v,
-            u+d, v+d,
-            u, v,
-            u, v+d,
-            // right
-            u, v,
-            u, v+d,
-            u+d, v,
-            u, v+d,
-            u+d, v+d,
-            u+d, v,
-        ]);
-    }
-
-    crate::engine::vao::VAO::textured(&verts, &uvs)
-
-}
-
-pub fn gen_item_vao(items: &Vec<Item>, a: &TextureAtlas) -> VAO {
-
-    let mut verts = vec![];
-    let mut uvs = vec![];
-
-    for item in items {
-        verts.extend_from_slice(&[
-            0., 0., 0.,
-            1., 1., 0.,
-            0., 1., 0.,
-            1., 1., 0.,
-            0., 0., 0.,
-            1., 0., 0.,
-        ]);
-        let (u,v) = a.get_uv(item.texture);
-        let d = a.uv_dif();
-        uvs.extend_from_slice(&[
-            u, v+d,
-            u+d, v,
-            u, v,
-            u+d, v,
-            u, v+d,
-            u+d, v+d,
-        ]);
-    }
-
-    crate::engine::vao::VAO::textured(&verts, &uvs)
-
-}
 /* 
 impl serde::Serialize for crate::Data {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

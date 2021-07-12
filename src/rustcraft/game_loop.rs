@@ -97,6 +97,8 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     let mut state = GameState::Playing;
     let mut event_pump = display.event_pump();
     let mut last_tick_dur = 0.;
+
+    let irenderer = ItemGUIRenderer::generate(data.registry.as_ref());
     
     data.world.load_around(&WorldPos::from(Vector3 {x:50., y: 55., z: 50.}));
 
@@ -239,6 +241,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
         let mut raycast_hit = None;
         let mut on_use = None;
+        let mut to_spawn = vec![];
 
         if let Ok((pos, phys, view, pdata)) = data.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(data.cam) {
 
@@ -281,10 +284,21 @@ RustCraft dev build
                 if data.input.clicked_primary() {
                     if let Some(hit) = raycast_hit {
                         let block = data.world.block_at(&hit.1).unwrap().clone();
-                        if data.world.set_block_at(&hit.1, &data.registry[0]) {
-                            if let Some(drop_id) = block.drops {
-                                let mut stack = ItemStack::of(data.registry.get(drop_id), 1);
-                                pdata.inventory.merge(&mut Some(stack));
+                        if data.world.set_block_at(&hit.1, data.registry.get("air").as_block().unwrap()) {
+                            if let Some(drop_id) = &block.drops {
+                                let mut stack = ItemStack::of(data.registry.get(&drop_id).clone(), 1);
+                                // * merge directly
+                                /* pdata.inventory.merge(&mut Some(stack)); */
+                                let phys = Physics::new();
+                                let pos = Position::new(hit.1.pos_center().into(),(0.3,0.3,0.3).into());
+                                let aabb = pos.get_aabb();
+                                let cmps = (
+                                    pos,
+                                    phys,
+                                    ItemCmp::from(stack),
+                                    Model::from(rdata.cube.clone()),
+                                );
+                                to_spawn.push((cmps,aabb));
                             }
                             block_updates.add_area(hit.1.0);
                             block_updates.add_single(hit.1.0);
@@ -330,6 +344,11 @@ RustCraft dev build
 
             data.ent_tree.set(data.cam, &aabb); */
             
+        }
+
+        for (cmps, aabb) in to_spawn {
+            let ent = data.ecs.spawn(cmps);
+            data.ent_tree.insert(ent, (), &aabb);
         }
 
         if let Some((p,f)) = on_use {
@@ -394,9 +413,15 @@ RustCraft dev build
         chunk_renderer.render(&data.world);
 
         // render bounding boxes
-        rdata.cube.bind();
+        /* rdata.cube.bind();
         rdata.bbox.bind();
-        Position::system_draw_bounding_boxes(data, &chunk_renderer.program, &rdata.cube); // ! change
+        Position::system_draw_bounding_boxes(data, &chunk_renderer.program, &rdata.cube); // ! change */
+
+        // render entities
+        prg.enable();
+        prg.load_mat4(0, &Matrix4::from(data.fov));
+        prg.load_mat4(1, &rdata.view_mat);
+        Model::system_render(data, &prg);
 
         // render item in hand
         if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
@@ -411,7 +436,7 @@ RustCraft dev build
                 let rot = Euler::new(Deg(0.),Deg(-60.),Deg(0.));
                 prg.load_mat4(2, &(Matrix4::from_translation(pos) * Matrix4::from(rot)));
                 data.atlas.bind();
-                match &item.item {
+                /* match &item.item {
                     ItemLike::Item(item) => {
                         data.registry.item_vao.bind();
                         data.registry.item_vao.draw_6((item.id - data.registry.items_offset) as i32); // hax
@@ -419,7 +444,7 @@ RustCraft dev build
                     ItemLike::Block(block) => {
                         // rdata.cube.draw();
                     }
-                }
+                } */
                 unsafe {
                     gl::Enable(gl::DEPTH_TEST);
                 }
@@ -439,7 +464,7 @@ RustCraft dev build
 
         // render inventory
         if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
-            pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos());
+            pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
             match state {
                 GameState::Inventory { ref picked_item } => {
                     if let Some(picked_item) = picked_item {
@@ -450,16 +475,7 @@ RustCraft dev build
                         unsafe {
                             gl::Enable(gl::BLEND);
                         }
-                        match &picked_item.item {
-                            ItemLike::Item(inner) => {
-                                data.registry.item_vao.bind();
-                                data.registry.item_vao.draw_6((inner.id - data.registry.blocks.len()) as i32);
-                            },
-                            ItemLike::Block(inner) => {
-                                data.registry.iso_block_vao.bind();
-                                data.registry.iso_block_vao.draw_18(inner.id as i32);
-                            }
-                        }
+                        irenderer.draw(&picked_item.item);
                         unsafe {
                             gl::Disable(gl::BLEND);
                         }

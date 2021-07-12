@@ -12,7 +12,7 @@ impl From<()> for PErr {
 
 #[derive(Debug)]
 pub enum Cmd {
-    Give { id: usize, count: usize }
+    Give { id: String, count: usize }
 }
 
 impl std::str::FromStr for Cmd {
@@ -28,11 +28,7 @@ fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
         let cmd = s.get_iden()?;
         match cmd.as_str() {
             "give" => {
-                let id = s.get_integer()?;
-                if id < 0 {
-                    return Err(PErr);
-                }
-                let id = id as usize;
+                let id = s.get_string()?;
                 let count = s.get_integer().unwrap_or(1);
                 if count < 0 {
                     return Err(PErr);
@@ -55,7 +51,7 @@ impl Cmd {
                     while count > 0 {
                         let rem = count.min(64);
                         count -= rem;
-                        pdata.inventory.merge(&mut ItemStack::of(data.registry.get(*id), rem).into());
+                        pdata.inventory.merge(&mut ItemStack::of(data.registry.get(id).clone(), rem).into());
                     }
                 }
             }

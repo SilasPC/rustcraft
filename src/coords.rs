@@ -125,6 +125,10 @@ pub trait Coord {
         sub.y == 0 || sub.y == 15 ||
         sub.z == 0 || sub.z == 15
     }
+    #[inline(always)]
+    fn pos_center(&self) -> WorldPos<f32> {
+        self.as_pos_i32().as_pos_f32() + (0.5,0.5,0.5).into()
+    }
 }
 
 pub trait AsCoord<T: cgmath::BaseNum> {

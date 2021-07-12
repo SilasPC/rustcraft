@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 #[derive(Eq, PartialEq, Clone, Debug, Hash, serde::Deserialize)]
 pub struct ItemData {
-    pub id: usize,
+    pub id: ArcStr,
     pub name: String,
     pub texture: usize,
 }

@@ -1,14 +1,14 @@
 
 [[shaped]]
-input = [7]
-output = 9
+input = ["planks"]
+output = "stick"
 count = 4
 
 [[shaped]]
-input = [4]
-output = 7
+input = ["log"]
+output = "planks"
 count = 4
 
 [[shaped]]
-input = [2]
-output = 3
+input = ["dirt"]
+output = "grass"

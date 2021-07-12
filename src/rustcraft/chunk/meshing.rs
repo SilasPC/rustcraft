@@ -165,9 +165,8 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
 
     let now = std::time::Instant::now();
 
-    let block_map = &reg.blocks;
     let atlas = &reg.texture_atlas;
-    let air = &reg[0];
+    let air = reg.get("air");
 
     let mut verts = Vec::with_capacity(10000);
     let mut uvs = Vec::with_capacity(10000);
@@ -365,8 +364,6 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
 pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
 
     let data = &w.chunks.get(&pos).unwrap().data;
-
-    let block_map = &reg.blocks;
     let atlas = &reg.texture_atlas;
 
     let mut verts = vec![];
@@ -542,8 +539,6 @@ pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>,
 pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
 
     let now = std::time::Instant::now();
-
-    let block_map = &reg.blocks;
     let atlas = &reg.texture_atlas;
 
     let mut verts = vec![];

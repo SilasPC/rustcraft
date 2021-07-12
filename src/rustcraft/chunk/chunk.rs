@@ -36,7 +36,7 @@ pub struct Chunk {
     pub light_remove_updates: VecDeque<(WorldPos<i32>,u8)>,
     pub mesh: Option<VAO>,
 }
-
+/* 
 #[derive(serde::Serialize, serde::Deserialize)]
 enum SavedBlock {
     Shared(usize),
@@ -64,7 +64,7 @@ struct SavedChunk {
     chunk_state: ChunkState,
     pos: ChunkPos,
     data: Vec<Vec<Vec<SavedBlock>>>,
-}
+} */
 
 impl std::fmt::Debug for Chunk {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -81,7 +81,7 @@ impl Chunk {
         self.pos.cmp(&rhs.pos)
     }
 
-    pub fn load(x: i32, y: i32, z: i32, reg: &Registry) -> Option<Self> {
+    /* pub fn load(x: i32, y: i32, z: i32, reg: &Registry) -> Option<Self> {
         let SavedChunk {
             chunk_state,
             data,
@@ -106,9 +106,9 @@ impl Chunk {
         let light = [[[0; 16]; 16]; 16];
         println!("Loading chunk {:?}",(x,y,z));
         Self { light_remove_updates: VecDeque::new(), light_updates: VecDeque::new(), chunk_state, data, mesh: None, pos, needs_refresh: true, light }.into()
-    }
+    } */
 
-    pub fn save(&self) -> Vec<u8> {
+    /* pub fn save(&self) -> Vec<u8> {
         let mut data = vec![];
         for x in 0..16 {
             let mut plane = vec![];
@@ -128,7 +128,7 @@ impl Chunk {
         };
         println!("Saving chunk {:?}", (self.pos.x, self.pos.y, self.pos.z));
         bincode::serialize(&sc).unwrap()
-    }
+    } */
 
     pub fn new(pos: ChunkPos, air: Block) -> Self {
         let data = vec![vec![vec![air;16];16];16];
@@ -200,7 +200,7 @@ impl Chunk {
                     let da = noise.density(ax,ay+1,az);
                     
                     self.data[x as usize][y as usize][z as usize] = 
-                    reg[
+                    reg.get(
                         if d > 0.56 {
                             palette[0]
                         } else if d > 0.52 {
@@ -210,9 +210,9 @@ impl Chunk {
                                 palette[2]
                             }
                         } else {
-                            0
+                            "air"
                         }
-                    ].clone();
+                    ).as_block().unwrap().clone();
                     /* if db > 0.52 && db < 0.56 && d < 0.51 && !(cb > 0.57) {
                         let t = noise.get2d([x as f64 / 1.5, z as f64 / 1.5]);
                         if t > 0.52 {

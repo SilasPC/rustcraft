@@ -45,15 +45,10 @@ impl Updates {
                         if let Some(below) = data.world.block_at(&below) {
                             let below = below.as_ref();
                             if !below.solid {
-                                data.world.set_block_at(&here, &data.registry[0]);
-                                let fall_size = Vector3 {
-                                    x: 1.,
-                                    y: 1.,
-                                    z: 1.,
-                                };
-                                let pos_comp = Position::from(here.as_pos_f32());
-                                let phys = Physics::new(fall_size);
-                                let aabb = phys.get_aabb(&pos_comp);
+                                data.world.set_block_at(&here, data.registry.get("air").as_block().unwrap());
+                                let pos_comp = Position::new(here.pos_center(), (1.,1.,1.).into());
+                                let phys = Physics::new();
+                                let aabb = pos_comp.get_aabb();
                                 let falling_block = data.ecs.spawn((
                                     pos_comp, phys, FallingBlock::of(block)
                                 ));

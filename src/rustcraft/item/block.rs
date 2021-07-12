@@ -94,7 +94,7 @@ impl Block {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct BlockData {
-    pub id: usize,
+    pub id: ArcStr,
     pub name: String,
     #[serde(default = "yes")]
     pub solid: bool,
@@ -112,7 +112,7 @@ pub struct BlockData {
     #[serde(default)]
     pub has_gravity: bool,
     #[serde(default)]
-    pub drops: Option<usize>,
+    pub drops: Option<ArcStr>,
     #[serde(skip)]
     pub behavior: Option<Box<Behavior>>,
     #[serde(skip)]

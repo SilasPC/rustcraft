@@ -1,6 +1,6 @@
 
 [[block]]
-id = 0
+id = "air"
 name = "Air"
 no_render = true
 transparent = true
@@ -9,66 +9,66 @@ solid = false
 texture = [0, 0, 0]
 
 [[block]]
-id = 1
+id = "stone"
 name = "Stone"
 texture = [0, 0, 0]
-drops = 1
+drops = "stone"
 
 [[block]]
-id = 2
+id = "dirt"
 name = "Dirt"
 texture = [1, 1, 1]
-drops = 2
+drops = "dirt"
 
 [[block]]
-id = 3
+id = "grass"
 name = "Grass"
 texture = [3, 2, 1]
-drops = 2
+drops = "dirt"
 
 [[block]]
-id = 4
+id = "log"
 name = "Log"
 flammable = true
 texture = [5, 4, 5]
-drops = 4
+drops = "log"
 
 [[block]]
-id = 5
+id = "sand"
 name = "Sand"
 has_gravity = true
 texture = [6, 6, 6]
-drops = 5
+drops = "sand"
 
 [[block]]
-id = 6
+id = "leaves"
 name = "Leaves"
 flammable = true
 transparent = true
 replacable = true
 texture = [7, 7, 7]
-drops = 6
+drops = "stick"
 
 [[block]]
-id = 7
+id = "planks"
 name = "Planks"
 flammable = true
 texture = [8, 8, 8]
-drops = 7
+drops = "planks"
 
 [[block]]
-id = 8
+id = "glowstone"
 name = "Glowstone"
 texture = [9, 9, 9]
-drops = 8
+drops = "glowstone"
 light = 15
 
 [[item]]
-id = 9
+id = "stick"
 name = "Stick"
 texture = 15
 
 [[item]]
-id = 10
+id = "apple"
 name = "Apple"
 texture = 14
