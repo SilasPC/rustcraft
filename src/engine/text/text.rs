@@ -10,6 +10,12 @@ pub struct Text {
     pub vao: VAO,
 }
 
+impl Clone for Text {
+    fn clone(&self) -> Self {
+        Self::new(self.text.clone(), self.font.clone())
+    }
+}
+
 impl Text {
     
     pub fn new(text: String, font: Arc<Font>) -> Self {
