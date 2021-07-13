@@ -1,4 +1,5 @@
 
+use crate::PixelPos;
 use cgmath::*;
 
 #[derive(Default, Debug)]
@@ -79,7 +80,7 @@ impl Input {
 
     }
 
-    pub fn mouse_pos(&self) -> (i32,i32) {self.mouse}
+    pub fn mouse_pos(&self, height: i32) -> PixelPos {(self.mouse.0, height - self.mouse.1).into()}
 
     pub fn compute_movement_vector(&self, yaw: Deg<f32>) -> Vector3<f32> {
         let rad = Rad::from(yaw);

@@ -1,4 +1,5 @@
 
+use crate::text::text::Text;
 pub use aabb_tree::Proxy;
 use crate::TextureAtlas;
 use aabb_tree::AabbTree;
@@ -242,3 +243,41 @@ impl serde::Serialize for crate::Data {
 
     }
 } */
+
+pub struct DebugText {
+    pub text: Text,
+}
+
+impl From<&Arc<Font>> for DebugText {
+    fn from(f: &Arc<Font>) -> Self {
+        Self {
+            text: f.build_text("RustCraft dev build".to_owned())
+        }
+    }
+}
+
+impl DebugText {
+    pub fn set_data(&mut self, pos: &WorldPos<f32>, looking_at: Option<&String>, delta: f32, last_tick_dur: f32) {
+        self.text.set_text(
+            format!(
+r#"
+RustCraft dev build
+- {:?}
+- Chunk {:?}
+- Looking at {:?}
+- fps: {:.0}
+- tick: {:.1} ms
+"#,
+                pos,
+                pos.as_chunk(),
+                looking_at,
+                1. / delta,
+                last_tick_dur
+            )
+        );
+    }
+}
+
+pub fn fdiv(x: i32, d: i32) -> i32 {
+    (x as f32 / d as f32).floor() as i32
+}

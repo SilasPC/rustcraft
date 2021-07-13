@@ -48,7 +48,7 @@ pub fn gen_block_vao<'a>(b: impl Iter<Item = &'a Block>, m: &mut HashMap<String,
     // six triangles per block item => 18 verts
     for b in b {
         m.insert(b.id.to_string(), offset);
-        offset += 18;
+        offset += 1;
         verts.extend_from_slice(&[
             // top
             0.5, 1., 0.,
@@ -118,7 +118,7 @@ pub fn gen_item_vao<'a>(items: impl Iter<Item = &'a Item>, m: &mut HashMap<Strin
     // one face => 6 verts
     for item in items {
         m.insert(item.id.to_string(), offset);
-        offset += 6;
+        offset += 1;
         verts.extend_from_slice(&[
             0., 0., 0.,
             1., 1., 0.,

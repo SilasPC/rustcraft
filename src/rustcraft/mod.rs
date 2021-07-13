@@ -14,3 +14,4 @@ pub mod cmd;
 pub mod chunk;
 pub mod worker;
 pub mod settings;
+pub mod inv;

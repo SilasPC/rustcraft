@@ -4,6 +4,9 @@ use derive_more::*;
 use cgmath::*;
 use serde::*;
 
+#[derive(From, Into, Clone, Copy, Debug)]
+pub struct PixelPos(pub (i32, i32));
+
 #[derive(Neg, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Copy, Clone, From, Into, Serialize, Deserialize, Hash, PartialEq, Debug)]
 pub struct WorldPos<T: cgmath::BaseNum>(pub Vector3<T>);
 

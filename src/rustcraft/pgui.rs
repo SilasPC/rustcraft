@@ -1,4 +1,5 @@
 
+use crate::inv::InventoryGUI;
 use crate::render_gui::ItemGUIRenderer;
 use crate::registry::Registry;
 use crate::player::inventory::PlayerInventory;
@@ -11,7 +12,7 @@ pub struct GUI {
     pub toolbar: Texture,
     pub selector: Texture,
     pub crosshairs: Texture,
-    pub inventory: Texture,
+    pub inventory: InventoryGUI,
     pub selected_slot: i32,
 }
 
@@ -22,7 +23,7 @@ impl GUI {
         let toolbar = Texture::from_path("assets/item_bar.png").into();
         let selector = Texture::from_path("assets/item_selected.png").into();
         let crosshairs = Texture::from_path("assets/crosshairs.png").into();
-        let inventory = Texture::from_path("assets/inventory.png").into();
+        let inventory = player_inventory();
 
         /* let heart = std::rc::Rc::from(Texture::from_path("assets/heart.png"));
         let mut hearts = vec![];
@@ -92,7 +93,7 @@ impl GUI {
         }
     }
 
-    pub fn render(
+    /* pub fn render(
         &self,
         r: &mut GUIRenderer,
         reg: &Registry,
@@ -182,6 +183,6 @@ impl GUI {
         }
         
         r.stop();
-    }
+    } */
 
 }

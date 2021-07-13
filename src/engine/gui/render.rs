@@ -3,6 +3,7 @@ use crate::vao::VAO;
 use crate::program::Program;
 use cgmath::*;
 
+#[derive(Clone,Copy,Debug)]
 pub struct Cursor {
     pub pos: Vector2<i32>,
 }

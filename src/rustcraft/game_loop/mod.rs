@@ -1,4 +1,7 @@
 
+use crate::util::DebugText;
+use crate::inv::InventoryRenderer;
+use crate::inv::InventoryGUI;
 use crate::worker::*;
 use meshing::ChunkRenderer;
 use crate::cmd::Cmd;
@@ -28,6 +31,7 @@ const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
 
 pub enum GameState {
     Inventory {
+        inventory: Arc<InventoryGUI>,
         picked_item: Option<ItemStack>,
     },
     Playing,
@@ -74,7 +78,6 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     }
 
     let chunk_renderer = ChunkRenderer::new();
-    let mut guirend = GUIRenderer::new(display.size_i32());
     let mut block_updates = Updates::default();
     let mut pgui = GUI::new();
     let worker_data = WorkerData {
@@ -83,14 +86,13 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     let mut worker = JobDispatcher::new(worker_data);
     let mut last_tick = Instant::now();
     let text_rend = crate::engine::text::font::TextRenderer::new();
-    let mut debug_text = rdata.font.build_text("RustCraft dev build".into());
+    let mut debug_text = DebugText::from(&rdata.font);
     use crate::engine::lines::*;
-    let box_vao = box_vao();
     let lines = LineProgram::new();
     let vign = data.loader.load_texture("assets/vign.png");
     let prg = Program::load(
-        include_str!("vert.glsl"),
-        include_str!("frag.glsl"),
+        include_str!("../vert.glsl"),
+        include_str!("../frag.glsl"),
         vec!["project","view","transform","uvScale","uvOffset"]
     );
     
@@ -98,8 +100,13 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     let mut event_pump = display.event_pump();
     let mut last_tick_dur = 0.;
 
-    let irenderer = ItemGUIRenderer::generate(data.registry.as_ref());
-    
+    let mut invren = InventoryRenderer {
+        iren: ItemGUIRenderer::generate(data.registry.as_ref()),
+        gui: GUIRenderer::new(display.size_i32()),
+        atlas: data.atlas.clone(),
+        highlight: data.loader.load_texture("assets/slot_highlight.png")
+    };
+
     data.world.load_around(&WorldPos::from(Vector3 {x:50., y: 55., z: 50.}));
 
     'main: loop {
@@ -189,7 +196,10 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
                     state = match state {
                         GameState::Playing => {
                             display.set_mouse_capture(false);
-                            GameState::Inventory {picked_item: Option::None}
+                            GameState::Inventory {
+                                picked_item: Option::None,
+                                inventory: pgui.inventory.clone().into(),
+                            }
                         },
                         GameState::Inventory { .. } => {
                             display.set_mouse_capture(true);
@@ -255,22 +265,11 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
             let w = &data.world;
             let bm = &data.registry;
-            debug_text.set_text(
-                format!(
-r#"
-RustCraft dev build
-    - {:?}
-    - Chunk {:?}
-    - Looking at {:?}
-    - fps: {:.0}
-    - tick: {:.1} ms
-"#,
-                    pos,
-                    position_to_chunk_coordinates(&pos.pos),
-                    raycast_hit.and_then(|(_,hit)| w.block_at(&hit)).map(|b| &b.name),
-                    1. / data.delta,
-                    last_tick_dur
-                )
+            debug_text.set_data(
+                &pos.pos,
+                raycast_hit.and_then(|(_,hit)| w.block_at(&hit)).map(|b| &b.name),
+                data.delta,
+                last_tick_dur
             );
 
             // println!("{}", data.world.area(&pos.pos).is_some());
@@ -308,7 +307,7 @@ RustCraft dev build
                 } else if data.input.clicked_secondary() {
 
                     if let Some(hit) = raycast_hit {
-                        let maybe_item = &mut pdata.inventory.hotbar[pgui.selected_slot as usize];
+                        let maybe_item = &mut pdata.inventory.data[pgui.selected_slot as usize];
                         let mut success = false;
                         if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
                             if data.world.set_block_at(&hit.0, &block) {
@@ -358,13 +357,14 @@ RustCraft dev build
         // interact with inventory
         if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
             match state {
-                GameState::Inventory { ref mut picked_item } => {
+                GameState::Inventory { ref mut picked_item, ref inventory } => {
                     if data.input.clicked_primary() {
-                        let slot = pgui.determine_hovered_slot(data.input.mouse_pos());
-                        // println!("{:?}",slot);
+                        compile_warning!(need corner anchor for determining hovered slot);
+                        /* let slot = (inventory.hovered)(data.input.mouse_pos(display.size_i32().1));
+                        //println!("")
                         if let Some(slot) = slot {
-                            pdata.inventory.transfer(slot, picked_item, &data.registry, &data.crafting);
-                        }
+                            pdata.inventory.transfer(slot as u32, picked_item, &data.registry, &data.crafting);
+                        } */
                     }
                 },
                 _ => {}
@@ -425,7 +425,7 @@ RustCraft dev build
 
         // render item in hand
         if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
-            if let Some(item) = &pdata.inventory.hotbar[pgui.selected_slot()] {
+            if let Some(item) = &pdata.inventory.data[pgui.selected_slot()] {
                 unsafe {
                     gl::Disable(gl::DEPTH_TEST);
                 }
@@ -452,7 +452,7 @@ RustCraft dev build
         }
 
         // tmp vignette solution
-        guirend.start();
+        /* guirend.start();
         guirend.set_pixels(0, 0);
         guirend.square.bind();
         vign.bind();
@@ -460,26 +460,15 @@ RustCraft dev build
         let ps = guirend.pixel_scale;
         guirend.set_uniforms(w/ps,h/ps);
         guirend.square.draw();
-        guirend.stop();
+        guirend.stop(); */
 
         // render inventory
         if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
-            pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
+            // pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
             match state {
-                GameState::Inventory { ref picked_item } => {
-                    if let Some(picked_item) = picked_item {
-                        let m = data.input.mouse_pos();
-                        guirend.set_pixels(m.0, display.size_i32().1 - m.1);
-                        guirend.move_pixels(-8, -8);
-                        guirend.set_uniforms(16, 16);
-                        unsafe {
-                            gl::Enable(gl::BLEND);
-                        }
-                        irenderer.draw(&picked_item.item);
-                        unsafe {
-                            gl::Disable(gl::BLEND);
-                        }
-                    }
+                GameState::Inventory { ref picked_item, ref inventory } => {
+                    let mpos = data.input.mouse_pos(display.size_i32().1);
+                    invren.render(&pgui, &pdata.inventory.data, mpos, picked_item);
                 },
                 _ => {}
             }
@@ -497,8 +486,8 @@ RustCraft dev build
                 z: 0.2,
                 w: 1.0,
             });
-            box_vao.bind();
-            box_vao.draw();
+            rdata.line_box.bind();
+            rdata.line_box.draw();
         }
 
         match &state {
@@ -508,7 +497,7 @@ RustCraft dev build
             _ => {}
         };
 
-        text_rend.render(&debug_text, -0.9, 0.9, display.size());
+        text_rend.render(&debug_text.text, -0.9, 0.9, display.size());
 
         // ! END RENDERING
 

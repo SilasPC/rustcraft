@@ -28,7 +28,7 @@ fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
         let cmd = s.get_iden()?;
         match cmd.as_str() {
             "give" => {
-                let id = s.get_string()?;
+                let id = s.get_iden()?;
                 let count = s.get_integer().unwrap_or(1);
                 if count < 0 {
                     return Err(PErr);
