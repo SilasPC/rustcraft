@@ -206,8 +206,10 @@ impl Chunk {
                         } else if d > 0.52 {
                             if da > 0.52 {
                                 palette[1]
-                            } else {
+                            } else if ay >= 20 {
                                 palette[2]
+                            } else {
+                                palette[1]
                             }
                         } else if ay > 20 {
                             "air"

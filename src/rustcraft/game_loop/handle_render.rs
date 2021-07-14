@@ -49,6 +49,7 @@ pub fn handle_render(
         );
         gl::Enable(gl::DEPTH_TEST);
         gl::ActiveTexture(gl::TEXTURE0);
+        gl::Enable(gl::BLEND);
     }
     
     // render chunks
@@ -57,6 +58,10 @@ pub fn handle_render(
     chunk_renderer.load_view(&rdata.view_mat);
     chunk_renderer.load_glob_light(data.world.smooth_light_level().max(MIN_BRIGHTNESS));
     chunk_renderer.render(&data.world);
+
+    unsafe {
+        gl::Disable(gl::BLEND);
+    }
 
     // render bounding boxes
     /* rdata.cube.bind();
