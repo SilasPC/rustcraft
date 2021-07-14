@@ -54,6 +54,8 @@ impl Physics {
     /// returns true if position was updated
     pub fn update(&mut self, pos: &mut Position, delta: f32, world: &WorldData) -> bool {
 
+        let old_y_vel = self.vel.y;
+
         self.vel += self.force;
         self.force = self.force.map(|_| 0.);
 
@@ -61,46 +63,67 @@ impl Physics {
         
         let mut new_pos = pos.pos.0 + self.vel * delta;
 
-        if !self.no_clip {
-            macro_rules! test_it {
-                ($x:expr, $y:expr, $z:expr) => {
-                    if self.vel.x != 0. && check_hit(world, &Vector3 {
-                        x: new_pos.x + $x * pos.size.x,
-                        ..pos.pos.0
-                    }) {
-                        new_pos.x = pos.pos.x;
-                        self.vel.x = 0.;
-                    }
-                    if self.vel.y != 0. && check_hit(world, &Vector3 {
-                        y: new_pos.y + $y * pos.size.y,
-                        ..pos.pos.0
-                    }) {
-                        new_pos.y = pos.pos.y;
-                        if self.vel.y < 0. {
-                            self.grounded = true;
-                            new_pos.y = new_pos.y.floor();
-                        } 
-                        self.vel.y = 0.;
-                    } else {
-                        self.grounded = false;
-                    }
-                    if self.vel.x != 0. && check_hit(world, &Vector3 {
-                        z: new_pos.z + $z * pos.size.z,
-                        ..pos.pos.0
-                    }) {
-                        new_pos.z = pos.pos.z;
-                        self.vel.z = 0.;
-                    }
-                };
+        {
+
+            macro_rules! test {
+                (x) => {{
+                    let sE = 0.01;
+                    let bE = pos.size.x - sE;
+                    let byE = 0.99;
+                    let offset = if self.vel.x > 0. {pos.size.x} else {0.};
+                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true)
+                }};
+                (y) => {{
+                    let sE = 0.01;
+                    let bE = pos.size.x - sE;
+                    let offset = if self.vel.y > 0. {pos.size.y} else {0.};
+                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true)
+                }};
+                (z) => {{
+                    let sE = 0.01;
+                    let bE = pos.size.x - sE;
+                    let byE = 0.99;
+                    let offset = if self.vel.z > 0. {pos.size.z} else {0.};
+                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
+                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true)
+                }};
             }
-            test_it!(0.,0.,0.);/* 
-            test_it!(1.,0.,0.);
-            test_it!(0.,1.,0.);
-            test_it!(0.,0.,1.);
-            test_it!(1.,1.,0.);
-            test_it!(1.,0.,1.);
-            test_it!(0.,1.,1.);
-            test_it!(1.,1.,1.); */
+
+            if self.vel.x != 0. && test!(x) {
+                if self.vel.x > 0. {
+                    new_pos.x = new_pos.x.floor() + 1. - pos.size.x;
+                } else {
+                    new_pos.x = new_pos.x.ceil();
+                }
+				self.vel.x = 0.;
+			}
+            
+            if self.vel.y != 0. && test!(y) {
+                if self.vel.y > 0. {
+                    new_pos.y = new_pos.y.floor() + 1. - pos.size.y;
+                } else {
+                    new_pos.y = new_pos.y.ceil();
+                }
+				self.vel.y = 0.;
+			}
+
+            if self.vel.z != 0. && test!(z) {
+                if self.vel.z > 0. {
+                    new_pos.z = new_pos.z.floor() + 1. - pos.size.z;
+                } else {
+                    new_pos.z = new_pos.z.ceil();
+                }
+				self.vel.z = 0.;
+			}
+
         }
 
         pos.pos = new_pos.into();
@@ -112,6 +135,8 @@ impl Physics {
 
         if self.vel.y != 0. {
             self.grounded = false;
+        } else if old_y_vel == 0. {
+            self.grounded = true;
         }
         
         return true;

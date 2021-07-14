@@ -30,6 +30,8 @@ const TICK_DURATION: Duration = Duration::from_millis(50);
 const RANDOM_TICK_SPEED: usize = 3;
 /// Sky minimum brightness
 const SKY_MIN_BRIGHTNESS: f32 = 0.4;
+/// Minimum block brightness
+const MIN_BRIGHTNESS: f32 = 0.4;
 /// Sky color
 const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
 

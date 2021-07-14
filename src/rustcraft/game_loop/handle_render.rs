@@ -1,4 +1,5 @@
 
+use crate::game_loop::MIN_BRIGHTNESS;
 use crate::util::DebugText;
 use crate::text::font::TextRenderer;
 use crate::*;
@@ -54,7 +55,7 @@ pub fn handle_render(
     data.atlas.texture().bind();
     chunk_renderer.load_proj(&Matrix4::from(data.fov));
     chunk_renderer.load_view(&rdata.view_mat);
-    chunk_renderer.load_glob_light(data.world.smooth_light_level().max(1./16.));
+    chunk_renderer.load_glob_light(data.world.smooth_light_level().max(MIN_BRIGHTNESS));
     chunk_renderer.render(&data.world);
 
     // render bounding boxes
