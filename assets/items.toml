@@ -63,6 +63,15 @@ texture = [9, 9, 9]
 drops = "glowstone"
 light = 15
 
+[[block]]
+id = "water"
+solid = false
+name = "Water"
+transparent = true
+group_transparent = true
+semi_transparent = true
+texture = [10, 10, 10]
+
 [[item]]
 id = "stick"
 name = "Stick"

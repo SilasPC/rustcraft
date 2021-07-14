@@ -39,6 +39,12 @@ impl ChunkRenderer {
             ));
             chunk.bind_and_draw();
         }
+        for chunk in w.chunks.values().filter(|c| c.renderable()) {
+            self.program.load_mat4(2, &Matrix4::from_translation(
+                chunk.pos.as_pos_f32().0
+            ));
+            chunk.bind_and_draw_second_pass();
+        }
     }
 }
 
@@ -161,16 +167,20 @@ pub fn cube_mesh() -> VAO {
 
 }
 
-pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Vec<f32>, Vec<f32>), (Vec<f32>, Vec<f32>, Vec<f32>)) {
 
     let now = std::time::Instant::now();
 
     let atlas = &reg.texture_atlas;
     let air = reg.get("air");
 
-    let mut verts = Vec::with_capacity(10000);
-    let mut uvs = Vec::with_capacity(10000);
-    let mut light = Vec::with_capacity(10000);
+    let mut verts1 = vec![];
+    let mut uvs1 = vec![];
+    let mut light1 = vec![];
+
+    let mut verts2 = vec![];
+    let mut uvs2 = vec![];
+    let mut light2 = vec![];
 
     let uv_dif = atlas.uv_dif();
 
@@ -192,9 +202,20 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                         w.light_at(&p) as f32 / 15.
                     }};
                 }
-                
 
-                let block = get!(x,y,z);
+                let block = {
+                    let p: WorldPos<i32> = (x+bx, y+by, z+bz).into();
+                    w.block_at_any_state(&p)
+                        .or_else(|| {println!("{:?} {:?}",pos,p);None})
+                        .unwrap()
+                };
+
+                macro_rules! should_draw {
+                    ($x:expr, $y:expr, $z:expr) => {{
+                        let b = get!($x,$y,$z);
+                        b.transparent && !(b.group_transparent && b == block)
+                    }};
+                }
 
                 let t = block.transparent;
 
@@ -204,8 +225,12 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                 let yc = y as isize + 1;
                 let zc = z as isize;
 
+                let light = if block.semi_transparent {&mut light2} else {&mut light1};
+                let verts = if block.semi_transparent {&mut verts2} else {&mut verts1};
+                let uvs = if block.semi_transparent {&mut uvs2} else {&mut uvs1};
+
                 // y+ face
-                if get!(x,y+1,z).transparent /* != t */ {
+                if should_draw!(x,y+1,z) {
                     let l = get!(light x,y+1,z);
                     light.extend([l].iter().cycle().take(6));
                     verts.extend_from_slice(&[
@@ -229,7 +254,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                 }
 
                 // y- face
-                if get!(x,y-1,z).transparent /* != t */ {
+                if should_draw!(x,y-1,z) {
                     let yc = yc - 1;
                     let l = get!(light x,y-1,z);
                     light.extend([l].iter().cycle().take(6));
@@ -258,7 +283,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                 let (uh,vh) = (u+uv_dif,v+uv_dif);
 
                 // x- face
-                if get!(x-1,y,z).transparent /* != t */ {
+                if should_draw!(x-1,y,z) {
                     let l = get!(light x-1,y,z);
                     light.extend([l].iter().cycle().take(6));
                     verts.extend_from_slice(&[
@@ -280,7 +305,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                 }
 
                 // x+ face
-                if get!(x+1,y,z).transparent /* != t */ {
+                if should_draw!(x+1,y,z) {
                     let xc = xc + 1;
                     let l = get!(light x+1,y,z);
                     light.extend([l].iter().cycle().take(6));
@@ -303,7 +328,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                 }
 
                 // z- face
-                if get!(x,y,z-1).transparent /* != t */ {
+                if should_draw!(x,y,z-1) {
                     let yc = yc - 1; //?
                     let l = get!(light x,y,z-1);
                     light.extend([l].iter().cycle().take(6));
@@ -326,7 +351,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
                 }
 
                 // z+ face
-                if get!(x,y,z+1).transparent /* != t */ {
+                if should_draw!(x,y,z+1) {
                     let yc = yc - 1;//?
                     let zc = zc + 1;
                     let l = get!(light x,y,z+1);
@@ -353,11 +378,12 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec
         }
     }
 
-    let verts = verts.into_iter().map(|v: isize| v as f32).collect::<Vec<_>>();
+    let verts1 = verts1.into_iter().map(|v: isize| v as f32).collect::<Vec<_>>();
+    let verts2 = verts2.into_iter().map(|v: isize| v as f32).collect::<Vec<_>>();
 
     // println!("{:?} values in {} ms",verts.len()+uvs.len()+light.len(), now.elapsed().as_millis());
 
-    (verts, uvs, light)
+    ((verts1, uvs1, light1), (verts2, uvs2, light2))
 
 }
 

@@ -1,14 +1,11 @@
 
-use crate::util::DebugText;
-use crate::inv::InventoryRenderer;
-use crate::inv::InventoryGUI;
+use crate::inv::*;
 use crate::worker::*;
 use meshing::ChunkRenderer;
 use crate::cmd::Cmd;
 use crate::updates::Updates;
 use crate::crafting::CraftingRegistry;
-use crate::util::position_to_chunk_coordinates;
-use crate::util::AABB;
+use crate::util::*;
 use crate::text::text::Text;
 use game::pgui::GUI;
 use crate::gui::render::GUIRenderer;
@@ -148,7 +145,6 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
             &state,
             raycast_hit
         );
-
 
         display.window.gl_swap_window();
 

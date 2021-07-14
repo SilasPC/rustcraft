@@ -10,7 +10,7 @@ out vec4 Color;
 void main()
 {
     vec4 col = texture(textureSampler, uv);
-    if (col.a < 1.0) discard;
+    if (col.a == 0.0) discard;
     col.xyz *= light;
     Color = col;
 }

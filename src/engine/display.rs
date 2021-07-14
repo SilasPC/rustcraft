@@ -2,20 +2,26 @@
 use sdl2::*;
 use sdl2::video::*;
 
+#[derive(Debug)]
+pub struct DisplayState {
+    pub vsync: bool,
+    pub fullscreen: bool,
+}
+
 pub struct GLDisplay {
     pub sdl: Sdl,
     pub video: VideoSubsystem,
     pub window: Window,
     pub _gl_ctx: GLContext,
-    pub is_fullscreen: bool,
+    pub state: DisplayState,
 }
 
 impl GLDisplay {
     pub fn new(title: &str, size: (u32, u32)) -> Self {
             
         let sdl = sdl2::init().unwrap();
-
-        let video = sdl.video().unwrap();
+        let mut video = sdl.video().unwrap();
+        video.gl_set_swap_interval(sdl2::video::SwapInterval::Immediate);
     
         let gl_attr = video.gl_attr();
         gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
@@ -35,7 +41,10 @@ impl GLDisplay {
             video,
             window,
             _gl_ctx,
-            is_fullscreen: false,
+            state: DisplayState {
+                vsync: false,
+                fullscreen: false
+            }
         }
         
     }
@@ -52,6 +61,13 @@ impl GLDisplay {
         let size = self.size();
         unsafe {
             gl::Viewport(0, 0, size.0 as i32, size.1 as i32);
+        }
+    }
+
+    pub fn set_vsync(&mut self, on: bool) {
+        let mode = sdl2::video::SwapInterval::from(on as i32);
+        if self.video.gl_set_swap_interval(mode).is_ok() {
+            self.state.fullscreen = on;
         }
     }
 
@@ -73,15 +89,14 @@ impl GLDisplay {
         x as f32 / y as f32
     }
 
-    pub fn toggle_fullscren(&mut self) {
-        let fs = self.window.fullscreen_state();
-        use sdl2::video::FullscreenType::*;
-        let (new_state_bool, new_state) = match fs {
-            Off => (true, True),
-            _ => (false, Off)
+    pub fn set_fullscreen(&mut self, on: bool) {
+        use sdl2::video::FullscreenType;;
+        let state = match on {
+            true => FullscreenType::True,
+            false => FullscreenType::Off
         };
-        if self.window.set_fullscreen(new_state).is_ok() {
-            self.is_fullscreen = new_state_bool;
+        if self.window.set_fullscreen(state).is_ok() {
+            self.state.fullscreen = on;
         }
     }
 

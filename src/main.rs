@@ -1,5 +1,5 @@
 #![allow(dead_code, unused)]
-#![feature(box_patterns, box_syntax, generators, generator_trait, try_blocks)]
+#![feature(box_patterns, box_syntax, generators, generator_trait, try_blocks, duration_constants)]
 
 #[macro_use]
 extern crate warn;
@@ -144,6 +144,8 @@ fn main() {
     }
 
     let settings = Settings::load();
+    display.set_vsync(settings.vsync);
+    display.set_fullscreen(settings.fullscreen);
     
     let mut data = Data::new(settings);
     let mut rdata = RenderData::new(&mut data);

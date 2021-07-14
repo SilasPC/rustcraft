@@ -56,7 +56,7 @@ pub fn handle_input(
                     }
                 };
             },
-            KeyDown {keycode: Some(F11), ..} => display.toggle_fullscren(),
+            KeyDown {keycode: Some(F11), ..} => display.set_fullscreen(!display.state.fullscreen),
             KeyDown {keycode: Some(R), ..} => ret.do_chunk_load = true,
             KeyDown {keycode: Some(E), ..} => {
                 match state {

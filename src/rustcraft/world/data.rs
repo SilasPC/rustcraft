@@ -130,9 +130,13 @@ impl WorldData {
                         // ! need to make another solution here
                         // ! need to make a hybrid version as well
                         if !self.chunks.get(&p.into()).unwrap().renderable() || meshed.contains(&p) {continue}
-                        let (verts, uvs, lights) = (meshing::make_mesh(p.into(), self, reg));
+                        let (m1,m2) = (meshing::make_mesh(p.into(), self, reg));
                         let c = self.chunks.get_mut(&p.into()).unwrap();
-                        c.mesh.as_mut().unwrap().update_lit(&verts, &uvs, &lights);
+                        {
+                            let m = c.mesh.as_mut().unwrap();
+                            m.0.update_lit(&m1.0, &m1.1, &m1.2);
+                            m.1.update_lit(&m2.0, &m2.1, &m2.2);
+                        }
                         c.needs_refresh = false;
                         c.chunk_state = ChunkState::Rendered;
                         meshed.insert(p);
@@ -215,12 +219,16 @@ impl WorldData {
                             z + *i % RAD
                         ).into();
                         {
-                            let (verts, uvs, lights) = meshing::make_mesh(p, self, reg);
+                            let (m1, m2) = meshing::make_mesh(p, self, reg);
                             let c = self.chunks.get_mut(&p).unwrap();
                             if let Some(mesh) = &mut c.mesh {
-                                mesh.update_lit(&verts, &uvs, &lights);
+                                mesh.0.update_lit(&m1.0, &m1.1, &m1.2);
+                                mesh.1.update_lit(&m2.0, &m2.1, &m2.2);
                             } else {
-                                c.mesh = Some(VAO::textured_lit(&verts, &uvs, &lights));
+                                c.mesh = Some((
+                                    VAO::textured_lit(&m1.0, &m1.1, &m1.2),
+                                    VAO::textured_lit(&m2.0, &m2.1, &m2.2)
+                                ));
                             }
                             c.needs_refresh = false;
                             c.chunk_state = ChunkState::Rendered;

@@ -1,8 +1,16 @@
 
-#[derive(serde::Deserialize)]
+use cgmath::Deg;
+
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct Settings {
-    pub fov: cgmath::Deg<f32>,
+    #[serde(default = "fov_def")]
+    pub fov: Deg<f32>,
+    #[serde(default = "one")]
     pub mouse_sensitivity: f32,
+    #[serde(default)]
+    pub fullscreen: bool,
+    #[serde(default)]
+    pub vsync: bool,
 }
 
 impl Settings {
@@ -11,3 +19,6 @@ impl Settings {
         toml::from_str(tomlstr.as_ref()).unwrap()
     }
 }
+
+const fn one() -> f32 {1.}
+const fn fov_def() -> Deg<f32> {Deg(90.)}

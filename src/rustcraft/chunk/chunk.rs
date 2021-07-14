@@ -34,7 +34,7 @@ pub struct Chunk {
     pub light: LightData,
     pub light_updates: VecDeque<WorldPos<i32>>,
     pub light_remove_updates: VecDeque<(WorldPos<i32>,u8)>,
-    pub mesh: Option<VAO>,
+    pub mesh: Option<(VAO, VAO)>,
 }
 /* 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -209,8 +209,10 @@ impl Chunk {
                             } else {
                                 palette[2]
                             }
-                        } else {
+                        } else if ay > 20 {
                             "air"
+                        } else {
+                            "water"
                         }
                     ).as_block().unwrap().clone();
                     /* if db > 0.52 && db < 0.56 && d < 0.51 && !(cb > 0.57) {
@@ -246,8 +248,15 @@ impl Chunk {
 
     pub fn bind_and_draw(&self) {
         if let Some(mesh) = &self.mesh {
-            mesh.bind();
-            mesh.draw();
+            mesh.0.bind();
+            mesh.0.draw();
+        }
+    }
+
+    pub fn bind_and_draw_second_pass(&self) {
+        if let Some(mesh) = &self.mesh {
+            mesh.1.bind();
+            mesh.1.draw();
         }
     }
 

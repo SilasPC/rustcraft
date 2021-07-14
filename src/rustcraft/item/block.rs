@@ -101,6 +101,10 @@ pub struct BlockData {
     #[serde(default)]
     pub transparent: bool,
     #[serde(default)]
+    pub semi_transparent: bool,
+    #[serde(default)]
+    pub group_transparent: bool,
+    #[serde(default)]
     pub replacable: bool,
     #[serde(default)]
     pub flammable: bool,
