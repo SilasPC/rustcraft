@@ -1,4 +1,5 @@
 
+use crate::lines::LineProgram;
 use crate::Program;
 use super::*;
 
@@ -64,16 +65,15 @@ impl Position {
         }.normalize()
     }
 
-    pub fn system_draw_bounding_boxes(data: &mut crate::Data, program: &Program, cube: &VAO) {
+    pub fn system_draw_bounding_boxes(data: &mut crate::Data, program: &mut LineProgram) {
+        program.enable();
+        program.bind();
+        program.load_color(&(0.8,0.8,0.8,1.0).into());
         for (ent, pos) in data.ecs.query_mut::<&Position>() {
-            if ent == data.cam {continue};
-            program.load_mat4(2, 
-                &(Matrix4::from_translation(pos.pos.0)
-                * Matrix4::from_nonuniform_scale(pos.size.x, pos.size.y, pos.size.z))
-            );
-            
-            cube.draw();
-
+            // if ent == data.cam {continue};
+            program.load_transform(&(Matrix4::from_translation(pos.pos.0)
+            * Matrix4::from_nonuniform_scale(pos.size.x, pos.size.y, pos.size.z)));
+            program.draw();
         }
     }
 

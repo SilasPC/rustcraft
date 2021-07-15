@@ -1,13 +1,7 @@
 
-use cgmath::Vector3;
-use std::time::Duration;
-use crate::game_loop::RANDOM_TICK_SPEED;
-use crate::Data;
+use crate::prelude::*;
 use crate::game_loop::GameState;
 use crate::game_loop::Updates;
-use std::time::Instant;
-use crate::game_loop::TICK_DURATION;
-use crate::coords::*;
 
 pub fn handle_game_tick(
     data: &mut Data,
@@ -16,8 +10,8 @@ pub fn handle_game_tick(
     state: &GameState,
     
 ) -> Option<Duration> {
-    if last_tick.elapsed() > TICK_DURATION {
-        *last_tick += TICK_DURATION;
+    if last_tick.elapsed() > consts::TICK_DURATION {
+        *last_tick += consts::TICK_DURATION;
 
         let start = Instant::now();
         if !state.is_paused() {
@@ -38,7 +32,7 @@ pub fn handle_game_tick(
         let keys = data.world.chunks.iter().filter(|(_,c)| c.renderable()).map(|(k,_)| k.clone()).collect::<Vec<_>>();
         for cp in keys {
             // println!("{:?}",cp);
-            for _ in 0..RANDOM_TICK_SPEED {
+            for _ in 0..consts::RANDOM_TICK_SPEED {
                 let random = rng.gen::<(i32,i32,i32)>();
                 let pos = cp.as_pos_i32() + Vector3::from(random).map(|x| x.abs() % 16).into();
                 assert_eq!(cp, pos.as_chunk());

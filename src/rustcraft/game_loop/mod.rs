@@ -1,4 +1,5 @@
 
+use crate::static_prg::StaticProgram;
 use crate::inv::*;
 use crate::worker::*;
 use meshing::ChunkRenderer;
@@ -24,17 +25,6 @@ mod handle_interaction;
 mod state;
 use state::*;
 
-/// Tick interval duration
-const TICK_DURATION: Duration = Duration::from_millis(50);
-/// Number of random ticks per chunk per game tick
-const RANDOM_TICK_SPEED: usize = 3;
-/// Sky minimum brightness
-const SKY_MIN_BRIGHTNESS: f32 = 0.4;
-/// Minimum block brightness
-const MIN_BRIGHTNESS: f32 = 0.4;
-/// Sky color
-const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
-
 pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderData) {
 
     display.refresh();
@@ -43,9 +33,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
 
     unsafe {
         gl::ClearColor(
-            SKY.0,
-            SKY.1,
-            SKY.2,
+            consts::SKY.0,
+            consts::SKY.1,
+            consts::SKY.2,
             1.
         );
         gl::Enable(gl::CULL_FACE);
@@ -63,15 +53,16 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     let text_rend = crate::engine::text::font::TextRenderer::new();
     let mut debug_text = DebugText::from(&rdata.font);
     use crate::engine::lines::*;
-    let lines = LineProgram::new();
+    let mut lines = LineProgram::new(rdata.line_box.clone());
     let vign = data.loader.load_texture("assets/vign.png");
     let prg = Program::load(
         include_str!("../vert.glsl"),
         include_str!("../frag.glsl"),
         vec!["project","view","transform","uvScale","uvOffset"]
     );
+    let mut sprg = StaticProgram::new();
     
-    let mut state = GameState::Playing;
+    let mut state = GameState::Playing { breaking: std::option::Option::None };
     let mut event_pump = display.event_pump();
     let mut last_tick_dur = 0.;
 
@@ -117,7 +108,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
             &mut debug_text,
             &mut block_updates,
             last_tick_dur,
-            &pgui
+            &pgui,
+            &mut invren,
+            display,
         );
         
         // ! START SYSTEMS
@@ -141,11 +134,12 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
             &mut invren,
             &text_rend,
             &mut debug_text,
-            &lines,
+            &mut lines,
             &prg,
             &pgui,
             &state,
-            raycast_hit
+            raycast_hit,
+            &mut sprg
         );
 
         display.window.gl_swap_window();

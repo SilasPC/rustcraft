@@ -9,6 +9,7 @@ pub mod engine;
 pub mod coords;
 pub mod rustcraft;
 pub mod perlin;
+pub mod consts;
 use crate::lines::box_vao;
 use crate::crafting::CraftingRegistry;
 use crate::text::font::Font;
@@ -25,6 +26,7 @@ use engine::*;
 use rustcraft::*;
 
 pub mod prelude {
+    pub use crate::consts;
     pub use game::settings::Settings;
     pub use util::ArcStr;
     pub use util;
@@ -42,15 +44,19 @@ pub mod prelude {
     pub use crate::vao::VAO;
     pub use crate::rustcraft::chunk::{chunk::{self, Chunk}, meshing};
     pub use std::sync::Arc;
+    pub use std::time::{Duration, Instant};
 }
 use crate::prelude::*;
 
 pub struct RenderData {
     pub bbox: Arc<Texture>,
     pub cube: Arc<VAO>,
-    pub line_box: VAO,
+    pub line_box: Arc<VAO>,
     pub view_mat: Matrix4<f32>,
+    pub proj_mat: Matrix4<f32>,
     pub font: Arc<Font>,
+    pub break_atlas: Arc<TextureAtlas>,
+    pub fov: PerspectiveFov<f32>
 }
 
 impl RenderData {
@@ -59,13 +65,19 @@ impl RenderData {
         let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
         let cube = meshing::cube_mesh().into();
         let view_mat = Matrix4::one();
-        let line_box = box_vao();
+        let line_box = box_vao().into();
+        let break_atlas = data.loader.load_texture_atlas("assets/break_atlas.png", 4);
+        let fov = data.fov;
+        let proj_mat = Matrix4::from(data.fov);
         Self {
             bbox,
             cube,
             font,
             view_mat,
-            line_box
+            line_box,
+            break_atlas,
+            proj_mat,
+            fov
         }
     }
 }

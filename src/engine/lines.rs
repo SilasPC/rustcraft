@@ -1,15 +1,39 @@
 
+use crate::prelude::*;
 use crate::engine::program::Program;
-use crate::engine::vao::VAO;
 
 pub struct LineProgram {
-    pub program: Program
+    program: Program,
+    cube: Arc<VAO>
 }
 
 impl LineProgram {
-    pub fn new() -> Self {
+    pub fn new(cube: Arc<VAO>) -> Self {
         let program = Program::load(VERT, FRAG, vec!["transform", "view", "project", "color"]);
-        Self {program}
+        Self { program, cube }
+    }
+    pub fn enable(&mut self) {
+        self.program.enable();
+    }
+    pub fn load_view(&mut self, view: &Matrix4<f32>, project: &Matrix4<f32>) {
+        self.program.load_mat4(1, view);
+        self.program.load_mat4(2, project);
+    }
+    pub fn load_transform(&mut self, transform: &Matrix4<f32>) {
+        self.program.load_mat4(0, transform);
+    }
+    pub fn load_color(&mut self, c: &Vector4<f32>) {
+        self.program.load_vec4(3, c);
+    }
+    pub fn bind(&mut self) {
+        self.cube.bind();
+    }
+    pub fn draw(&mut self) {
+        self.cube.draw();
+    }
+    pub fn bind_and_draw(&mut self) {
+        self.cube.bind();
+        self.cube.draw();
     }
 }
 

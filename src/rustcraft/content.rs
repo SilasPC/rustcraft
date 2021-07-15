@@ -140,6 +140,44 @@ fn fire_update(pos: WorldPos<i32>, data: &mut Data) {
     }
 }
 
+pub fn player_toolbar() -> InventoryGUI {
+    let texture = Texture::from_path("assets/item_bar.png").into();
+
+    let mut slots = vec![];
+
+    let mut c = (4, 4);
+    for i in 0..9 {
+        slots.push(c.into());
+        c.0 += 20;
+    }
+
+    fn slot_at(p: PixelPos) -> Option<usize> {
+
+        fn grid(x: i32, y: i32) -> Option<(i32, i32)> {
+            if x.rem_euclid(20) < 16 && y.rem_euclid(20) < 16 {
+                (fdiv(x,20),fdiv(y,20)).into()
+            } else {
+                None
+            }
+        }
+            
+        let mut p = p.0;
+        p.0 -= 4;
+        p.1 -= 4;
+        if let Some((x@0..=8,0)) = grid(p.0, p.1) {
+            Some(x as usize)
+        } else {
+            None
+        }
+
+    }
+    InventoryGUI {
+        texture,
+        slots,
+        slot_at,
+    }
+}
+
 pub fn player_inventory() -> InventoryGUI {
     let texture = Texture::from_path("assets/inventory.png").into();
 

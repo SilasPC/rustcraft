@@ -1,4 +1,5 @@
 
+use crate::game_loop::InventoryRenderer;
 use crate::pgui::GUI;
 use crate::util::DebugText;
 use crate::game_loop::Updates;
@@ -14,7 +15,9 @@ pub fn handle_interaction(
     debug_text: &mut DebugText,
     block_updates: &mut Updates,
     last_tick_dur: f32,
-    pgui: &GUI
+    pgui: &GUI,
+    invren: &mut InventoryRenderer,
+    display: &GLDisplay
 ) -> Option<(WorldPos<f32>,WorldPos<f32>)> {
     
     let mut raycast_hit = None;
@@ -42,34 +45,63 @@ pub fn handle_interaction(
 
         // println!("{}", data.world.area(&pos.pos).is_some());
 
-        if state.is_playing() {
+        if let GameState::Playing{ breaking } = state {
 
             if data.input.holding_jump() {
                 phys.try_jump();
             }
 
-            if data.input.clicked_primary() {
+            if !data.input.holding_primary() {
+                *breaking = None;
+            }
+            if data.input.holding_primary() {
                 if let Some(hit) = raycast_hit {
-                    let block = data.world.block_at(&hit.1).unwrap().clone();
-                    if data.world.set_block_at(&hit.1, data.registry.get("air").as_block().unwrap()) {
-                        if let Some(drop_id) = &block.drops {
-                            let mut stack = ItemStack::of(data.registry.get(&drop_id).clone(), 1);
-                            // * merge directly
-                            /* pdata.inventory.merge(&mut Some(stack)); */
-                            let phys = Physics::new();
-                            let pos = Position::new(hit.1.pos_center().into(),(0.3,0.3,0.3).into());
-                            let aabb = pos.get_aabb();
-                            let cmps = (
-                                pos,
-                                phys,
-                                ItemCmp::from(stack),
-                                Model::from(rdata.cube.clone()),
-                            );
-                            to_spawn.push((cmps,aabb));
+
+                    if let Some(breaking) = breaking {
+                        if breaking.1 != hit.1.as_pos_i32() {
+                            *breaking = (0., hit.1.as_pos_i32());
                         }
-                        block_updates.add_area(hit.1.0);
-                        block_updates.add_single(hit.1.0);
-                        data.world.to_update.push(hit.1.as_pos_i32());
+                    } else {
+                        *breaking = Some((0., hit.1.as_pos_i32()));
+                    }
+                    
+                    let block = data.world.block_at(&hit.1).unwrap().clone();
+
+                    let broken = {
+                        let t = {
+                            let breaking = breaking.as_mut().unwrap();
+                            breaking.0 += data.delta; // TODO mult by hardness factor
+                            breaking.0
+                        };
+                        if t >= 1.0 {
+                            *breaking = None;
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    
+                    if broken {
+                        if data.world.set_block_at(&hit.1, data.registry.get("air").as_block().unwrap()) {
+                            if let Some(drop_id) = &block.drops {
+                                let mut stack = ItemStack::of(data.registry.get(&drop_id).clone(), 1);
+                                // * merge directly
+                                /* pdata.inventory.merge(&mut Some(stack)); */
+                                let phys = Physics::new();
+                                let pos = Position::new(hit.1.pos_center().into(),(0.3,0.3,0.3).into());
+                                let aabb = pos.get_aabb();
+                                let cmps = (
+                                    pos,
+                                    phys,
+                                    ItemCmp::from(stack),
+                                    Model::from(rdata.cube.clone()),
+                                );
+                                to_spawn.push((cmps,aabb));
+                            }
+                            block_updates.add_area(hit.1.0);
+                            block_updates.add_single(hit.1.0);
+                            data.world.to_update.push(hit.1.as_pos_i32());
+                        }
                     }
                 }
             } else if data.input.clicked_secondary() {
@@ -104,7 +136,7 @@ pub fn handle_interaction(
             phys.apply_force_continuous(data.delta, &force);
         }
 
-        rdata.view_mat = Matrix4::from(pos.rot) * Matrix4::from_translation(-pos.pos.0-view.offset());
+        rdata.view_mat = view.calc_view_mat(&pos);
 
         /* let aabb = phys.get_aabb(pos);
         //println!("Player: {:?}",aabb);
@@ -127,12 +159,11 @@ pub fn handle_interaction(
         match state {
             GameState::Inventory { ref mut picked_item, ref inventory } => {
                 if data.input.clicked_primary() {
-                    compile_warning!(need corner anchor for determining hovered slot);
-                    /* let slot = (inventory.hovered)(data.input.mouse_pos(display.size_i32().1));
-                    //println!("")
-                    if let Some(slot) = slot {
+                    let mpos = data.input.mouse_pos(display.size_i32().1);
+                    // compile_warning!(need corner anchor for determining hovered slot);
+                    if let Some(slot) = invren.corner_cursor(&pgui.inventory, mpos) {
                         pdata.inventory.transfer(slot as u32, picked_item, &data.registry, &data.crafting);
-                    } */
+                    }
                 }
             },
             _ => {}

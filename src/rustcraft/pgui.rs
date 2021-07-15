@@ -9,7 +9,7 @@ use crate::engine::gui::{gui::*, render::*};
 use crate::prelude::*;
 
 pub struct GUI {
-    pub toolbar: Texture,
+    pub toolbar: InventoryGUI,
     pub selector: Texture,
     pub crosshairs: Texture,
     pub inventory: InventoryGUI,
@@ -20,7 +20,7 @@ impl GUI {
 
     pub fn new() -> Self {
 
-        let toolbar = Texture::from_path("assets/item_bar.png").into();
+        let toolbar = player_toolbar();
         let selector = Texture::from_path("assets/item_selected.png").into();
         let crosshairs = Texture::from_path("assets/crosshairs.png").into();
         let inventory = player_inventory();

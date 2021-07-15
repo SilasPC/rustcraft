@@ -63,7 +63,7 @@ impl Physics {
         
         let mut new_pos = pos.pos.0 + self.vel * delta;
 
-        {
+        #[allow(non_snake_case)] {
 
             macro_rules! test {
                 (x) => {{

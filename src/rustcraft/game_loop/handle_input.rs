@@ -44,11 +44,11 @@ pub fn handle_input(
                 *state = match state {
                     GameState::Paused => {
                         display.set_mouse_capture(true);
-                        GameState::Playing
+                        GameState::Playing { breaking: std::option::Option::None }
                     },
                     GameState::Chat { .. } => {
                         display.set_mouse_capture(true);
-                        GameState::Playing
+                        GameState::Playing { breaking: std::option::Option::None }
                     },
                     _ => {
                         display.set_mouse_capture(false);
@@ -60,7 +60,7 @@ pub fn handle_input(
             KeyDown {keycode: Some(R), ..} => ret.do_chunk_load = true,
             KeyDown {keycode: Some(E), ..} => {
                 match state {
-                    GameState::Playing => {
+                    GameState::Playing {..} => {
                         display.set_mouse_capture(false);
                         *state = GameState::Inventory {
                             picked_item: Option::None,
@@ -69,7 +69,7 @@ pub fn handle_input(
                     },
                     GameState::Inventory { .. } => {
                         display.set_mouse_capture(true);
-                        *state = GameState::Playing
+                        *state = GameState::Playing { breaking: std::option::Option::None }
                     },
                     _ => {}
                 };
@@ -83,14 +83,14 @@ pub fn handle_input(
                             cmd.exec(data);
                         }
                         display.set_mouse_capture(true);
-                        *state = GameState::Playing
+                        *state = GameState::Playing { breaking: std::option::Option::None }
                     },
                     _ => {}
                 };
             },
             KeyDown {keycode: Some(T), ..} => {
                 match state {
-                    GameState::Playing => {
+                    GameState::Playing {..} => {
                         display.set_mouse_capture(false);
                         *state = GameState::Chat { text: rdata.font.build_text("".into()), start_frame: data.frame_time }
                     },

@@ -1,4 +1,5 @@
 
+use crate::coords::*;
 use crate::game_loop::InventoryGUI;
 use crate::ItemStack;
 use crate::game_loop::Text;
@@ -10,7 +11,9 @@ pub enum GameState {
         inventory: Arc<InventoryGUI>,
         picked_item: Option<ItemStack>,
     },
-    Playing,
+    Playing {
+        breaking: Option<(f32,WorldPos<i32>)>
+    },
     Paused,
     Chat {
         start_frame: Instant,
@@ -20,7 +23,7 @@ pub enum GameState {
 
 impl GameState {
     pub fn is_playing(&self) -> bool {
-        match self { Self::Playing => true, _ => false }
+        match self { Self::Playing {..} => true, _ => false }
     }
     pub fn is_paused(&self) -> bool {
         match self { Self::Paused {..} => true, _ => false }

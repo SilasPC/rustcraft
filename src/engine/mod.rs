@@ -6,3 +6,4 @@ pub mod vao;
 pub mod text;
 pub mod lines;
 pub mod loader;
+pub mod static_prg;

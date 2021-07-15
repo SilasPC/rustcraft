@@ -11,6 +11,8 @@ pub struct Settings {
     pub fullscreen: bool,
     #[serde(default)]
     pub vsync: bool,
+    #[serde(default)]
+    pub third_person: bool,
 }
 
 impl Settings {
