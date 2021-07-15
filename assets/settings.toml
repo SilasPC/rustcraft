@@ -2,3 +2,4 @@ fov = 90
 mouse_sensitivity = 0.5
 vsync = true
 fullscreen = false
+debug = true

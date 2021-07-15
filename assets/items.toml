@@ -12,7 +12,13 @@ texture = [0, 0, 0]
 id = "stone"
 name = "Stone"
 texture = [0, 0, 0]
-drops = "stone"
+drops = "cobblestone"
+
+[[block]]
+id = "cobblestone"
+name = "Cobblestone"
+texture = [11, 11, 11]
+drops = "cobblestone"
 
 [[block]]
 id = "dirt"

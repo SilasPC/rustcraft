@@ -64,14 +64,16 @@ pub fn handle_render(
     }
 
     // render bounding boxes
-    lines.load_view(
-        &rdata.view_mat,
-        &rdata.proj_mat,    
-    );
-    Position::system_draw_bounding_boxes(data, lines);
+    if data.settings.debug {
+        lines.enable();
+        lines.load_view(
+            &rdata.view_mat,
+            &rdata.proj_mat,    
+        );
+        Position::system_draw_bounding_boxes(data, lines);
+    }
 
     // render entities 
-    // TODO what is going on here lol
     prg.enable();
     prg.load_mat4(0, &rdata.proj_mat);
     prg.load_mat4(1, &rdata.view_mat);

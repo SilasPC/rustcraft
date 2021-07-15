@@ -15,6 +15,8 @@ pub struct Settings {
     pub third_person: bool,
     #[serde(default = "two")]
     pub gui_scale: i32, // TODO implement
+    #[serde(default)]
+    pub debug: bool,
 }
 
 impl Settings {

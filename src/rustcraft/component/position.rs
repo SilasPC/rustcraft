@@ -70,7 +70,7 @@ impl Position {
         program.bind();
         program.load_color(&(0.8,0.8,0.8,1.0).into());
         for (ent, pos) in data.ecs.query_mut::<&Position>() {
-            // if ent == data.cam {continue};
+            if ent == data.cam {continue};
             program.load_transform(&(Matrix4::from_translation(pos.pos.0)
             * Matrix4::from_nonuniform_scale(pos.size.x, pos.size.y, pos.size.z)));
             program.draw();
