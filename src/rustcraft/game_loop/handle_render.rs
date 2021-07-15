@@ -27,13 +27,15 @@ pub fn handle_render(
     state: &GameState,
     raycast_hit: Option<(WorldPos<f32>,WorldPos<f32>)>,
     sprg: &mut StaticProgram,
+    vign: &Texture,
+    clouds: &Texture,
 ) {
+    let light_factor = (data.world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
     unsafe {
-        let lf = (data.world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
         gl::ClearColor(
-            consts::SKY.0 * lf,
-            consts::SKY.1 * lf,
-            consts::SKY.2 * lf,
+            consts::SKY.0 * light_factor,
+            consts::SKY.1 * light_factor,
+            consts::SKY.2 * light_factor,
             1.
         );
     }
@@ -53,7 +55,8 @@ pub fn handle_render(
     data.atlas.texture().bind();
     chunk_renderer.load_proj(&rdata.proj_mat);
     chunk_renderer.load_view(&rdata.view_mat);
-    chunk_renderer.load_glob_light(data.world.smooth_light_level().max(consts::MIN_BRIGHTNESS));
+    let world_light = data.world.smooth_light_level().max(consts::MIN_BRIGHTNESS);
+    chunk_renderer.load_glob_light(light_factor);
     chunk_renderer.render(&data.world);
 
     unsafe {
@@ -67,11 +70,23 @@ pub fn handle_render(
     );
     Position::system_draw_bounding_boxes(data, lines);
 
-    // render entities
+    // render entities 
+    // TODO what is going on here lol
     prg.enable();
     prg.load_mat4(0, &rdata.proj_mat);
     prg.load_mat4(1, &rdata.view_mat);
     Model::system_render(data, sprg);
+
+    // render clouds
+    sprg.enable();
+    clouds.bind();
+    sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
+    sprg.load_uv((1.,1.), (0.,0.));
+    sprg.load_transform(&(Matrix4::from_translation((0.,consts::CLOUD_HEIGHT,0.).into()) * Matrix4::from_scale(clouds.size().0 * consts::CLOUD_SIZE)));
+    sprg.load_light(light_factor);
+    // ? use quad instead
+    rdata.cube.bind();
+    rdata.cube.draw();
 
     // render item in hand
     if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
@@ -101,17 +116,6 @@ pub fn handle_render(
         }
     }
 
-    // tmp vignette solution
-    /* guirend.start();
-    guirend.set_pixels(0, 0);
-    guirend.square.bind();
-    vign.bind();
-    let (w,h) = guirend.screen_size;
-    let ps = guirend.pixel_scale;
-    guirend.set_uniforms(w/ps,h/ps);
-    guirend.square.draw();
-    guirend.stop(); */
-
     if let Some(hit) = raycast_hit {
         const E: f32 = 0.001;
         let hit = hit.1.map(|v| v.floor() - E);
@@ -137,7 +141,6 @@ pub fn handle_render(
         match state {
             GameState::Playing { breaking: Some(breaking) } => {
                 sprg.enable();
-                sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
                 sprg.load_transform(&t);
                 rdata.break_atlas.bind();
                 let uvd = rdata.break_atlas.uv_dif();
@@ -150,6 +153,23 @@ pub fn handle_render(
         }
     }
 
+    // tmp vignette solution
+    unsafe {
+        gl::Disable(gl::DEPTH_TEST);
+        gl::Enable(gl::BLEND);
+    }
+    sprg.enable();
+    sprg.load_uv((1., 1.), (0.,0.));
+    sprg.load_light(1.);
+    sprg.load_view(&Matrix4::one(),&Matrix4::one());
+    sprg.load_transform(&(Matrix4::from_translation((-1., -1., -1.,).into()) * Matrix4::from_scale(2.)));
+    vign.bind();
+    rdata.cube.bind();
+    rdata.cube.draw();
+    unsafe {
+        gl::Enable(gl::DEPTH_TEST);
+        gl::Disable(gl::BLEND);
+    }
     
     // render inventory
     if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {

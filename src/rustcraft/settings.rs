@@ -13,6 +13,8 @@ pub struct Settings {
     pub vsync: bool,
     #[serde(default)]
     pub third_person: bool,
+    #[serde(default = "two")]
+    pub gui_scale: i32, // TODO implement
 }
 
 impl Settings {
@@ -23,4 +25,5 @@ impl Settings {
 }
 
 const fn one() -> f32 {1.}
+const fn two() -> i32 {2}
 const fn fov_def() -> Deg<f32> {Deg(90.)}

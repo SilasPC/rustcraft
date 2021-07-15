@@ -7,7 +7,6 @@ pub struct Physics {
     force: Vector3<f32>,
     vel: Vector3<f32>,
     grounded: bool,
-    no_clip: bool,
 }
 
 impl Physics {
@@ -19,13 +18,7 @@ impl Physics {
             grounded: true,
             force: zero,
             vel: zero,
-            no_clip: false
         }
-    }
-
-    pub fn set_flying(&mut self, flying: bool) {
-        self.no_clip = flying;
-        self.gravity = !flying;
     }
 
     pub fn try_jump(&mut self) {
@@ -61,7 +54,7 @@ impl Physics {
 
         if self.gravity {self.vel.y -= 10. * delta;}
         
-        let mut new_pos = pos.pos.0 + self.vel * delta;
+        let mut new_pos = pos.pos.0;
 
         #[allow(non_snake_case)] {
 
@@ -97,6 +90,7 @@ impl Physics {
                 }};
             }
 
+            new_pos.x += self.vel.x * delta;
             if self.vel.x != 0. && test!(x) {
                 if self.vel.x > 0. {
                     new_pos.x = new_pos.x.floor() + 1. - pos.size.x;
@@ -105,7 +99,9 @@ impl Physics {
                 }
 				self.vel.x = 0.;
 			}
+
             
+            new_pos.y += self.vel.y * delta;
             if self.vel.y != 0. && test!(y) {
                 if self.vel.y > 0. {
                     new_pos.y = new_pos.y.floor() + 1. - pos.size.y;
@@ -115,6 +111,7 @@ impl Physics {
 				self.vel.y = 0.;
 			}
 
+            new_pos.z += self.vel.z * delta;
             if self.vel.z != 0. && test!(z) {
                 if self.vel.z > 0. {
                     new_pos.z = new_pos.z.floor() + 1. - pos.size.z;
@@ -135,7 +132,7 @@ impl Physics {
 
         if self.vel.y != 0. {
             self.grounded = false;
-        } else if old_y_vel == 0. {
+        } else if old_y_vel == 0. && self.gravity {
             self.grounded = true;
         }
         

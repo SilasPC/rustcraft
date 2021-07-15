@@ -11,7 +11,7 @@ impl FallingBlock {
         let mut to_destroy = vec![];
         for (ent, (pos, phys, this)) in data.ecs.query_mut::<(&mut Position, &mut Physics, &FallingBlock)>() {
             if phys.is_grounded() {
-                // spawn item if fail:
+                compile_warning!(spawn item if fail);
                 data.world.set_block_at(&pos.pos, &this.block);
                 data.ent_tree.remove(ent);
                 to_destroy.push(ent);

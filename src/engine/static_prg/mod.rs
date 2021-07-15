@@ -12,11 +12,14 @@ impl StaticProgram {
             program: Program::load(
                 include_str!("./vert.glsl"),
                 include_str!("./frag.glsl"),
-                vec!["transform", "view", "project", "uvScale", "uvOffset"]
+                vec!["transform", "view", "project", "uvScale", "uvOffset", "lightScale"]
             )
         }
     }
 
+    pub fn load_light(&mut self, val: f32) {
+        self.program.load_f32(5, val)
+    }
     pub fn load_view(&mut self, view: &Matrix4<f32>, project: &Matrix4<f32>) {
         self.program.load_mat4(1, view);
         self.program.load_mat4(2, project);

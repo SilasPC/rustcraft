@@ -9,3 +9,7 @@ pub const SKY_MIN_BRIGHTNESS: f32 = 0.4;
 pub const MIN_BRIGHTNESS: f32 = 0.4;
 /// Sky color
 pub const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
+/// Cloud block-per-pixel size
+pub const CLOUD_SIZE: f32 = 20.;
+/// Cloud world height
+pub const CLOUD_HEIGHT: f32 = 70.;

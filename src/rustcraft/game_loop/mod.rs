@@ -65,6 +65,8 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
     let mut state = GameState::Playing { breaking: std::option::Option::None };
     let mut event_pump = display.event_pump();
     let mut last_tick_dur = 0.;
+    
+    let clouds = data.loader.load_texture("assets/clouds.png");
 
     let mut invren = InventoryRenderer {
         iren: ItemGUIRenderer::generate(data.registry.as_ref()),
@@ -139,7 +141,9 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
             &pgui,
             &state,
             raycast_hit,
-            &mut sprg
+            &mut sprg,
+            vign.as_ref(),
+            clouds.as_ref()
         );
 
         display.window.gl_swap_window();
