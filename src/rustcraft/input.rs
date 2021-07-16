@@ -37,9 +37,9 @@ impl Input {
     }
     pub fn reset(&mut self) {*self = Self::default();}
 
-    pub fn update_scancodes(&mut self, state: sdl2::keyboard::KeyboardState) {
-        use sdl2::keyboard::Scancode::*;
-        if state.is_scancode_pressed(LShift) {
+    pub fn update_flags(&mut self, flags: sdl2::keyboard::Mod) {
+        use sdl2::keyboard::Mod;
+        if flags.contains(Mod::LSHIFTMOD) {
             self.sneak += 1;
         } else {
             self.sneak = 0;
@@ -52,19 +52,21 @@ impl Input {
 
         match event {
             Event::KeyDown {keycode: Some(W), ..} => self.forward += 1,
-            Event::KeyDown {keycode: Some(S), ..} => self.forward -= 1,
-            Event::KeyDown {keycode: Some(A), ..} => self.rightward -= 1,
-            Event::KeyDown {keycode: Some(D), ..} => self.rightward += 1,
-            Event::KeyDown {keycode: Some(Space), ..} => self.jump += 1,
             Event::KeyUp {keycode: Some(W), ..} => self.forward += -1,
+            Event::KeyDown {keycode: Some(S), ..} => self.forward -= 1,
             Event::KeyUp {keycode: Some(S), ..} => self.forward -= -1,
+            Event::KeyDown {keycode: Some(A), ..} => self.rightward -= 1,
             Event::KeyUp {keycode: Some(A), ..} => self.rightward -= -1,
+            Event::KeyDown {keycode: Some(D), ..} => self.rightward += 1,
             Event::KeyUp {keycode: Some(D), ..} => self.rightward += -1,
+            Event::KeyDown {keycode: Some(Space), ..} => self.jump += 1,
             Event::KeyUp {keycode: Some(Space), ..} => self.jump = 0,
+
             Event::MouseButtonDown { mouse_btn: Left, .. } => self.primary += 1,
-            Event::MouseButtonDown { mouse_btn: Right, .. } => self.secondary += 1,
             Event::MouseButtonUp { mouse_btn: Left, .. } => self.primary = 0,
+            Event::MouseButtonDown { mouse_btn: Right, .. } => self.secondary += 1,
             Event::MouseButtonUp { mouse_btn: Right, .. } => self.secondary = 0,
+
             Event::MouseMotion { x, y, xrel, yrel, .. } => {
                 self.mouse.0 = *x;
                 self.mouse.1 = *y;

@@ -47,6 +47,8 @@ pub fn handle_interaction(
 
         if let GameState::Playing{ breaking } = state {
 
+            phys.set_edge_stop(data.input.holding_sneak());
+
             if data.input.holding_jump() {
                 phys.try_jump();
             }

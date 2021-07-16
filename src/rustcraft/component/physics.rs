@@ -7,6 +7,7 @@ pub struct Physics {
     force: Vector3<f32>,
     vel: Vector3<f32>,
     grounded: bool,
+    edge_stop: bool,
 }
 
 impl Physics {
@@ -18,6 +19,7 @@ impl Physics {
             grounded: true,
             force: zero,
             vel: zero,
+            edge_stop: false
         }
     }
 
@@ -31,6 +33,10 @@ impl Physics {
 
     pub fn apply_force_once(&mut self, f: &Vector3<f32>) {
         self.vel += *f;
+    }
+
+    pub fn set_edge_stop(&mut self, val: bool) {
+        self.edge_stop = val;
     }
 
     /* pub fn apply_force_movement(&mut self, delta: f32, f: &Vector3<f32>) {
@@ -47,6 +53,7 @@ impl Physics {
     /// returns true if position was updated
     pub fn update(&mut self, pos: &mut Position, delta: f32, world: &WorldData) -> bool {
 
+        let was_grounded = self.grounded;
         let old_y_vel = self.vel.y;
 
         self.vel += self.force;
@@ -90,6 +97,7 @@ impl Physics {
                 }};
             }
 
+            let old_vel = self.vel;
             new_pos.x += self.vel.x * delta;
             if self.vel.x != 0. && test!(x) {
                 if self.vel.x > 0. {
@@ -98,17 +106,6 @@ impl Physics {
                     new_pos.x = new_pos.x.ceil();
                 }
 				self.vel.x = 0.;
-			}
-
-            
-            new_pos.y += self.vel.y * delta;
-            if self.vel.y != 0. && test!(y) {
-                if self.vel.y > 0. {
-                    new_pos.y = new_pos.y.floor() + 1. - pos.size.y;
-                } else {
-                    new_pos.y = new_pos.y.ceil();
-                }
-				self.vel.y = 0.;
 			}
 
             new_pos.z += self.vel.z * delta;
@@ -120,6 +117,29 @@ impl Physics {
                 }
 				self.vel.z = 0.;
 			}
+            
+            new_pos.y += self.vel.y * delta;
+            if self.vel.y != 0. && test!(y) {
+                if self.vel.y > 0. {
+                    new_pos.y = new_pos.y.floor() + 1. - pos.size.y;
+                } else {
+                    new_pos.y = new_pos.y.ceil();
+                }
+				self.vel.y = 0.;
+                compile_warning!(edge stop);
+			} else if /* was_grounded && self.vel.y < 0. && self.edge_stop */ true {
+                // not grounded, try cancel x
+                new_pos.x = pos.pos.0.x;
+                if !test!(y) {
+                    // still not grounded, cancel x not enough, try cancel z instead
+                    new_pos.x += old_vel.x * delta;
+                    new_pos.z = pos.pos.0.z;
+                    if !test!(y) {
+                        // still not grounded, must cancel both
+                        new_pos.x = pos.pos.0.x;
+                    }
+                }
+            }
 
         }
 

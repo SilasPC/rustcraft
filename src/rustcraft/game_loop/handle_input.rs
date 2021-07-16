@@ -21,7 +21,7 @@ pub fn handle_input(
 
     data.input.start_new_frame();
     display.video.text_input().start();
-    //data.input.update_scancodes(event_pump.keyboard_state());
+    data.input.update_flags(display.sdl.keyboard().mod_state());
     for event in event_pump.poll_iter() {
         use sdl2::event::Event::*;
         use sdl2::keyboard::Keycode::*;
