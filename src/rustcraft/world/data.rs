@@ -1,4 +1,5 @@
 
+#[macro_use]
 use crate::prelude::*;
 use super::TerrainGen;
 
@@ -18,7 +19,7 @@ pub struct WorldData {
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
     pub changed_chunks: HashSet<ChunkPos>,
-    pub to_update: Vec<WorldPos<i32>>,
+    pub to_update: Vec<BlockPos>,
 }
 
 impl WorldData {
@@ -85,13 +86,11 @@ impl WorldData {
         }
     }
 
-    pub fn light_at(&self, pos: &impl Coord) -> u8 {
-        self.chunk_at(pos.as_chunk()).map(|c| c.light_at(pos)).unwrap_or(0)
+    pub fn light_at(&self, pos: &impl Coord) -> &Light {
+        self.chunk_at(pos.as_chunk()).unwrap().light_at(pos)
     }
-    pub fn set_light_at(&mut self, pos: &impl Coord, light: u8) {
-        if let Some(c) = self.chunk_at_mut(pos.as_chunk()) {
-            c.set_light_at(pos, light);
-        }
+    pub fn light_at_mut(&mut self, pos: &impl Coord) -> &mut Light {
+        self.chunk_at_mut(pos.as_chunk()).unwrap().light_at_mut(pos)
     }
 
     pub fn chunk_at(&self, pos: ChunkPos) -> Option<&Chunk> {
@@ -248,17 +247,58 @@ impl WorldData {
         }
     }
 
+    pub fn raycast(&self, mut pos: WorldPos, heading: &Vector3<f32>, max_dist: f32) -> Option<RayCastHit> {
+        
+        let mut dist = 0.;
+        while dist < max_dist && !self.check_hit(&pos) {
+            dist += 0.1;
+            pos.0 += 0.1 * heading;
+        }
+
+        if dist < max_dist {
+            let hit = pos;
+            let mut prev = pos;
+            prev.0 -= 0.1 * heading;
+            let mut prev = prev.as_block();
+            compile_warning!(not always adjacent);
+            /* if !prev.adjacent_to(&hit.as_block()) {
+                dbg!((prev,hit));
+            } */
+
+            return Some(RayCastHit {
+                hit,
+                prev
+            });
+        } else {
+            return None
+        }
+
+    }
+
+    fn check_hit(&self, pos: &impl Coord) -> bool {
+        self.block_at(pos)
+            .map(|b| b.solid)
+            .unwrap_or(false)
+    }
+
+
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct RayCastHit {
+    pub hit: WorldPos,
+    pub prev: BlockPos,
 }
 
 fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
-    let (x,y,z) = pos.as_pos_i32().as_tuple();
+    let (x,y,z) = pos.as_block().as_tuple();
     let dirt = reg.get("dirt").as_block().unwrap();
     let log = reg.get("log").as_block().unwrap();
     let leaves = reg.get("leaves").as_block().unwrap();
     for x in x..x+16 {
         for z in z..z+16 {
             for y in y..y+16 {
-                let below: WorldPos<i32> = (x,y-1,z).into();
+                let below: BlockPos = (x,y-1,z).into();
                 if world.block_at_any_state(&below).unwrap().id.as_ref() == "grass" {
                     let nx = x as f64 / 1.3;
                     let nz = z as f64 / 1.3;
@@ -271,7 +311,7 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
                                 let h = 3 + (2. * world.noise.noise_basic.get2d([nx,nz])) as i32;
                                 world.set_block_at_any_state(&below, dirt);
                                 for y in y..=y+h {
-                                    let here: WorldPos<i32> = (x,y,z).into();
+                                    let here: BlockPos = (x,y,z).into();
                                     world.set_block_at_any_state(&here, log);
                                 }
                                 for dx in -2..=2i32 {
@@ -279,12 +319,12 @@ fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
                                         for dy in 0..=3i32 {
                                             if dx.abs()+dz.abs()+dy.abs() > 5 {continue}
                                             let y = y + h-3 + dy;
-                                            let here: WorldPos<i32> = (x+dx,y+4,z+dz).into();
+                                            let here: BlockPos = (x+dx,y+4,z+dz).into();
                                             world.replace_at_any_state(&here, leaves);
                                         }
                                     }
                                 }
-                                let here: WorldPos<i32> = (x,y+h,z).into();
+                                let here: BlockPos = (x,y+h,z).into();
                                 world.replace_at_any_state(&here, leaves);
                             }
                     }

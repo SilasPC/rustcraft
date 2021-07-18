@@ -35,13 +35,13 @@ impl ChunkRenderer {
         self.program.enable();
         for chunk in w.chunks.values().filter(|c| c.renderable()) {
             self.program.load_mat4(2, &Matrix4::from_translation(
-                chunk.pos.as_pos_f32().0
+                chunk.pos.as_world().0
             ));
             chunk.bind_and_draw();
         }
         for chunk in w.chunks.values().filter(|c| c.renderable()) {
             self.program.load_mat4(2, &Matrix4::from_translation(
-                chunk.pos.as_pos_f32().0
+                chunk.pos.as_world().0
             ));
             chunk.bind_and_draw_second_pass();
         }
@@ -184,7 +184,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Ve
 
     let uv_dif = atlas.uv_dif();
 
-    let (bx,by,bz) = pos.as_pos_i32().as_tuple();
+    let (bx,by,bz) = pos.as_block().as_tuple();
 
     for x in 0..16i32 {
         for y in 0..16i32 {
@@ -192,19 +192,19 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Ve
 
                 macro_rules! get {
                     ($x:expr, $y:expr, $z:expr) => {{
-                        let p: WorldPos<i32> = ($x+bx, $y+by, $z+bz).into();
+                        let p: BlockPos = ($x+bx, $y+by, $z+bz).into();
                         w.block_at_any_state(&p)
                             .or_else(|| {println!("{:?} {:?}",pos,p);None})
                             .unwrap()
                     }};
                     (light $x:expr, $y:expr, $z:expr) => {{
-                        let p: WorldPos<i32> = ($x+bx, $y+by, $z+bz).into();
-                        w.light_at(&p) as f32 / 15.
+                        let p: BlockPos = ($x+bx, $y+by, $z+bz).into();
+                        w.light_at(&p).block() as f32 / 15.
                     }};
                 }
 
                 let block = {
-                    let p: WorldPos<i32> = (x+bx, y+by, z+bz).into();
+                    let p: BlockPos = (x+bx, y+by, z+bz).into();
                     w.block_at_any_state(&p)
                         .or_else(|| {println!("{:?} {:?}",pos,p);None})
                         .unwrap()
@@ -573,7 +573,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
     let uv_dif = atlas.uv_dif();
 
-    let (bx,by,bz) = pos.as_pos_i32().as_tuple();
+    let (bx,by,bz) = pos.as_block().as_tuple();
 
     let data = &w.chunks.get(&pos).unwrap().data;
 

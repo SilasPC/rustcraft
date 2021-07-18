@@ -141,7 +141,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
             &prg,
             &pgui,
             &state,
-            raycast_hit,
+            raycast_hit.map(|hit| hit.hit),
             &mut sprg,
             vign.as_ref(),
             clouds.as_ref()

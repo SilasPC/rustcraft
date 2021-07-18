@@ -151,13 +151,13 @@ impl<K: Copy + Eq + std::hash::Hash, T> BVH<K,T> {
         self.vals.iter()
     }
 
-    pub fn query(&self, aabb: &AABB) -> Vec<Proxy> {
-        let mut proxies = vec![];
+    pub fn query(&self, aabb: &AABB) -> Vec<&T> {
+        let mut refs = vec![];
         self.tree.query_aabb(&aabb.0, |x| {
-            proxies.push(x);
+            refs.push(&self.vals[&x]);
             true
         });
-        proxies
+        refs
     }
 
     pub fn for_each(&self, f: impl Fn(&K, &T)) {
@@ -178,16 +178,6 @@ impl<K, T> std::ops::IndexMut<Proxy> for BVH<K, T> {
     fn index_mut(&mut self, idx: Proxy) -> &mut Self::Output {
         self.vals.get_mut(&idx).unwrap()
     }
-}
-
-pub fn position_to_chunk_coordinates(pos: &Vector3<f32>) -> Vector3<i32> {
-    pos.map(|x| (x / 16.).floor() as i32)
-}
-pub fn position_to_sub_coordinates(pos: &Vector3<f32>) -> Vector3<i32> {
-    pos.map(|x| (x % 16.).floor() as i32).map(|x| (x+16)%16)
-}
-pub fn sub_coords_from_i32(x: i32, y: i32, z: i32) -> Vector3<i32> {
-    Vector3 {x,y,z}.map(|x| x % 16).map(|x| (x+16)%16)
 }
 
 /* 
@@ -257,12 +247,12 @@ impl From<&Arc<Font>> for DebugText {
 }
 
 impl DebugText {
-    pub fn set_data(&mut self, pos: &WorldPos<f32>, looking_at: Option<&String>, delta: f32, last_tick_dur: f32) {
+    pub fn set_data(&mut self, pos: &WorldPos, looking_at: Option<(&String, BlockPos)>, delta: f32, last_tick_dur: f32) {
         self.text.set_text(
             format!(
 r#"
 RustCraft dev build
-- {:?}
+- {:.1?}
 - Chunk {:?}
 - Looking at {:?}
 - fps: {:.0}
@@ -270,7 +260,7 @@ RustCraft dev build
 "#,
                 pos,
                 pos.as_chunk(),
-                looking_at,
+                looking_at.map(|(b,p)| format!("{} @ {:?}", b, (p.x,p.y,p.z))),
                 1. / delta,
                 last_tick_dur
             )
@@ -430,4 +420,13 @@ pub struct RenderedItem {
 impl Drawable for RenderedItem {
     fn bind(&self) {self.vao.bind()}
     fn draw(&self) {self.vao.draw_n(6*6, self.offset)}
+}
+
+#[macro_export]
+macro_rules! repeat {
+    ($n: expr, $x:expr) => {
+        for _ in 0..$n {
+            $x;
+        }
+    };
 }

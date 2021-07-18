@@ -34,7 +34,7 @@ pub fn handle_game_tick(
             // println!("{:?}",cp);
             for _ in 0..consts::RANDOM_TICK_SPEED {
                 let random = rng.gen::<(i32,i32,i32)>();
-                let pos = cp.as_pos_i32() + Vector3::from(random).map(|x| x.abs() % 16).into();
+                let pos = cp.as_block() + Vector3::from(random).map(|x| x.abs() % 16).into();
                 assert_eq!(cp, pos.as_chunk());
                 if let Some(on_rnd_tick) = data.world.block_at(&pos).map(|b| b.behavior.clone()).flatten().map(|beh| beh.on_rnd_tick).flatten() {
                     on_rnd_tick(pos, data)

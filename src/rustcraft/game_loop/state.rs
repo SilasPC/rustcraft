@@ -12,7 +12,7 @@ pub enum GameState {
         picked_item: Option<ItemStack>,
     },
     Playing {
-        breaking: Option<(f32,WorldPos<i32>)>
+        breaking: Option<(f32, BlockPos)>
     },
     Paused,
     Chat {

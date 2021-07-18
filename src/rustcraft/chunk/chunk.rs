@@ -1,16 +1,41 @@
 
 use crate::prelude::*;
-use crate::util::sub_coords_from_i32;
-use crate::util::position_to_sub_coordinates;
 use crate::util::AABB;
+
+#[derive(Clone, Copy, Default)]
+pub struct Light(u8);
+impl Light {
+    #[inline(always)]
+    pub fn block(&self) -> u8 {
+        self.0 & 0xf
+    }
+    #[inline(always)]
+    pub fn set_block(&mut self, val: u8) {
+        self.0 &= 0xf0;
+        self.0 |= val;
+    }
+    #[inline(always)]
+    pub fn sky(&self) -> u8 {
+        self.0 >> 4
+    }
+    #[inline(always)]
+    pub fn set_sky(&mut self, val: u8) {
+        self.0 &= 0xf;
+        self.0 |= val << 4;
+    }
+}
 
 /// Signifies the current state of the chunk
 #[derive(PartialOrd,PartialEq,Eq,Ord,Clone,Copy,Debug,serde::Serialize,serde::Deserialize)]
 pub enum ChunkState {
+    /// No data has been filled in
     Empty,
+    /// First stage (terrain) generation done
     Filled,
+    /// Second stage (detailing) done
     Detailed,
-    Rendered,
+    /// Rendered and interactable
+    Rendered
 }
 
 /* impl ChunkState {
@@ -24,7 +49,7 @@ pub enum ChunkState {
 } */
 
 pub type BlocksData = Vec<Vec<Vec<Block>>>;
-pub type LightData = [[[u8; 16]; 16]; 16];
+pub type LightData = [[[Light; 16]; 16]; 16];
 
 pub struct Chunk {
     pub chunk_state: ChunkState,
@@ -32,8 +57,8 @@ pub struct Chunk {
     pub pos: ChunkPos,
     pub data: BlocksData,
     pub light: LightData,
-    pub light_updates: VecDeque<WorldPos<i32>>,
-    pub light_remove_updates: VecDeque<(WorldPos<i32>,u8)>,
+    pub light_updates: VecDeque<BlockPos>,
+    pub light_remove_updates: VecDeque<(BlockPos, u8)>,
     pub mesh: Option<(VAO, VAO)>,
 }
 /* 
@@ -77,9 +102,9 @@ impl std::fmt::Debug for Chunk {
 
 impl Chunk {
 
-    pub fn compare_position(&self, rhs: &Self) -> std::cmp::Ordering {
+    /* pub fn compare_position(&self, rhs: &Self) -> std::cmp::Ordering {
         self.pos.cmp(&rhs.pos)
-    }
+    } */
 
     /* pub fn load(x: i32, y: i32, z: i32, reg: &Registry) -> Option<Self> {
         let SavedChunk {
@@ -132,7 +157,7 @@ impl Chunk {
 
     pub fn new(pos: ChunkPos, air: Block) -> Self {
         let data = vec![vec![vec![air;16];16];16];
-        let light = [[[0; 16]; 16]; 16];
+        let light = [[[Light::default(); 16]; 16]; 16];
         Self { light_remove_updates: VecDeque::new(), light_updates: VecDeque::new(), chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
     }
 
@@ -152,13 +177,13 @@ impl Chunk {
         &self.data[x][y][z]
     }
 
-    pub fn light_at(&self, pos: &impl Coord) -> u8 {
+    pub fn light_at_mut(&mut self, pos: &impl Coord) -> &mut Light {
         let (x,y,z) = pos.as_sub().into();
-        self.light[x][y][z]
+        &mut self.light[x][y][z]
     }
-    pub fn set_light_at(&mut self, pos: &impl Coord, light: u8) {
+    pub fn light_at(&self, pos: &impl Coord) -> &Light {
         let (x,y,z) = pos.as_sub().into();
-        self.light[x][y][z] = light;
+        &self.light[x][y][z]
     }
 
     pub fn set_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
@@ -167,13 +192,13 @@ impl Chunk {
         if b != block {
             if b.light != block.light {
                 let remove = b.light > block.light;
-                let val = pos.as_pos_i32();
+                let val = pos.as_block();
                 if remove {
                     self.light_remove_updates.push_back((val,b.light));
                 } else {
                     self.light_updates.push_back(val);
                 }
-                self.light[sc.x][sc.y][sc.z] = block.light;
+                self.light[sc.x][sc.y][sc.z].set_block(block.light);
             }
             *b = block.clone();
             self.needs_refresh = true;
@@ -194,7 +219,7 @@ impl Chunk {
                     let ay = 16 * pos.y + y;
                     let az = 16 * pos.z + z;
 
-                    // if noise.is_cave(ax, ay, az) {continue}
+                    if noise.is_cave(ax, ay, az) {continue}
 
                     let d = noise.density(ax,ay,az);
                     let da = noise.density(ax,ay+1,az);
@@ -265,20 +290,21 @@ impl Chunk {
 }
 
 pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
-    compile_warning!(propagation is broken);
     let Vector3 {x, y, z} = pos.into();
     let (mut removal_queue, mut queue) = world.chunk_at_mut(pos).map(|c| (
         std::mem::take(&mut c.light_remove_updates),
         std::mem::take(&mut c.light_updates)
     )).unwrap();
-    // println!("1. new {:?}, rem {:?}",queue,removal_queue);
+
+    // removal loop
     while let Some((pos,old_light)) = removal_queue.pop_front() {
         macro_rules! prop {
             ($x:expr, $y:expr, $z:expr) => {
-                let pos = Into::<WorldPos<i32>>::into(($x, $y, $z));
-                let new_light = world.light_at(&pos);
+                let pos = Into::<BlockPos>::into(($x, $y, $z));
+                let light = world.light_at_mut(&pos);
+                let new_light = light.block();
                 if new_light != 0 && new_light < old_light {
-                    world.set_light_at(&pos, 0);
+                    light.set_block(0);
                     removal_queue.push_back((($x,$y,$z).into(),new_light));
                 } else if new_light >= old_light {
                     queue.push_back(($x,$y,$z).into());
@@ -293,17 +319,22 @@ pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
         prop!(x,y,z+1);
         prop!(x,y,z-1);
     }
-    // println!("2. new {:?}, rem {:?}",queue,removal_queue);
+    
+    // propagation loop
     while let Some(pos) = queue.pop_front() {
-        let pos_light = world.light_at(&pos);
+        let pos_light = world.light_at_mut(&pos).block();
         if pos_light == 0 {continue}
         macro_rules! prop {
             ($x:expr, $y:expr, $z:expr) => {
-                let pos = Into::<WorldPos<i32>>::into(($x, $y, $z));
-                let b = world.block_at(&pos).unwrap();
-                if b.transparent && world.light_at(&pos) <= b.light {
-                    world.set_light_at(&pos, pos_light - 1);
-                    queue.push_back(($x, $y, $z).into());
+                let prop_pos = Into::<BlockPos>::into(($x, $y, $z));
+                if world.block_at(&prop_pos).unwrap().transparent {
+                    let l = world.light_at_mut(&prop_pos);
+                    if l.block() + 2 <= pos_light {
+                        l.set_block(pos_light - 1);
+                        if pos_light > 2 {
+                            queue.push_back(($x, $y, $z).into());
+                        }
+                    }
                 }
             };
         }

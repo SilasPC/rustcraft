@@ -1,5 +1,5 @@
 #![allow(dead_code, unused)]
-#![feature(box_patterns, box_syntax, generators, generator_trait, try_blocks, duration_constants)]
+#![feature(box_patterns, box_syntax, generators, generator_trait, try_blocks, duration_constants, result_cloned)]
 
 #[macro_use]
 extern crate warn;
@@ -30,6 +30,7 @@ pub mod prelude {
     pub use crate::consts;
     pub use game::settings::Settings;
     pub use util::ArcStr;
+    #[macro_use]
     pub use util;
     pub use engine;
     pub use rustcraft as game;
@@ -104,7 +105,7 @@ pub struct Data {
     pub ecs: hecs::World,
     pub registry: Arc<Registry>,
     pub atlas: Arc<TextureAtlas>,
-    pub ent_tree: BVH<hecs::Entity, ()>,
+    pub ent_tree: BVH<hecs::Entity, hecs::Entity>,
 }
 
 impl Data {
@@ -122,10 +123,10 @@ impl Data {
         let cam = {
             let (cam, aabb) = make_player();
             let cam = ecs.spawn(cam);
-            ent_tree.insert(cam, (), &aabb);
+            ent_tree.insert(cam, cam, &aabb);
             cam
         };
-        let atlas = loader.load_texture_atlas("assets/atlas.png", 4);
+        let atlas = loader.load_texture_atlas("assets/atlas.png", 6);
         let registry = make_registry(atlas.clone());
         let crafting = load_recipies(&registry);
         Data {

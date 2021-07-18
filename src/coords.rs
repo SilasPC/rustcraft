@@ -7,21 +7,29 @@ use serde::*;
 #[derive(From, Into, Clone, Copy, Debug)]
 pub struct PixelPos(pub (i32, i32));
 
-#[derive(Neg, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Copy, Clone, From, Into, Serialize, Deserialize, Hash, PartialEq, Debug)]
-pub struct WorldPos<T: cgmath::BaseNum>(pub Vector3<T>);
+#[derive(Neg, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Copy, Clone, From, Into, Serialize, Deserialize, PartialEq, Debug)]
+pub struct WorldPos(pub Vector3<f32>);
+
+#[derive(Neg, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Copy, Clone, From, Into, Serialize, Deserialize, Hash, PartialEq, Eq, Debug)]
+pub struct BlockPos(pub Vector3<i32>);
 
 #[derive(Neg, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Copy, Clone, From, Into, Serialize, Deserialize, Hash, PartialEq, Eq, Debug)]
 pub struct ChunkPos(pub Vector3<i32>);
 
-impl<T: cgmath::BaseNum + Eq> Eq for WorldPos<T> {}
-impl<T: cgmath::BaseNum + Ord> Ord for WorldPos<T> {
-    fn cmp(&self, rhs: &Self) -> Ordering {
-        Into::<(T,T,T)>::into(self.0).cmp(&Into::<(T,T,T)>::into(rhs.0))
+impl PartialOrd for WorldPos {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        AsRef::<[f32;3]>::as_ref(&self.0).partial_cmp(rhs.0.as_ref())
     }
 }
-impl<T: cgmath::BaseNum> PartialOrd for WorldPos<T> {
+
+impl Ord for BlockPos {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        AsRef::<[i32;3]>::as_ref(&self.0).cmp(rhs.0.as_ref())
+    }
+}
+impl PartialOrd for BlockPos {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        Into::<(T,T,T)>::into(self.0).partial_cmp(&Into::<(T,T,T)>::into(rhs.0))
+        AsRef::<[i32;3]>::as_ref(&self.0).partial_cmp(rhs.0.as_ref())
     }
 }
 
@@ -36,14 +44,12 @@ impl PartialOrd for ChunkPos {
     }
 }
 
-impl<T: cgmath::BaseNum> WorldPos<T> {
-    pub fn as_tuple(&self) -> (T,T,T) {
-        self.0.into()
-    }
+impl std::ops::Deref for WorldPos {
+    type Target = Vector3<f32>;
+    fn deref(&self) -> &Self::Target {&self.0}
 }
-
-impl<T: cgmath::BaseNum> std::ops::Deref for WorldPos<T> {
-    type Target = Vector3<T>;
+impl std::ops::Deref for BlockPos {
+    type Target = Vector3<i32>;
     fn deref(&self) -> &Self::Target {&self.0}
 }
 impl std::ops::Deref for ChunkPos {
@@ -51,38 +57,34 @@ impl std::ops::Deref for ChunkPos {
     fn deref(&self) -> &Self::Target {&self.0}
 }
 
-impl<T: cgmath::BaseNum> From<(T,T,T)> for WorldPos<T> {
-    fn from(val: (T,T,T)) -> WorldPos<T> {
+impl From<(f32,f32,f32)> for WorldPos {
+    fn from(val: (f32,f32,f32)) -> Self {
+        Vector3::from(val).into()
+    }
+}
+impl From<(i32,i32,i32)> for WorldPos {
+    fn from(val: (i32,i32,i32)) -> Self {
+        BlockPos::from(val).as_world()
+    }
+}
+
+impl From<(i32,i32,i32)> for BlockPos {
+    fn from(val: (i32,i32,i32)) -> Self {
         Vector3::from(val).into()
     }
 }
 
 impl From<(i32,i32,i32)> for ChunkPos {
-    fn from(val: (i32,i32,i32)) -> ChunkPos {
+    fn from(val: (i32,i32,i32)) -> Self {
         Vector3::from(val).into()
     }
 }
 
-impl Coord for WorldPos<i32> {
-    fn as_pos_i32(&self) -> WorldPos<i32> {
-        *self
-    }
-    fn as_pos_f32(&self) -> WorldPos<f32> {
-        self.0.map(|v| v as f32).into()
-    }
-    fn as_chunk(&self) -> ChunkPos {
-        self.0.map(|v| (v as f32 / 16.).floor() as i32).into()
-    }
-    fn as_sub(&self) -> Vector3<usize> {
-        self.0.map(|v| v.rem_euclid(16) as usize)
-    }
-}
-
-impl Coord for WorldPos<f32> {
-    fn as_pos_i32(&self) -> WorldPos<i32> {
+impl Coord for WorldPos {
+    fn as_block(&self) -> BlockPos {
         self.0.map(|v| v.floor() as i32).into()
     }
-    fn as_pos_f32(&self) -> WorldPos<f32> {
+    fn as_world(&self) -> WorldPos {
         *self
     }
     fn as_chunk(&self) -> ChunkPos {
@@ -93,16 +95,46 @@ impl Coord for WorldPos<f32> {
     }
 }
 
+impl Coord for BlockPos {
+    fn as_block(&self) -> BlockPos {
+        *self
+    }
+    fn as_world(&self) -> WorldPos {
+        self.0.map(|v| v as f32).into()
+    }
+    fn as_chunk(&self) -> ChunkPos {
+        self.0.map(|v| (v as f32 / 16.).floor() as i32).into()
+    }
+    fn as_sub(&self) -> Vector3<usize> {
+        self.0.map(|v| v.rem_euclid(16) as usize)
+    }
+}
+
+impl WorldPos {
+    pub fn as_tuple(&self) -> (f32,f32,f32) {
+        self.0.into()
+    }
+}
+impl BlockPos {
+    pub fn as_tuple(&self) -> (i32,i32,i32) {
+        self.0.into()
+    }
+    pub fn adjacent_to(&self, other: &Self) -> bool {
+        (self.0.x - other.0.x).abs() +
+        (self.0.y - other.0.y).abs() +
+        (self.0.z - other.0.z).abs() == 1
+    }
+}
 impl ChunkPos {
     pub fn as_tuple(&self) -> (i32,i32,i32) {
         self.0.into()
     }
 }
 impl Coord for ChunkPos {
-    fn as_pos_i32(&self) -> WorldPos<i32> {
+    fn as_block(&self) -> BlockPos {
         self.0.map(|x| x * 16).into()
     }
-    fn as_pos_f32(&self) -> WorldPos<f32> {
+    fn as_world(&self) -> WorldPos {
         self.0.map(|x| (x * 16) as f32).into()
     }
     fn as_chunk(&self) -> ChunkPos {
@@ -115,9 +147,9 @@ impl Coord for ChunkPos {
 
 pub trait Coord {
     #[inline(always)]
-    fn as_pos_f32(&self) -> WorldPos<f32>;
+    fn as_world(&self) -> WorldPos;
     #[inline(always)]
-    fn as_pos_i32(&self) -> WorldPos<i32>;
+    fn as_block(&self) -> BlockPos;
     #[inline(always)]
     fn as_chunk(&self) -> ChunkPos;
     #[inline(always)]
@@ -129,24 +161,28 @@ pub trait Coord {
         sub.z == 0 || sub.z == 15
     }
     #[inline(always)]
-    fn pos_center(&self) -> WorldPos<f32> {
-        self.as_pos_i32().as_pos_f32() + (0.5,0.5,0.5).into()
+    fn center_align(&self) -> WorldPos {
+        self.as_block().as_world() + (0.5,0.5,0.5).into()
+    }
+    #[inline(always)]
+    fn corner_align(&self) -> WorldPos {
+        self.as_block().as_world()
     }
 }
 
-pub trait AsCoord<T: cgmath::BaseNum> {
-    fn as_coord(&self) -> WorldPos<T>;
+pub trait AsCoord {
+    fn as_coord(&self) -> WorldPos;
 }
 
-impl<T: cgmath::BaseNum> AsCoord<T> for Vector3<T> {
-    fn as_coord(&self) -> WorldPos<T> {
+impl AsCoord for Vector3<f32> {
+    fn as_coord(&self) -> WorldPos {
         WorldPos(*self)
     }
 }
 
 
-impl<T: cgmath::BaseNum> AsCoord<T> for (T,T,T) {
-    fn as_coord(&self) -> WorldPos<T> {
+impl AsCoord for (f32,f32,f32) {
+    fn as_coord(&self) -> WorldPos {
         WorldPos(Vector3::from(*self))
     }
 }

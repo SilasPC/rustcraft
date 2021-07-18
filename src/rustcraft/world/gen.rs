@@ -14,8 +14,7 @@ impl TerrainGen {
         let yf = y.abs() as f64 / 13.;
         let zf = z.abs() as f64 / 13.;
         let c = self.noise_basic.get3d([xf, yf, zf]);
-        let c = (c+0.1).powf(1.5);
-        c > 0.65
+        c > 0.75
     }
     pub fn density(&self, x: isize, y: isize, z: isize) -> f64 {
         let xf = x.abs() as f64 / 70.;

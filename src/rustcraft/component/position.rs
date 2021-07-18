@@ -6,7 +6,7 @@ use super::*;
 #[derive(Clone)]
 pub struct Position {
     pub size: Vector3<f32>,
-    pub pos: WorldPos<f32>,
+    pub pos: WorldPos,
     pub rot: Euler<Deg<f32>>,
 }
 
@@ -22,7 +22,7 @@ impl std::fmt::Debug for Position {
 
 impl Position {
 
-    pub fn new(pos: WorldPos<f32>, size: Vector3<f32>) -> Self {
+    pub fn new(pos: WorldPos, size: Vector3<f32>) -> Self {
         Self {
             size,
             pos,

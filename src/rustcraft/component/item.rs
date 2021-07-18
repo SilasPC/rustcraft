@@ -20,8 +20,35 @@ impl From<ItemStack> for ItemCmp {
 impl ItemCmp {
 
     pub fn system_tick_age_items(data: &mut crate::Data) {
+
         let mut despawn = vec![];
+        let mut picked_up = vec![];
+        let mut update = HashMap::new();
+        if let Ok(pos) = data.ecs.query_one_mut::<&Position>(data.cam).cloned() {
+            let mut aabb = pos.get_aabb();
+            aabb.extend_radius(2.);
+            for ent in data.ent_tree.query(&aabb) {
+                if let Ok((ipos, item)) = data.ecs.query_one_mut::<(&Position,&ItemCmp)>(*ent) {
+                    if item.age > 3 && ipos.pos.distance(pos.pos.0) < 1.5+0.4 {
+                        picked_up.push((ent, Some(item.item.clone())));
+                    }
+                }
+            }
+        }
+        if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
+            for (ent, mut stack) in picked_up {
+                pdata.inventory.merge(&mut stack);
+                if stack.is_none() {
+                    despawn.push(*ent);
+                } else {
+                    update.insert(ent, stack.unwrap());
+                }
+            }
+        }
         for (ent, item) in data.ecs.query_mut::<&mut ItemCmp>() {
+            if let Some(stack) = update.remove(&ent) {
+                item.item = stack;
+            }
             item.age += 1;
             if item.age > 20 * LIVE_SECS {
                 despawn.push(ent);

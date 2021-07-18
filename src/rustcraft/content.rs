@@ -86,7 +86,7 @@ struct SavedRecipe {
 
 const fn one() -> usize {1}
 
-fn grass_update(mut pos: WorldPos<i32>, data: &mut Data) {
+fn grass_update(mut pos: BlockPos, data: &mut Data) {
     pos.0.y += 1;
     let mut turn_to_dirt = false;
     if let Some(block) = data.world.block_at(&pos) {
@@ -98,7 +98,7 @@ fn grass_update(mut pos: WorldPos<i32>, data: &mut Data) {
     }
 }
 
-fn fire_update(pos: WorldPos<i32>, data: &mut Data) {
+fn fire_update(pos: BlockPos, data: &mut Data) {
     use rand::Rng;
     let mut r = rand::thread_rng();
     if r.gen::<f32>() < 0.9 {

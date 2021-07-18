@@ -25,7 +25,7 @@ pub fn handle_render(
     prg: &Program,
     pgui: &GUI,
     state: &GameState,
-    raycast_hit: Option<(WorldPos<f32>,WorldPos<f32>)>,
+    raycast_hit: Option<WorldPos>,
     sprg: &mut StaticProgram,
     vign: &Texture,
     clouds: &Texture,
@@ -121,7 +121,7 @@ pub fn handle_render(
 
     if let Some(hit) = raycast_hit {
         const E: f32 = 0.001;
-        let hit = hit.1.map(|v| v.floor() - E);
+        let hit = hit.corner_align().0.map(|v| v - E);
         lines.enable();
         let t = Matrix4::from_translation(hit) * Matrix4::from_scale(1. + 2.*E);
         lines.load_view(
