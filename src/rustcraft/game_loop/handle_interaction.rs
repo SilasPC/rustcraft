@@ -1,4 +1,5 @@
 
+use crate::util::Drawable;
 use crate::game_loop::InventoryRenderer;
 use crate::pgui::GUI;
 use crate::util::DebugText;
@@ -17,7 +18,7 @@ pub fn handle_interaction(
     last_tick_dur: f32,
     pgui: &GUI,
     invren: &mut InventoryRenderer,
-    display: &GLDisplay
+    display: &GLDisplay,
 ) -> Option<(WorldPos<f32>,WorldPos<f32>)> {
     
     let mut raycast_hit = None;
@@ -92,11 +93,15 @@ pub fn handle_interaction(
                                 let phys = Physics::new();
                                 let pos = Position::new(hit.1.pos_center().into(),(0.3,0.3,0.3).into());
                                 let aabb = pos.get_aabb();
+                                let model = box util::RenderedItem {
+                                    vao: rdata.item_cubes.clone(),
+                                    offset: invren.iren.offsets[drop_id.as_ref()]
+                                };
                                 let cmps = (
                                     pos,
                                     phys,
                                     ItemCmp::from(stack),
-                                    Model::from(rdata.cube.clone()),
+                                    Model::from(model as Box<dyn Drawable>),
                                 );
                                 to_spawn.push((cmps,aabb));
                             }

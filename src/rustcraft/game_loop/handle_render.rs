@@ -74,9 +74,10 @@ pub fn handle_render(
     }
 
     // render entities 
-    prg.enable();
-    prg.load_mat4(0, &rdata.proj_mat);
-    prg.load_mat4(1, &rdata.view_mat);
+    sprg.enable();
+    sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
+    sprg.load_light(1.0);
+    sprg.load_uv((1.,1.), (0.,0.));
     Model::system_render(data, sprg);
 
     // render clouds

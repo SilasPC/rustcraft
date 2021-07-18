@@ -19,6 +19,12 @@ impl From<Item> for ItemLike {
 }
 
 impl ItemLike {
+    pub fn ptr(&self) -> usize {
+        match &self {
+            Self::Block(inner) => inner.as_ref() as *const BlockData as usize,
+            Self::Item(inner) => inner.as_ref() as *const ItemData as usize,
+        }
+    }
     pub fn id(&self) -> &str {
         match self {
             Self::Block(inner) => inner.id.as_ref(),

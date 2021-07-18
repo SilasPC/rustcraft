@@ -10,6 +10,7 @@ pub mod coords;
 pub mod rustcraft;
 pub mod perlin;
 pub mod consts;
+use crate::util::gen_full_block_vao;
 use crate::lines::box_vao;
 use crate::crafting::CraftingRegistry;
 use crate::text::font::Font;
@@ -49,6 +50,7 @@ pub mod prelude {
 use crate::prelude::*;
 
 pub struct RenderData {
+    pub item_cubes: Arc<VAO>,
     pub bbox: Arc<Texture>,
     pub cube: Arc<VAO>,
     pub line_box: Arc<VAO>,
@@ -69,7 +71,13 @@ impl RenderData {
         let break_atlas = data.loader.load_texture_atlas("assets/break_atlas.png", 4);
         let fov = data.fov;
         let proj_mat = Matrix4::from(data.fov);
+        let item_cubes = gen_full_block_vao(
+            data.registry.items.values().filter_map(ItemLike::as_block),
+            &mut HashMap::new(),
+            &data.atlas
+        ).into();
         Self {
+            item_cubes,
             bbox,
             cube,
             font,

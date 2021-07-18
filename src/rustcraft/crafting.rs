@@ -75,11 +75,13 @@ impl CraftingRegistry {
         }
     }
 
-    pub fn register(&mut self, shaped: bool, input: &[Option<ItemLike>], output: ItemStack) {
+    pub fn register(&mut self, shaped: bool, mut input: Vec<Option<ItemLike>>, output: ItemStack) {
         if shaped {
-            self.shaped[0].register(input, output);
+            self.shaped[0].register(&input, output);
         } else {
-            todo!("unshaped not supported until ItemLike is PartialOrd");
+            compile_warning!(unshaped not supported);
+            //input.sort_by_cached_key(|s| s.map(|i| i.ptr()).unwrap_or(0));
+            //self.unshaped[0].register(&input, output);
         }
     }
 

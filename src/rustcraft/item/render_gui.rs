@@ -5,18 +5,18 @@ use std::iter::Iterator as Iter;
 pub struct ItemGUIRenderer {
     item: VAO,
     block: VAO,
-    offsets: HashMap<String, i32>,
+    pub offsets: HashMap<String, i32>,
 }
 
 impl ItemGUIRenderer {
     pub fn generate(reg: &Registry) -> Self {
         let mut offsets = HashMap::new();
-        let item = gen_item_vao(
-            reg.items.values().filter_map(ItemLike::as_item),
-            &mut offsets, reg.texture_atlas.as_ref()
-        );
         let block = gen_block_vao(
             reg.items.values().filter_map(ItemLike::as_block),
+            &mut offsets, reg.texture_atlas.as_ref()
+        );
+        let item = gen_item_vao(
+            reg.items.values().filter_map(ItemLike::as_item),
             &mut offsets, reg.texture_atlas.as_ref()
         );
         Self {

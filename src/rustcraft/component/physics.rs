@@ -127,7 +127,7 @@ impl Physics {
                 }
 				self.vel.y = 0.;
                 compile_warning!(edge stop);
-			} else if /* was_grounded && self.vel.y < 0. && self.edge_stop */ true {
+			} else if /* was_grounded && self.vel.y < 0. && self.edge_stop */ self.edge_stop {
                 // not grounded, try cancel x
                 new_pos.x = pos.pos.0.x;
                 if !test!(y) {

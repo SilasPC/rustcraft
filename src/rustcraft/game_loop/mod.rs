@@ -128,6 +128,7 @@ pub fn game_loop(display: &mut GLDisplay, data: &mut Data, rdata: &mut RenderDat
         data.world.load(&data.registry, 100);
 
         // RENDER
+        let now = Instant::now();
         handle_render::handle_render(
             display,
             data,

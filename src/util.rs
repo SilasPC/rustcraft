@@ -281,3 +281,153 @@ RustCraft dev build
 pub fn fdiv(x: i32, d: i32) -> i32 {
     (x as f32 / d as f32).floor() as i32
 }
+
+pub fn gen_full_block_vao<'a>(b: impl std::iter::Iterator<Item = &'a Block>, m: &mut HashMap<String, i32>, a: &TextureAtlas) -> VAO {
+
+    let xc = 0;
+    let yc = 1;
+    let zc = 0;
+
+    let mut verts = vec![];
+    let mut uvs = vec![];
+    let mut offset = 0;
+
+    for b in b {
+
+        m.insert(b.id.to_string(), offset);
+        offset += 1;
+    
+        verts.extend(&[
+            // top
+            xc, yc, zc,
+            xc, yc, zc+1,
+            xc+1, yc, zc,
+            xc, yc, zc+1,
+            xc+1, yc, zc+1,
+            xc+1, yc, zc,
+    
+            // bot
+            xc, yc-1, zc,
+            xc+1, yc-1, zc,
+            xc, yc-1, zc+1,
+            xc, yc-1, zc+1,
+            xc+1, yc-1, zc,
+            xc+1, yc-1, zc+1,
+    
+            xc, yc, zc,
+            xc, yc-1, zc,
+            xc, yc, zc+1,
+            xc, yc-1, zc,
+            xc, yc-1, zc+1,
+            xc, yc, zc+1,
+    
+            xc+1, yc, zc,
+            xc+1, yc, zc+1,
+            xc+1, yc-1, zc,
+            xc+1, yc-1, zc,
+            xc+1, yc, zc+1,
+            xc+1, yc-1, zc+1,
+    
+            xc, yc-1, zc,
+            xc, yc, zc,
+            xc+1, yc-1, zc,
+            xc+1, yc-1, zc,
+            xc, yc, zc,
+            xc+1, yc, zc,
+    
+            xc, yc-1, zc+1,
+            xc+1, yc-1, zc+1,
+            xc, yc, zc+1,
+            xc+1, yc-1, zc+1,
+            xc+1, yc, zc+1,
+            xc, yc, zc+1,
+        ]);
+        
+        let (u,v) = a.get_uv(b.texture.0);
+        let (uh,vh) = a.get_uv_high(b.texture.0);
+
+        uvs.extend(&[
+            u, v,
+            u, vh,
+            uh, v,
+            u, vh,
+            uh, vh,
+            uh, v,
+        ]);
+        
+        let (u,v) = a.get_uv(b.texture.2);
+        let (uh,vh) = a.get_uv_high(b.texture.2);
+
+        uvs.extend(&[
+            u, v,
+            uh, v,
+            u, vh,
+            u, vh,
+            uh, v,
+            uh, vh,
+        ]);
+
+        let (u,v) = a.get_uv(b.texture.1);
+        let (uh,vh) = a.get_uv_high(b.texture.1);
+
+        uvs.extend(&[
+            u, v,
+            u, vh,
+            uh, v,
+            u, vh,
+            uh, vh,
+            uh, v,
+    
+            u, v,
+            uh, v,
+            u, vh,
+            u, vh,
+            uh, v,
+            uh, vh,
+    
+            uh, vh,
+            uh, v,
+            u, vh,
+            u, vh,
+            uh, v,
+            u, v,
+    
+            uh, vh,
+            u, vh,
+            uh, v,
+            u, vh,
+            u, v,
+            uh, v,
+        ]);
+
+    }
+
+    let verts = verts.into_iter().map(|v: isize| v as f32).collect::<Vec<_>>();
+
+    VAO::textured(&verts, &uvs)
+}
+
+pub trait Drawable: Send + Sync {
+    fn bind(&self);
+    fn draw(&self);
+}
+
+impl Drawable for Arc<VAO> {
+    fn bind(&self) {self.as_ref().bind()}
+    fn draw(&self) {self.as_ref().draw()}
+}
+
+impl Drawable for VAO {
+    fn bind(&self) {self.bind()}
+    fn draw(&self) {self.draw()}
+}
+
+pub struct RenderedItem {
+    pub vao: Arc<VAO>,
+    pub offset: i32,
+}
+
+impl Drawable for RenderedItem {
+    fn bind(&self) {self.vao.bind()}
+    fn draw(&self) {self.vao.draw_n(6*6, self.offset)}
+}

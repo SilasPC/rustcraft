@@ -118,7 +118,7 @@ impl VAO {
         unsafe {
 
             if verts.len() / 3 != uvs.len() / 2 {
-                panic!("UVs - VERTs count mismatch ({} != {})", uvs.len() / 3, verts.len() / 2);
+                panic!("UVs - VERTs count mismatch ({} != {})", uvs.len() / 2, verts.len() / 3);
             }
             
             let mut id = 0;
@@ -242,6 +242,20 @@ impl VAO {
                 kind,
                 6 * offset, // number of verticies
                 6 // number of verticies
+            );
+        }
+    }
+
+    pub fn draw_n(&self, n: i32, offset: i32) {
+        let (kind, count) = match self.kind {
+            RenderKind::Triangles => (gl::TRIANGLES, 3),
+            RenderKind::Lines => (gl::LINES, 2),
+        };
+        unsafe {
+            gl::DrawArrays(
+                kind,
+                n * offset, // number of verticies
+                n // number of verticies
             );
         }
     }

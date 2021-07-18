@@ -19,6 +19,11 @@ impl TextureAtlas {
         let v = (index / self.size) as f32 / self.size as f32;
         (u,v)
     }
+    pub fn get_uv_high(&self, index: usize) -> (f32, f32) {
+        let (u,v) = self.get_uv(index);
+        let d = self.uv_dif();
+        (u+d,v+d)
+    }
     pub fn uv_dif(&self) -> f32 {1./self.size as f32}
     pub fn id(&self) -> uint {self.texture.id}
     pub fn texture(&self) -> &Texture {&self.texture}

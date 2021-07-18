@@ -65,8 +65,8 @@ pub fn load_recipies(reg: &Registry) -> CraftingRegistry {
             .map(Option::from)
             .chain([None].iter().cycle().cloned())
             .take(9)
-            .collect::<Vec<_>>();
-        creg.register(true, input.as_slice(), ItemStack::of(reg.get(&shaped.output).clone(), 1));
+            .collect();
+        creg.register(true, input, ItemStack::of(reg.get(&shaped.output).clone(), 1));
     }
     creg
 }

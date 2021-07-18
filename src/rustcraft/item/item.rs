@@ -33,6 +33,12 @@ impl Item {
     }
 }
 
+impl AsRef<ItemData> for Item {
+    fn as_ref(&self) -> &ItemData {
+        &self.0.0
+    }
+}
+
 
 impl std::ops::Deref for Item {
     type Target = ItemData;
