@@ -19,23 +19,23 @@ impl From<ItemStack> for ItemCmp {
 
 impl ItemCmp {
 
-    pub fn system_tick_age_items(data: &mut crate::Data) {
+    pub fn system_tick_age_items(data: &mut crate::WorldData) {
 
         let mut despawn = vec![];
         let mut picked_up = vec![];
         let mut update = HashMap::new();
-        if let Ok(pos) = data.ecs.query_one_mut::<&Position>(data.cam).cloned() {
+        if let Ok(pos) = data.entities.ecs.query_one_mut::<&Position>(data.entities.player).cloned() {
             let mut aabb = pos.get_aabb();
             aabb.extend_radius(2.);
-            for ent in data.ent_tree.query(&aabb) {
-                if let Ok((ipos, item)) = data.ecs.query_one_mut::<(&Position,&ItemCmp)>(*ent) {
+            for ent in data.entities.tree.query(&aabb) {
+                if let Ok((ipos, item)) = data.entities.ecs.query_one_mut::<(&Position,&ItemCmp)>(*ent) {
                     if item.age > 3 && ipos.pos.distance(pos.pos.0) < 1.5+0.4 {
                         picked_up.push((ent, Some(item.item.clone())));
                     }
                 }
             }
         }
-        if let Ok(pdata) = data.ecs.query_one_mut::<&mut PlayerData>(data.cam) {
+        if let Ok(pdata) = data.entities.ecs.query_one_mut::<&mut PlayerData>(data.entities.player) {
             for (ent, mut stack) in picked_up {
                 pdata.inventory.merge(&mut stack);
                 if stack.is_none() {
@@ -45,7 +45,7 @@ impl ItemCmp {
                 }
             }
         }
-        for (ent, item) in data.ecs.query_mut::<&mut ItemCmp>() {
+        for (ent, item) in data.entities.ecs.query_mut::<&mut ItemCmp>() {
             if let Some(stack) = update.remove(&ent) {
                 item.item = stack;
             }
@@ -55,7 +55,7 @@ impl ItemCmp {
             }
         }
         for ent in despawn {
-            let _ = data.ecs.despawn(ent);
+            let _ = data.entities.ecs.despawn(ent);
         }
     }
 

@@ -48,110 +48,22 @@ pub mod prelude {
     pub use std::sync::Arc;
     pub use std::time::{Duration, Instant};
 }
+
 use crate::prelude::*;
-
-pub struct RenderData {
-    pub item_cubes: Arc<VAO>,
-    pub bbox: Arc<Texture>,
-    pub cube: Arc<VAO>,
-    pub line_box: Arc<VAO>,
-    pub view_mat: Matrix4<f32>,
-    pub proj_mat: Matrix4<f32>,
-    pub font: Arc<Font>,
-    pub break_atlas: Arc<TextureAtlas>,
-    pub fov: PerspectiveFov<f32>
-}
-
-impl RenderData {
-    pub fn new(data: &mut Data) -> Self {
-        let bbox = data.loader.load_texture("assets/bbox.png");
-        let font = data.loader.load_font("assets/font.png", "assets/font.fnt");
-        let cube = meshing::cube_mesh().into();
-        let view_mat = Matrix4::one();
-        let line_box = box_vao().into();
-        let break_atlas = data.loader.load_texture_atlas("assets/break_atlas.png", 4);
-        let fov = data.fov;
-        let proj_mat = Matrix4::from(data.fov);
-        let item_cubes = gen_full_block_vao(
-            data.registry.items.values().filter_map(ItemLike::as_block),
-            &mut HashMap::new(),
-            &data.atlas
-        ).into();
-        Self {
-            item_cubes,
-            bbox,
-            cube,
-            font,
-            view_mat,
-            line_box,
-            break_atlas,
-            proj_mat,
-            fov
-        }
-    }
-}
-
-pub struct Data {
-    pub crafting: CraftingRegistry,
-    pub loader: crate::engine::loader::Loader,
-    pub paused: bool,
-    pub settings: Settings,
-    pub fov: PerspectiveFov<f32>,
-    pub cam: hecs::Entity,
-    pub input: Input,
-    pub frame_time: Instant,
-    pub delta: f32,
-    pub world: WorldData,
-    pub ecs: hecs::World,
-    pub registry: Arc<Registry>,
-    pub atlas: Arc<TextureAtlas>,
-    pub ent_tree: BVH<hecs::Entity, hecs::Entity>,
-}
-
-impl Data {
-    pub fn new(settings: Settings) -> Self {
-        let mut loader = crate::engine::loader::Loader::new();
-        let fov = PerspectiveFov {
-            near: 0.1,
-            far: 1000.,
-            fovy: Rad::from(settings.fov),
-            aspect: 900./700.
-        };
-        let mut ecs = hecs::World::new();
-        
-        let mut ent_tree = BVH::new();
-        let cam = {
-            let (cam, aabb) = make_player();
-            let cam = ecs.spawn(cam);
-            ent_tree.insert(cam, cam, &aabb);
-            cam
-        };
-        let atlas = loader.load_texture_atlas("assets/atlas.png", 6);
-        let registry = make_registry(atlas.clone());
-        let crafting = load_recipies(&registry);
-        Data {
-            crafting,
-            loader,
-            paused: false,
-            settings,
-            fov,
-            input: Input::default(),
-            cam,
-            frame_time: Instant::now(),
-            world: WorldData::new("seed!", registry.get("air").to_block().unwrap()),
-            registry,
-            atlas,
-            delta: 0.,
-            ecs,
-            ent_tree
-        }
-    }
-}
 
 fn main() {
 
-    let mut display = display::GLDisplay::new("Rustcraft", (900,700));
+    let mut data = init_data();
+    let mut rdata = init_rdata(&data);
+    let idata = init_idata();
+    
+    game_loop::game_loop(&mut data, &mut rdata, &idata);
+    
+}
 
+fn init_data() -> data::Data {
+    let mut display = display::GLDisplay::new("Rustcraft", (900,700));
+    let event_pump = display.event_pump();
     unsafe {
         gl::Viewport(0, 0, 900, 700);
         gl::ClearColor(
@@ -163,14 +75,68 @@ fn main() {
         gl::Enable(gl::CULL_FACE);
         gl::CullFace(gl::BACK);
     }
-
     let settings = Settings::load();
     display.set_vsync(settings.vsync);
     display.set_fullscreen(settings.fullscreen);
-    
-    let mut data = Data::new(settings);
-    let mut rdata = RenderData::new(&mut data);
+    data::Data {
+        display,
+        input: Input::default(),
+        settings,
+        paused: false,
+        event_pump,
+    }
+}
 
-    game_loop::game_loop(&mut display, &mut data, &mut rdata);
-    
+fn init_idata() -> data::IData {
+    let atlas = TextureAtlas::new(
+        Texture::from_path("assets/atlas.png"),
+        6
+    ).into();
+    let break_atlas = TextureAtlas::new(
+        Texture::from_path("assets/break_atlas.png"),
+        4
+    ).into();
+    let registry = make_registry(Arc::clone(&atlas));
+    let crafting = load_recipies(&registry);
+    let font = Font::from_font_files("assets/font.png", "assets/font.fnt").into();
+    let line_box = lines::box_vao().into();
+    let cube = meshing::cube_mesh().into();
+    let item_cubes = gen_full_block_vao(
+        registry.items.values().filter_map(ItemLike::as_block),
+        &mut HashMap::new(),
+        &*atlas,
+    ).into();
+    let vign = Texture::from_path("assets/vign.png").into();
+    let clouds = Texture::from_path("assets/clouds.png").into();
+
+    data::IData {
+        air: registry.get("air").to_block().unwrap(),
+        item_cubes,
+        crafting,
+        registry,
+        atlas,
+        break_atlas,
+        font,
+        line_box,
+        cube,
+        vign,
+        clouds,
+    }
+}
+
+fn init_rdata(data: &data::Data) -> data::RData {
+    let fov = PerspectiveFov {
+        near: 0.1,
+        far: 1000.,
+        fovy: Rad::from(data.settings.fov),
+        aspect: 900./700.
+    };
+
+    data::RData {
+        frame_time: Instant::now(),
+        delta: 0.,
+        fov,
+        view_mat: Matrix4::one(),
+        proj_mat: Matrix4::from(fov)
+    }
 }

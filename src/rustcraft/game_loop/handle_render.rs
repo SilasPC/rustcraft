@@ -14,9 +14,10 @@ use crate::Program;
 use crate::meshing::ChunkRenderer;
 
 pub fn handle_render(
-    display: &GLDisplay,
-    data: &mut Data,
-    rdata: &RenderData,
+    data: &mut data::Data,
+    rdata: &data::RData,
+    idata: &data::IData,
+    world: &mut WorldData,
     chunk_renderer: &ChunkRenderer,
     invren: &mut InventoryRenderer,
     text_rend: &TextRenderer,
@@ -27,10 +28,8 @@ pub fn handle_render(
     state: &GameState,
     raycast_hit: Option<WorldPos>,
     sprg: &mut StaticProgram,
-    vign: &Texture,
-    clouds: &Texture,
 ) {
-    let light_factor = (data.world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
+    let light_factor = (world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
     unsafe {
         gl::ClearColor(
             consts::SKY.0 * light_factor,
@@ -52,12 +51,12 @@ pub fn handle_render(
     }
     
     // render chunks
-    data.atlas.texture().bind();
+    idata.atlas.texture().bind();
     chunk_renderer.load_proj(&rdata.proj_mat);
     chunk_renderer.load_view(&rdata.view_mat);
-    let world_light = data.world.smooth_light_level().max(consts::MIN_BRIGHTNESS);
+    let world_light = world.smooth_light_level().max(consts::MIN_BRIGHTNESS);
     chunk_renderer.load_glob_light(light_factor);
-    chunk_renderer.render(&data.world);
+    chunk_renderer.render(world);
 
     unsafe {
         gl::Disable(gl::BLEND);
@@ -70,7 +69,7 @@ pub fn handle_render(
             &rdata.view_mat,
             &rdata.proj_mat,    
         );
-        Position::system_draw_bounding_boxes(data, lines);
+        Position::system_draw_bounding_boxes(world, lines);
     }
 
     // render entities 
@@ -78,21 +77,21 @@ pub fn handle_render(
     sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
     sprg.load_light(1.0);
     sprg.load_uv((1.,1.), (0.,0.));
-    Model::system_render(data, sprg);
+    Model::system_render(world, sprg);
 
     // render clouds
     sprg.enable();
-    clouds.bind();
+    idata.clouds.bind();
     sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
     sprg.load_uv((1.,1.), (0.,0.));
-    sprg.load_transform(&(Matrix4::from_translation((0.,consts::CLOUD_HEIGHT,0.).into()) * Matrix4::from_scale(clouds.size().0 * consts::CLOUD_SIZE)));
+    sprg.load_transform(&(Matrix4::from_translation((0.,consts::CLOUD_HEIGHT,0.).into()) * Matrix4::from_scale(idata.clouds.size().0 * consts::CLOUD_SIZE)));
     sprg.load_light(light_factor);
     // ? use quad instead
-    rdata.cube.bind();
-    rdata.cube.draw();
+    idata.cube.bind();
+    idata.cube.draw();
 
     // render item in hand
-    if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
+    if let Ok(pdata) = world.entities.ecs.query_one_mut::<&PlayerData>(world.entities.player) {
         if let Some(item) = &pdata.inventory.data[pgui.selected_slot()] {
             unsafe {
                 gl::Disable(gl::DEPTH_TEST);
@@ -103,7 +102,7 @@ pub fn handle_render(
             let pos = (0.4, -1.5, -2.).into();
             let rot = Euler::new(Deg(0.),Deg(-60.),Deg(0.));
             prg.load_mat4(2, &(Matrix4::from_translation(pos) * Matrix4::from(rot)));
-            data.atlas.bind();
+            idata.atlas.bind();
             /* match &item.item {
                 ItemLike::Item(item) => {
                     data.registry.item_vao.bind();
@@ -145,12 +144,12 @@ pub fn handle_render(
             GameState::Playing { breaking: Some(breaking) } => {
                 sprg.enable();
                 sprg.load_transform(&t);
-                rdata.break_atlas.bind();
-                let uvd = rdata.break_atlas.uv_dif();
-                let offset = rdata.break_atlas.get_uv((breaking.0 * 10.) as usize);
+                idata.break_atlas.bind();
+                let uvd = idata.break_atlas.uv_dif();
+                let offset = idata.break_atlas.get_uv((breaking.0 * 10.) as usize);
                 sprg.load_uv((uvd, uvd), offset);
-                rdata.cube.bind();
-                rdata.cube.draw();
+                idata.cube.bind();
+                idata.cube.draw();
             },
             _ => {}
         }
@@ -166,18 +165,18 @@ pub fn handle_render(
     sprg.load_light(1.);
     sprg.load_view(&Matrix4::one(),&Matrix4::one());
     sprg.load_transform(&(Matrix4::from_translation((-1., -1., -1.,).into()) * Matrix4::from_scale(2.)));
-    vign.bind();
-    rdata.cube.bind();
-    rdata.cube.draw();
+    idata.vign.bind();
+    idata.cube.bind();
+    idata.cube.draw();
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::Disable(gl::BLEND);
     }
     
     // render inventory
-    if let Ok(pdata) = data.ecs.query_one_mut::<&PlayerData>(data.cam) {
+    if let Ok(pdata) = world.entities.ecs.query_one_mut::<&PlayerData>(world.entities.player) {
         // pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
-        let mpos = data.input.mouse_pos(display.size_i32().1);
+        let mpos = data.input.mouse_pos(data.display.size_i32().1);
         unsafe {
             gl::Disable(gl::DEPTH_TEST);
         }
@@ -193,12 +192,12 @@ pub fn handle_render(
 
     match &state {
         GameState::Chat { text, .. } => {
-            text_rend.render(&text, -0.9, -0.9, display.size())
+            text_rend.render(&text, -0.9, -0.9, data.display.size())
         },
         _ => {}
     };
 
-    text_rend.render(&debug_text.text, -0.9, 0.9, display.size());
+    text_rend.render(&debug_text.text, -0.9, 0.9, data.display.size());
     
     unsafe {
         gl::Enable(gl::DEPTH_TEST);

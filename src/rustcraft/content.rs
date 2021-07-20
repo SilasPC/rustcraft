@@ -85,24 +85,24 @@ struct SavedRecipe {
 }
 
 const fn one() -> usize {1}
-
-fn grass_update(mut pos: BlockPos, data: &mut Data) {
+/* 
+fn grass_update(mut pos: BlockPos, data: &mut WorldData) {
     pos.0.y += 1;
     let mut turn_to_dirt = false;
-    if let Some(block) = data.world.block_at(&pos) {
+    if let Some(block) = world.block_at(&pos) {
         turn_to_dirt = block.solid || !block.transparent;
     }
     if turn_to_dirt {
         pos.0.y -= 1;
-        data.world.set_block_at(&pos, data.registry.get("dirt").as_block().unwrap());
+        world.set_block_at(&pos, data.registry.get("dirt").as_block().unwrap());
     }
 }
 
-fn fire_update(pos: BlockPos, data: &mut Data) {
+fn fire_update(pos: BlockPos, data: &mut WorldData) {
     use rand::Rng;
     let mut r = rand::thread_rng();
     if r.gen::<f32>() < 0.9 {
-        data.world.to_update.push(pos);
+        world.to_update.push(pos);
         return
     }
     let fire = data.registry.get("glowstone").as_block().unwrap(); // tmp glowstone
@@ -138,7 +138,7 @@ fn fire_update(pos: BlockPos, data: &mut Data) {
     } else {
         data.world.to_update.push(pos);
     }
-}
+} */
 
 pub fn player_toolbar() -> InventoryGUI {
     let texture = Texture::from_path("assets/item_bar.png").into();

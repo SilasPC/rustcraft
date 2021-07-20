@@ -43,15 +43,15 @@ fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
 }
 
 impl Cmd {
-    pub fn exec(&self, data: &mut Data) {
+    pub fn exec(&self, world: &mut WorldData, idata: &data::IData,) {
         match self {
             Self::Give{id,count} => {
-                if let Ok(pdata) = data.ecs.query_one_mut::<&mut crate::PlayerData>(data.cam) {
+                if let Ok(pdata) = world.entities.ecs.query_one_mut::<&mut crate::PlayerData>(world.entities.player) {
                     let mut count = *count;
                     while count > 0 {
                         let rem = count.min(64);
                         count -= rem;
-                        pdata.inventory.merge(&mut ItemStack::of(data.registry.get(id).clone(), rem).into());
+                        pdata.inventory.merge(&mut ItemStack::of(idata.registry.get(id).clone(), rem).into());
                     }
                 }
             }

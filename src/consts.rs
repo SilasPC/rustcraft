@@ -1,4 +1,6 @@
 
+/// Seed used for world generation
+pub const DEBUG_SEED: &'static str = "seed!";
 /// Tick interval duration
 pub const TICK_DURATION: std::time::Duration = std::time::Duration::from_millis(50);
 /// Number of random ticks per chunk per game tick
@@ -13,3 +15,5 @@ pub const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
 pub const CLOUD_SIZE: f32 = 20.;
 /// Cloud world height
 pub const CLOUD_HEIGHT: f32 = 70.;
+/// Duration of a day-night cycle
+pub const DAY_NIGHT_DURATION_TICKS: u64 = 20 * 60 * 20; // 20 mins

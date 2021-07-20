@@ -1,4 +1,5 @@
 
+use crate::world::VoxelData;
 use super::*;
 
 #[derive(Clone)]
@@ -51,7 +52,7 @@ impl Physics {
         self.force += f * delta;
     }
     /// returns true if position was updated
-    pub fn update(&mut self, pos: &mut Position, delta: f32, world: &WorldData) -> bool {
+    pub fn update(&mut self, pos: &mut Position, delta: f32, world: &VoxelData) -> bool {
 
         let was_grounded = self.grounded;
         let old_y_vel = self.vel.y;
@@ -158,17 +159,17 @@ impl Physics {
         
         return true;
 
-        fn check_hit(w: &crate::rustcraft::world::WorldData, pos: &Vector3<f32>) -> bool {
+        fn check_hit(w: &crate::rustcraft::world::VoxelData, pos: &Vector3<f32>) -> bool {
             w.block_at(&pos.as_coord())
                 .map(|b| b.solid)
                 .unwrap_or(true)
         }
     }
 
-    pub fn system_update(data: &mut crate::Data) {
-        for (ent, (pos, phys)) in data.ecs.query_mut::<(&mut Position, &mut Physics)>() {
-            if phys.update(pos, data.delta, &data.world) {
-                data.ent_tree.update(ent, &pos.get_aabb());
+    pub fn system_update(data: &mut WorldData, delta: f32) {
+        for (ent, (pos, phys)) in data.entities.ecs.query_mut::<(&mut Position, &mut Physics)>() {
+            if phys.update(pos, delta, &data.blocks) {
+                data.entities.tree.update(ent, &pos.get_aabb());
             }
         }
     }

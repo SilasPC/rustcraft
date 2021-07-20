@@ -15,4 +15,5 @@ pub mod chunk;
 pub mod worker;
 pub mod settings;
 pub mod inv;
+pub mod data;
 pub mod entity;

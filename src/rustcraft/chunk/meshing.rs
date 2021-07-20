@@ -33,13 +33,13 @@ impl ChunkRenderer {
     }
     pub fn render(&self, w: &WorldData) {
         self.program.enable();
-        for chunk in w.chunks.values().filter(|c| c.renderable()) {
+        for chunk in w.blocks.chunks.values().filter(|c| c.renderable()) {
             self.program.load_mat4(2, &Matrix4::from_translation(
                 chunk.pos.as_world().0
             ));
             chunk.bind_and_draw();
         }
-        for chunk in w.chunks.values().filter(|c| c.renderable()) {
+        for chunk in w.blocks.chunks.values().filter(|c| c.renderable()) {
             self.program.load_mat4(2, &Matrix4::from_translation(
                 chunk.pos.as_world().0
             ));
@@ -193,19 +193,19 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Ve
                 macro_rules! get {
                     ($x:expr, $y:expr, $z:expr) => {{
                         let p: BlockPos = ($x+bx, $y+by, $z+bz).into();
-                        w.block_at_any_state(&p)
+                        w.blocks.block_at_any_state(&p)
                             .or_else(|| {println!("{:?} {:?}",pos,p);None})
                             .unwrap()
                     }};
                     (light $x:expr, $y:expr, $z:expr) => {{
                         let p: BlockPos = ($x+bx, $y+by, $z+bz).into();
-                        w.light_at(&p).block() as f32 / 15.
+                        w.blocks.light_at(&p).block() as f32 / 15.
                     }};
                 }
 
                 let block = {
                     let p: BlockPos = (x+bx, y+by, z+bz).into();
-                    w.block_at_any_state(&p)
+                    w.blocks.block_at_any_state(&p)
                         .or_else(|| {println!("{:?} {:?}",pos,p);None})
                         .unwrap()
                 };
@@ -389,7 +389,7 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Ve
 
 pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
 
-    let data = &w.chunks.get(&pos).unwrap().data;
+    let data = &w.blocks.chunks.get(&pos).unwrap().data;
     let atlas = &reg.texture_atlas;
 
     let mut verts = vec![];
@@ -575,12 +575,12 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
     let (bx,by,bz) = pos.as_block().as_tuple();
 
-    let data = &w.chunks.get(&pos).unwrap().data;
+    let data = &w.blocks.chunks.get(&pos).unwrap().data;
 
     for x in 0..16 {
         for z in 0..16 {
             
-            let yplus = &w.chunks.get(&(pos+(0,1,0).into())).unwrap().data;
+            let yplus = &w.blocks.chunks.get(&(pos+(0,1,0).into())).unwrap().data;
             let y = 15;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -612,7 +612,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
                 }
             };
 
-            let yneg = &w.chunks.get(&(pos+(0,-1,0).into())).unwrap().data;
+            let yneg = &w.blocks.chunks.get(&(pos+(0,-1,0).into())).unwrap().data;
             let y = 0;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -654,7 +654,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
     for x in 0..16 {
         for y in 0..16 {
             
-            let zplus = &w.chunks.get(&(pos+(0,0,1).into())).unwrap().data;
+            let zplus = &w.blocks.chunks.get(&(pos+(0,0,1).into())).unwrap().data;
             let z = 15;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -691,7 +691,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
             };
 
-            let zneg = &w.chunks.get(&(pos+(0,0,-1).into())).unwrap().data;
+            let zneg = &w.blocks.chunks.get(&(pos+(0,0,-1).into())).unwrap().data;
             let z = 0;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -732,7 +732,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
     for y in 0..16 {
         for z in 0..16 {
             
-            let xplus = &w.chunks.get(&(pos+(1,0,0).into())).unwrap().data;
+            let xplus = &w.blocks.chunks.get(&(pos+(1,0,0).into())).unwrap().data;
             let x = 15;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -768,7 +768,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
             };
 
-            let xneg = &w.chunks.get(&(pos+(-1,0,0).into())).unwrap().data;
+            let xneg = &w.blocks.chunks.get(&(pos+(-1,0,0).into())).unwrap().data;
             let x = 0;
             let xc = x as isize;
             let yc = y as isize + 1;

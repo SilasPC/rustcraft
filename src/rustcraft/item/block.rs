@@ -14,7 +14,7 @@ fn no_data() -> Option<Value> {
     None
 }
 
-pub type BehaviorFn = fn(pos: BlockPos, data: &mut Data);
+pub type BehaviorFn = fn(pos: BlockPos, data: &mut WorldData);
 
 #[derive(Clone, Default)]
 pub struct Behavior {

@@ -31,10 +31,10 @@ impl WanderingAI {
         }
     }
 
-    pub fn system_update(data: &mut crate::Data) {
-        for (_ent, (phys, ai)) in data.ecs.query_mut::<(&mut Physics, &mut WanderingAI)>() {
-            ai.update(data.delta);
-            phys.apply_force_continuous(data.delta * 40., ai.heading());
+    pub fn system_update(data: &mut crate::WorldData, delta: f32) {
+        for (_ent, (phys, ai)) in data.entities.ecs.query_mut::<(&mut Physics, &mut WanderingAI)>() {
+            ai.update(delta);
+            phys.apply_force_continuous(delta * 40., ai.heading());
         }
     }
 

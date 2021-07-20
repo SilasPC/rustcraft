@@ -9,20 +9,20 @@ pub struct Return {
 }
 
 pub fn handle_input(
-    data: &mut Data,
+    data: &mut data::Data,
+    world: &mut WorldData,
     state: &mut GameState,
-    event_pump: &mut sdl2::EventPump,
-    display: &mut GLDisplay,
     pgui: &mut GUI,
-    rdata: &mut RenderData
+    rdata: &mut data::RData,
+    idata: &data::IData,
 ) -> Return {
 
     let mut ret = Return::default();
 
     data.input.start_new_frame();
-    display.video.text_input().start();
-    data.input.update_flags(display.sdl.keyboard().mod_state());
-    for event in event_pump.poll_iter() {
+    data.display.video.text_input().start();
+    data.input.update_flags(data.display.sdl.keyboard().mod_state());
+    for event in data.event_pump.poll_iter() {
         use sdl2::event::Event::*;
         use sdl2::keyboard::Keycode::*;
         use sdl2::event::WindowEvent::*;
@@ -31,7 +31,7 @@ pub fn handle_input(
             TextInput { ref text, .. } => {
                 let input_text = text;
                 match state {
-                    GameState::Chat { text, start_frame } if *start_frame != data.frame_time => {
+                    GameState::Chat { text, start_frame } if *start_frame != rdata.frame_time => {
                         let mut txt = text.text().to_owned();
                         txt.push_str(&input_text);
                         text.set_text(txt);
@@ -40,49 +40,50 @@ pub fn handle_input(
                 }
             },
             Quit {..} => ret.do_quit = true,
-            KeyDown {keycode: Some(Escape), ..} => {
+            KeyDown {keycode: Some(Escape), repeat: false, ..} => {
                 *state = match state {
                     GameState::Paused => {
-                        display.set_mouse_capture(true);
+                        data.display.set_mouse_capture(true);
                         GameState::Playing { breaking: std::option::Option::None }
                     },
                     GameState::Chat { .. } => {
-                        display.set_mouse_capture(true);
+                        data.display.set_mouse_capture(true);
                         GameState::Playing { breaking: std::option::Option::None }
                     },
                     _ => {
-                        display.set_mouse_capture(false);
+                        data.display.set_mouse_capture(false);
                         GameState::Paused
                     }
                 };
             },
-            KeyDown {keycode: Some(F11), ..} => display.set_fullscreen(!display.state.fullscreen),
+            KeyDown {keycode: Some(F5), repeat: false, .. } => data.settings.third_person ^= true,
+            KeyDown {keycode: Some(F11), repeat: false, ..} => data.display.set_fullscreen(!data.display.state.fullscreen),
             KeyDown {keycode: Some(R), ..} => ret.do_chunk_load = true,
-            KeyDown {keycode: Some(E), ..} => {
+            KeyDown {keycode: Some(E), repeat: false, ..} => {
                 match state {
                     GameState::Playing {..} => {
-                        display.set_mouse_capture(false);
+                        data.display.set_mouse_capture(false);
                         *state = GameState::Inventory {
                             picked_item: Option::None,
                             inventory: pgui.inventory.clone().into(),
                         }
                     },
                     GameState::Inventory { .. } => {
-                        display.set_mouse_capture(true);
+                        data.display.set_mouse_capture(true);
                         *state = GameState::Playing { breaking: std::option::Option::None }
                     },
                     _ => {}
                 };
             },
-            KeyDown {keycode: Some(Return), ..} => {
+            KeyDown {keycode: Some(Return), repeat: false, ..} => {
                 match state {
                     GameState::Chat { text, .. } => {
                         let cmd: Option<Cmd> = text.text().parse().ok();
                         println!("{}\n => {:?}",text.text(),cmd);
                         if let Some(cmd) = cmd {
-                            cmd.exec(data);
+                            cmd.exec(world, idata);
                         }
-                        display.set_mouse_capture(true);
+                        data.display.set_mouse_capture(true);
                         *state = GameState::Playing { breaking: std::option::Option::None }
                     },
                     _ => {}
@@ -91,8 +92,8 @@ pub fn handle_input(
             KeyDown {keycode: Some(T), ..} => {
                 match state {
                     GameState::Playing {..} => {
-                        display.set_mouse_capture(false);
-                        *state = GameState::Chat { text: rdata.font.build_text("".into()), start_frame: data.frame_time }
+                        data.display.set_mouse_capture(false);
+                        *state = GameState::Chat { text: idata.font.build_text("".into()), start_frame: rdata.frame_time }
                     },
                     _ => {}
                 };
@@ -109,7 +110,7 @@ pub fn handle_input(
                     _ => {}
                 };
             },
-            Window { win_event: Resized(..), .. } => display.refresh(),
+            Window { win_event: Resized(..), .. } => data.display.refresh(),
             _ => {}
         }
     }

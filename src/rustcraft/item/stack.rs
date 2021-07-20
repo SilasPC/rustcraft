@@ -17,6 +17,7 @@ impl ItemStack {
         Self { item: item.into(), count: 64 }
     }
 
+    /// Deduct `num` items from the stack
     pub fn deduct(item: &mut Option<ItemStack>, num: usize) {
         match item {
             Some(ref mut inner) => {
@@ -29,6 +30,7 @@ impl ItemStack {
         }
     }
 
+    /// Splits the given stack in half, returning the other half
     pub fn split(item: &mut Option<ItemStack>) -> Option<ItemStack> {
         match item {
             Some(ref mut inner) => {
@@ -48,7 +50,10 @@ impl ItemStack {
         }
     }
 
-    pub fn transfer(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
+    /// Move items from the stack `from` into the stack `into`,
+    /// swapping the stacks if they are not compatible.
+    /// If one is empty, they will still be swapped.
+    pub fn transfer_or_swap(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
         if from.is_some() && into.is_some() {
             let a = from.as_mut().unwrap();
             let b = into.as_mut().unwrap();
@@ -67,7 +72,9 @@ impl ItemStack {
         }
     }
 
-    pub fn transfer_no_swap(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
+    /// Move items from the stack `from` into the stack `into`,
+    /// unless the stacks are not compatible.
+    pub fn transfer(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
         if from.is_some() && into.is_some() {
             let a = from.as_mut().unwrap();
             let b = into.as_mut().unwrap();
@@ -84,6 +91,8 @@ impl ItemStack {
         }
     }
 
+    /// Move items from the stack `from` into the stack `into`,
+    /// unless the stacks are not compatible.
     pub fn merge(from: &mut Option<ItemStack>, into: &mut Option<ItemStack>) {
         if from.is_none() {return}
         match into {
