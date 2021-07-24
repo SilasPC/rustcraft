@@ -54,12 +54,13 @@ impl<'a> GameLoop<'a> {
                 KeyDown {keycode: Some(F11), repeat: false, ..} => self.data.display.set_fullscreen(!self.data.display.state.fullscreen),
                 KeyDown {keycode: Some(R), ..} => ret.do_chunk_load = true,
                 KeyDown {keycode: Some(E), repeat: false, ..} => {
+                    use crate::rustcraft::inventory::InventoryShell;
                     match self.state {
                         GameState::Playing {..} => {
                             self.data.display.set_mouse_capture(false);
                             self.state = GameState::Inventory {
                                 picked_item: Option::None,
-                                inventory: self.pgui.inventory.clone().into(),
+                                inventory: self.pgui.inventory.dyn_clone(),
                             }
                         },
                         GameState::Inventory { .. } => {

@@ -1,17 +1,13 @@
 
-use crate::world::RayCastHit;
-use crate::static_prg::StaticProgram;
 use crate::prelude::*;
+use inventory::*;
+use crate::static_prg::StaticProgram;
 use util::DebugText;
 use crate::text::font::TextRenderer;
 use crate::game_loop::InventoryRenderer;
 use crate::lines::LineProgram;
 use crate::game_loop::GameState;
 use crate::PlayerData;
-use cgmath::*;
-use crate::Model;
-use crate::pgui::GUI;
-use crate::Program;
 use crate::meshing::ChunkRenderer;
 
 impl<'a> GameLoop<'a> {
@@ -162,7 +158,39 @@ impl<'a> GameLoop<'a> {
         }
         
         // render inventory
-        if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&PlayerData>(self.world.entities.player) {
+        // ! factor out
+        let mpos = self.data.input.mouse_pos(self.data.display.size_i32().1);
+        self.invren.gui.start();
+        unsafe {
+            gl::Disable(gl::DEPTH_TEST);
+            gl::Enable(gl::BLEND);
+        }
+        if let Some(d) = self.pgui.hotbar.borrow_data(&mut self.world) {
+            self.invren.render_bottom(&self.pgui, &d, mpos);
+        }
+        match self.state {
+            GameState::Inventory { ref picked_item, .. } => {
+                if let Some(d) = self.pgui.inventory.borrow_data(&mut self.world) {
+                    { 
+                        self.invren.render_centered(&self.pgui.inventory, &d, mpos);
+                        if let Some(item) = picked_item.as_ref().map(|s| &s.item) {
+                            self.invren.render_floating_item(item, mpos);
+                        }
+                        
+                    }
+                }
+                if let Some(picked_item) = picked_item {
+                    self.invren.render_floating_item(&picked_item.item, mpos);
+                }
+            },
+            _ => {}
+        }
+
+        /* unsafe {
+            gl::Disable(gl::BLEND);
+        } */
+
+        /* if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&PlayerData>(self.world.entities.player) {
             // pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
             let mpos = self.data.input.mouse_pos(self.data.display.size_i32().1);
             unsafe {
@@ -170,13 +198,13 @@ impl<'a> GameLoop<'a> {
             }
             match self.state {
                 GameState::Inventory { ref picked_item, ref inventory } => {
-                    self.invren.render(&self.pgui, &pdata.inventory.data, mpos, picked_item, true);
+                    self.invren.render(&self.pgui, &pdata.inventory, mpos, picked_item, true);
                 },
                 _ => {
-                    self.invren.render(&self.pgui, &pdata.inventory.data, mpos, &None, false);
+                    self.invren.render(&self.pgui, &pdata.inventory, mpos, &None, false);
                 }
             }
-        }
+        } */
 
         match &self.state {
             GameState::Chat { text, .. } => {

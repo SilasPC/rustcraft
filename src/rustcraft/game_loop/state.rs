@@ -1,14 +1,13 @@
 
-use crate::coords::*;
-use crate::game_loop::InventoryGUI;
+use crate::prelude::*;
+use crate::engine::text::text::Text;
 use crate::ItemStack;
-use crate::game_loop::Text;
-use std::time::Instant;
-use std::sync::Arc;
+use crate::rustcraft::inventory::*;
 
 pub enum GameState {
     Inventory {
-        inventory: Arc<InventoryGUI>,
+        //aux_inventory: Box<dyn InventoryShell>,
+        inventory: Box<dyn InventoryShell>,
         picked_item: Option<ItemStack>,
     },
     Playing {

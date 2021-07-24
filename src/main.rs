@@ -1,4 +1,5 @@
 #![allow(dead_code, unused)]
+#![deny(unconditional_recursion)]
 #![feature(box_patterns, box_syntax, generators, generator_trait, try_blocks, duration_constants, result_cloned)]
 
 #[macro_use]
@@ -35,7 +36,7 @@ pub mod prelude {
     pub use util;
     pub use engine;
     pub use rustcraft as game;
-    pub use crate::rustcraft::world::{self, WorldData};
+    pub use crate::rustcraft::world::{self, WorldData, RayCastHit};
     pub use crate::rustcraft::item::*;
     pub use crate::*;
     pub use crate::rustcraft::component;

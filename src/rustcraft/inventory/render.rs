@@ -1,10 +1,7 @@
 
-use crate::pgui::GUI;
-use crate::util::fdiv;
-use crate::gui::render::Cursor;
-use crate::player::inventory::PlayerInventory;
-use crate::gui::render::GUIRenderer;
+use crate::content::inventory::PlayerGUI;
 use crate::prelude::*;
+use inventory::*;
 
 pub struct InventoryRenderer {
     pub atlas: Arc<TextureAtlas>,
@@ -15,14 +12,14 @@ pub struct InventoryRenderer {
 
 impl InventoryRenderer {
 
-    pub fn render(&mut self, pgui: &GUI, slots: &[Option<ItemStack>], m: PixelPos, picked_item: &Option<ItemStack>, show_inventory: bool) {
+    pub fn render(&mut self, pgui: &PlayerGUI, d: &impl InventoryData, m: PixelPos, picked_item: &Option<ItemStack>, show_inventory: bool) {
         self.gui.start();
         unsafe {
             gl::Enable(gl::BLEND);
         }
-        self.render_bottom(pgui, slots, m);
+        self.render_bottom(pgui, d, m);
         if show_inventory {
-            self.render_centered(&pgui.inventory, slots, m);
+            self.render_centered(&pgui.inventory, d, m);
             if let Some(item) = picked_item.as_ref().map(|s| &s.item) {
                 self.render_floating_item(item, m);
             }
@@ -32,14 +29,15 @@ impl InventoryRenderer {
         }
     }
 
-    pub fn corner_cursor(&mut self, i: &InventoryGUI, m: PixelPos) -> Option<usize> {
+    pub fn corner_cursor(&mut self, i: &impl InventoryShell, m: PixelPos) -> Option<usize> {
         let (w,h) = (900, 700);
         let (hw, hh) = (450, 350);
 
-        let (iw, ih) = i.texture.size();
+        let t = i.texture();
+        let (iw, ih) = t.size();
         let (iw, ih) = (iw as i32, ih as i32);
 
-        i.texture.bind();
+        t.bind();
         self.gui.set_pixels(hw, hh);
         self.gui.move_pixels(-iw / 2, -ih / 2);
         self.gui.set_uniforms(iw, ih);
@@ -51,11 +49,10 @@ impl InventoryRenderer {
             (m.0.1 - cy) / self.gui.pixel_scale,
         );
 
-        (i.slot_at)(mp.into())
-
+        i.slot_at(mp.into())
     }
 
-    fn render_floating_item(&mut self, item: &ItemLike, m: PixelPos) {
+    pub fn render_floating_item(&mut self, item: &ItemLike, m: PixelPos) {
         self.gui.start();
         self.gui.square.bind();
         self.atlas.bind();
@@ -65,16 +62,16 @@ impl InventoryRenderer {
         self.iren.draw(item);
     }
 
-    fn render_bottom(&mut self, pgui: &GUI, slots: &[Option<ItemStack>], m: PixelPos) {
+    pub fn render_bottom(&mut self, pgui: &PlayerGUI, d: &impl InventoryData, m: PixelPos) {
         self.gui.square.bind();
 
         let (w,h) = (900, 700);
         let (hw, hh) = (450, 350);
 
-        let (iw, ih) = pgui.toolbar.texture.size();
+        let (iw, ih) = pgui.hotbar.texture.size();
         let (iw, ih) = (iw as i32, ih as i32);
 
-        pgui.toolbar.texture.bind();
+        pgui.hotbar.texture.bind();
         self.gui.set_pixels(hw, 0);
         self.gui.move_pixels(-iw / 2, 0);
         self.gui.set_uniforms(iw, ih);
@@ -87,7 +84,7 @@ impl InventoryRenderer {
             (m.0.1 - cy) / self.gui.pixel_scale,
         );
 
-        self.render_priv(&pgui.toolbar, slots, None, (cx, cy));
+        self.render_priv(&pgui.hotbar, d, None, (cx, cy));
 
         pgui.selector.bind();
         self.gui.set_pixels(hw, 0);
@@ -99,16 +96,17 @@ impl InventoryRenderer {
 
     }
 
-    fn render_centered(&mut self, i: &InventoryGUI, slots: &[Option<ItemStack>], m: PixelPos) {
+    pub fn render_centered(&mut self, i: &impl InventoryShell, d: &impl InventoryData, m: PixelPos) {
         self.gui.square.bind();
 
         let (w,h) = (900, 700);
         let (hw, hh) = (450, 350);
 
-        let (iw, ih) = i.texture.size();
+        let t = i.texture();
+        let (iw, ih) = t.size();
         let (iw, ih) = (iw as i32, ih as i32);
 
-        i.texture.bind();
+        t.bind();
         self.gui.set_pixels(hw, hh);
         self.gui.move_pixels(-iw / 2, -ih / 2);
         self.gui.set_uniforms(iw, ih);
@@ -121,18 +119,20 @@ impl InventoryRenderer {
             (m.0.1 - cy) / self.gui.pixel_scale,
         );
 
-        self.render_priv(i, slots, mp.into(), (cx, cy));
+        self.render_priv(i, d, mp.into(), (cx, cy));
 
     }
 
-    fn render_priv(&mut self, i: &InventoryGUI, slots: &[Option<ItemStack>], mp: Option<(i32, i32)>, c: (i32, i32)) {
+    pub fn render_priv(&mut self, i: &impl InventoryShell, d: &impl InventoryData, mp: Option<(i32, i32)>, c: (i32, i32)) {
 
         let (cx, cy) = self.gui.cursor.pos.into();
 
+        let slots = i.slots();
+
         // slot highlighting
         if let Some(mp) = mp {
-            if let Some(slot) = (i.slot_at)(mp.into()) {
-                let p = i.slots[slot].0;
+            if let Some(slot) = i.slot_at(mp.into()) {
+                let p = slots[slot].0;
                 self.highlight.bind();
                 self.gui.cursor.pos = (
                     cx + p.0 * self.gui.pixel_scale,
@@ -145,9 +145,9 @@ impl InventoryRenderer {
         
         // items
         self.atlas.bind();
-        for (i, p) in i.slots.iter().enumerate() {
+        for (i, p) in slots.iter().enumerate() {
             let p = p.0;
-            if let Some(item) = &slots[i] {
+            if let Some(item) = d.slot(i) {
                 self.gui.cursor.pos = (
                     cx + p.0 * self.gui.pixel_scale,
                     cy + p.1 * self.gui.pixel_scale,
@@ -158,11 +158,4 @@ impl InventoryRenderer {
         }
     }
 
-}
-
-#[derive(Clone)]
-pub struct InventoryGUI {
-    pub texture: Arc<Texture>,
-    pub slots: Vec<PixelPos>,
-    pub slot_at: fn(p: PixelPos) -> Option<usize>,
 }

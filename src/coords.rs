@@ -5,6 +5,7 @@ use cgmath::*;
 use serde::*;
 
 #[derive(From, Into, Clone, Copy, Debug)]
+/// Y-axis is upwards.
 pub struct PixelPos(pub (i32, i32));
 
 #[derive(Neg, Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Copy, Clone, From, Into, Serialize, Deserialize, PartialEq, Debug)]

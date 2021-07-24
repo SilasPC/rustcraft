@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct RayCastHit {
+    pub dist_prev: f32,
     pub hit: WorldPos,
     pub prev: WorldPos,
 }
@@ -29,7 +30,8 @@ impl VoxelData {
 
             return Some(RayCastHit {
                 hit,
-                prev
+                prev,
+                dist_prev: dist - 0.1,
             });
         } else {
             return None

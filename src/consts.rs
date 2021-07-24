@@ -17,3 +17,5 @@ pub const CLOUD_SIZE: f32 = 20.;
 pub const CLOUD_HEIGHT: f32 = 70.;
 /// Duration of a day-night cycle
 pub const DAY_NIGHT_DURATION_TICKS: u64 = 20 * 60 * 20; // 20 mins
+/// Distance to camera in third person
+pub const THIRD_PERSON_DISTANCE: f32 = 5.;

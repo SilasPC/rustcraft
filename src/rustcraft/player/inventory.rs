@@ -1,8 +1,6 @@
 
-use crate::Registry;
-use crate::crafting::CraftingRegistry;
-use crate::rustcraft::item::*;
-use crate::engine::gui::{render::*, gui::*};
+use crate::prelude::*;
+use inventory::*;
 
 pub struct PlayerInventory {
     pub data: Vec<Option<ItemStack>>,
@@ -13,6 +11,15 @@ impl Default for PlayerInventory {
         Self {
             data: vec![None; 36]
         }
+    }
+}
+
+impl InventoryData for PlayerInventory {
+    fn slot(&self, slot: usize) -> &Option<ItemStack> {
+        &self.data[slot]
+    }
+    fn slot_mut(&mut self, slot: usize) -> &mut Option<ItemStack> {
+        &mut self.data[slot]
     }
 }
 

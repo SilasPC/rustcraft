@@ -4,7 +4,6 @@ use crate::world::RayCastHit;
 use crate::game_loop::handle_input::Return;
 use crate::util::Drawable;
 use crate::game_loop::InventoryRenderer;
-use crate::pgui::GUI;
 use crate::util::DebugText;
 use crate::game_loop::Updates;
 use crate::game_loop::Text;
@@ -45,7 +44,7 @@ impl<'a> GameLoop<'a> {
                     *breaking = None;
                 }
                 if self.data.input.holding_primary() {
-                    if let Some(RayCastHit {hit, prev: hit_prev}) = raycast_hit {
+                    if let Some(RayCastHit {hit, prev: hit_prev, ..}) = raycast_hit {
 
                         if let Some(breaking) = breaking {
                             if breaking.1 != hit.as_block() {
@@ -97,7 +96,7 @@ impl<'a> GameLoop<'a> {
                     }
                 } else if self.data.input.clicked_secondary() {
 
-                    if let Some(RayCastHit {hit, prev: hit_prev}) = raycast_hit {
+                    if let Some(RayCastHit {hit, prev: hit_prev, ..}) = raycast_hit {
                         let hit_prev = hit_prev.as_block();
                         let maybe_item = &mut pdata.inventory.data[self.pgui.selected_slot as usize];
                         let mut success = false;
@@ -129,11 +128,16 @@ impl<'a> GameLoop<'a> {
             }
 
             self.rdata.view_mat = view.calc_view_mat(&pos);
-            /* if self.data.settings.third_person {
-                if let Some(RayCastHit { prev, .. }) = self.world.blocks.raycast(pos.pos, &-pos.heading(), 5.) {
-                    self.rdata.view_mat = Matrix4::from_translation(prev.0) * self.rdata.view_mat; 
-                }
-            } */
+            if self.data.settings.third_person {
+                let heading = pos.heading();
+                let d = consts::THIRD_PERSON_DISTANCE;
+                let trans = if let Some(RayCastHit { dist_prev, .. }) = self.world.blocks.raycast(pos.pos, &-heading, d) {
+                    Matrix4::from_translation(dist_prev * heading)
+                } else {
+                    Matrix4::from_translation(heading * d)
+                };
+                self.rdata.view_mat = self.rdata.view_mat * trans;
+            }
             
         }
 
@@ -156,14 +160,16 @@ impl<'a> GameLoop<'a> {
         }
 
         // interact with inventory
-        if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&mut PlayerData>(self.world.entities.player) {
-            match &mut self.state {
-                GameState::Inventory { ref mut picked_item, ref inventory } => {
-                    if self.data.input.clicked_primary() {
-                        let mpos = self.data.input.mouse_pos(self.data.display.size_i32().1);
-                        // compile_warning!(need corner anchor for determining hovered slot);
-                        if let Some(slot) = self.invren.corner_cursor(&self.pgui.inventory, mpos) {
-                            pdata.inventory.transfer(slot as u32, picked_item, &self.idata.registry, &self.idata.crafting);
+        if self.data.input.clicked_primary() {
+            use inventory::*;
+            match self.state {
+                GameState::Inventory { ref mut picked_item, .. } => {
+                    let mpos = self.data.input.mouse_pos(self.data.display.size_i32().1);
+                    // compile_warning!(need corner anchor for determining hovered slot);
+                    // ! hot fix
+                    if let Some(hovered_slot) = self.invren.corner_cursor(&self.pgui.inventory, mpos) {
+                        if let Some(inv_data) = self.pgui.inventory.borrow_data(&mut self.world) {
+                            ItemStack::transfer_or_swap(picked_item, inv_data.slot_mut(hovered_slot));
                         }
                     }
                 },

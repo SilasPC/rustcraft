@@ -1,8 +1,9 @@
 
+use crate::content::inventory::PlayerGUI;
+use inventory::render::*;
 use crate::lines::LineProgram;
 use crate::text::font::TextRenderer;
 use crate::static_prg::StaticProgram;
-use crate::inv::*;
 use crate::worker::*;
 use meshing::ChunkRenderer;
 use crate::cmd::Cmd;
@@ -10,7 +11,6 @@ use crate::updates::Updates;
 use crate::crafting::CraftingRegistry;
 use crate::util::*;
 use crate::text::text::Text;
-use game::pgui::GUI;
 use crate::gui::render::GUIRenderer;
 use crate::display::GLDisplay;
 use crate::component::*;
@@ -34,7 +34,7 @@ pub struct GameLoop<'a> {
     pub world: WorldData,
     pub chunk_renderer: ChunkRenderer,
     pub block_updates: Updates,
-    pub pgui: GUI,
+    pub pgui: PlayerGUI,
     pub last_tick: Instant,
     pub text_rend: TextRenderer,
     pub debug_text: DebugText,
@@ -68,7 +68,7 @@ impl<'a> GameLoop<'a> {
 
         let chunk_renderer = ChunkRenderer::new();
         let mut block_updates = Updates::default();
-        let mut pgui = GUI::new();
+        let mut pgui = PlayerGUI::new();
         /* let worker_data = WorkerData {
             registry: idata.registry.clone()
         };
