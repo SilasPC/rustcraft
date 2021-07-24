@@ -8,12 +8,15 @@ impl<'a> GameLoop<'a> {
         if self.last_tick.elapsed() > consts::TICK_DURATION {
             self.last_tick += consts::TICK_DURATION;
     
-            let start = Instant::now();
-            if !self.state.is_paused() {
-                self.block_updates.update(&mut self.world);
-                crate::rustcraft::component::ItemCmp::system_tick_age_items(&mut self.world);
-                self.world.ticks += 1;
+            if self.state.is_paused() {
+                return None
             }
+
+            let start = Instant::now();
+            
+            self.block_updates.update(&mut self.world);
+            crate::rustcraft::component::ItemCmp::system_tick_age_items(&mut self.world);
+            self.world.ticks += 1;
     
             let mut rng = rand::thread_rng();
             use rand::prelude::*;

@@ -36,7 +36,7 @@ pub mod prelude {
     pub use util;
     pub use engine;
     pub use rustcraft as game;
-    pub use crate::rustcraft::world::{self, WorldData, RayCastHit};
+    pub use crate::rustcraft::world::{self, *};
     pub use crate::rustcraft::item::*;
     pub use crate::*;
     pub use crate::rustcraft::component;

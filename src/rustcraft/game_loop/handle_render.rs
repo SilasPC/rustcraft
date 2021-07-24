@@ -13,16 +13,18 @@ use crate::meshing::ChunkRenderer;
 impl<'a> GameLoop<'a> {
     pub fn handle_render(&mut self, raycast_hit: Option<RayCastHit>) {
         let light_factor = (self.world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
+        let sky_col = Vector3::from(consts::SKY) * light_factor;
         unsafe {
             gl::ClearColor(
-                consts::SKY.0 * light_factor,
-                consts::SKY.1 * light_factor,
-                consts::SKY.2 * light_factor,
+                sky_col.x,
+                sky_col.y,
+                sky_col.z,
                 1.
             );
         }
 
         self.chunk_renderer.program.enable();
+        self.chunk_renderer.load_fog_color(&sky_col);
         unsafe {
             gl::Clear(
                 gl::COLOR_BUFFER_BIT |

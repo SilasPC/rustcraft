@@ -11,10 +11,22 @@ layout (location = 2) in float lightIn;
 
 out vec2 uv;
 out float light;
+out float fogFactor;
+
+// very close = {den=0.3, gra=2.5}
+const float fogDensity = 0.03;
+const float fogGradient = 2.5;
 
 void main()
 {
     uv = uvIn;
     light = max(globLight,lightIn);
-    gl_Position = project * view * transform * vec4(vert, 1.0);
+
+    vec4 worldPos = transform * vec4(vert, 1.0);
+    vec4 viewPos = view * worldPos;
+    gl_Position = project * viewPos;
+    
+    float distanceToCamera = length(viewPos.xyz);
+    fogFactor = exp(-pow(distanceToCamera*fogDensity, fogGradient));
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
 }

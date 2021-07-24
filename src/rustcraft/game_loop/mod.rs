@@ -145,7 +145,7 @@ impl<'a> GameLoop<'a> {
 
         // TODO this is too slow
         self.world.blocks.refresh(&self.idata.registry);
-        self.world.load(&self.idata.registry, 100);
+        self.world.load(&self.idata.registry, 5); // ! adjust for performance
 
         // RENDER
         let now = Instant::now();

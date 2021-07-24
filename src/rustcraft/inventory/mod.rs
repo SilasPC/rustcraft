@@ -7,26 +7,6 @@ use crate::player::inventory::PlayerInventory;
 use crate::gui::render::GUIRenderer;
 use crate::prelude::*;
 
-#[derive(Clone)]
-pub struct InventoryGUI {
-    pub texture: Arc<Texture>,
-    pub slots: Vec<PixelPos>,
-    pub slot_at: fn(p: PixelPos) -> Option<usize>,
-}
-
-impl InventoryShell for InventoryGUI {
-    fn dyn_clone(&self) -> Box<dyn InventoryShell> {box self.clone() as Box<dyn InventoryShell>}
-    fn texture(&self) -> &Texture {&self.texture}
-    fn slots(&self) -> &[PixelPos] {self.slots.as_ref()}
-    fn slot_at(&self, p: PixelPos) -> Option<usize> {(self.slot_at)(p)}
-    fn borrow_data<'w>(&self, w: &'w mut WorldData) -> Option<&'w mut dyn InventoryData> {
-        compile_warning!(wrong?);
-        let pdata: &mut PlayerData = w.entities.ecs.query_one_mut::<&mut PlayerData>(w.entities.player).ok()?;
-        let d: &mut dyn InventoryData = &mut pdata.inventory.data as &mut dyn InventoryData;
-        Some(d)
-    }
-}
-
 pub trait InventoryShell {
     fn dyn_clone(&self) -> Box<dyn InventoryShell>;
     fn texture(&self) -> &Texture;

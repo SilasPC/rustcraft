@@ -1,12 +1,5 @@
 
-use crate::world::VoxelData;
-use crate::BlocksData;
-use cgmath::Matrix4;
-use crate::Program;
-use crate::Registry;
-use crate::world::WorldData;
-use crate::coords::*;
-use crate::vao::VAO;
+use crate::prelude::*;
 
 pub struct ChunkRenderer {
     pub program: Program
@@ -17,11 +10,14 @@ impl ChunkRenderer {
         let program = Program::load(
             include_str!("vert.glsl"),
             include_str!("frag.glsl"),
-            vec!["project","view","transform","globLight"]
+            vec!["project","view","transform","globLight","fogColor"]
         );
         ChunkRenderer {
             program
         }
+    }
+    pub fn load_fog_color(&self, color: &Vector3<f32>) {
+        self.program.load_vec3(4, color);
     }
     pub fn load_glob_light(&self, light: f32) {
         self.program.load_f32(3, light);

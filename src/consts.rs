@@ -6,9 +6,11 @@ pub const TICK_DURATION: std::time::Duration = std::time::Duration::from_millis(
 /// Number of random ticks per chunk per game tick
 pub const RANDOM_TICK_SPEED: usize = 3;
 /// Sky minimum brightness
-pub const SKY_MIN_BRIGHTNESS: f32 = 0.4;
+pub const SKY_MIN_BRIGHTNESS: f32 = 0.35;
 /// Minimum block brightness
-pub const MIN_BRIGHTNESS: f32 = 0.4;
+pub const MIN_BRIGHTNESS: f32 = 0.3;
+
+
 /// Sky color
 pub const SKY: (f32,f32,f32) = (110./256., 160./256., 240./256.,);
 /// Cloud block-per-pixel size
@@ -16,6 +18,6 @@ pub const CLOUD_SIZE: f32 = 20.;
 /// Cloud world height
 pub const CLOUD_HEIGHT: f32 = 70.;
 /// Duration of a day-night cycle
-pub const DAY_NIGHT_DURATION_TICKS: u64 = 20 * 60 * 20; // 20 mins
+pub const DAY_NIGHT_DURATION_TICKS: u64 = 20 * 60; // 1 minute
 /// Distance to camera in third person
 pub const THIRD_PERSON_DISTANCE: f32 = 5.;
