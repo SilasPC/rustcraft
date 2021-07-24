@@ -25,6 +25,7 @@ pub struct EntityData {
 
 pub struct VoxelData {
     pub chunks: HashMap<ChunkPos, Box<Chunk>>,
+    pub changed_chunks: HashSet<ChunkPos>,
 }
 
 pub struct WorldData {
@@ -35,7 +36,6 @@ pub struct WorldData {
     pub noise: TerrainGen,
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
-    pub changed_chunks: HashSet<ChunkPos>,
     pub to_update: Vec<BlockPos>,
 }
 
@@ -67,9 +67,10 @@ impl WorldData {
             player
         };
         let blocks = VoxelData {
-            chunks: HashMap::new()
+            chunks: HashMap::new(),
+            changed_chunks: HashSet::new(),
         };
-        WorldData { entities, to_update: vec![], changed_chunks: HashSet::new(), to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
+        WorldData { entities, to_update: vec![], to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
     }
 
 }

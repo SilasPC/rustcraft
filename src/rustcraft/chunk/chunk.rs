@@ -1,4 +1,5 @@
 
+use crate::world::VoxelData;
 use crate::prelude::*;
 use crate::util::AABB;
 
@@ -289,9 +290,9 @@ impl Chunk {
 
 }
 
-pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
+pub fn calc_light(pos: ChunkPos, world: &mut VoxelData) {
     let Vector3 {x, y, z} = pos.into();
-    let (mut removal_queue, mut queue) = world.blocks.chunk_at_mut(pos).map(|c| (
+    let (mut removal_queue, mut queue) = world.chunk_at_mut(pos).map(|c| (
         std::mem::take(&mut c.light_remove_updates),
         std::mem::take(&mut c.light_updates)
     )).unwrap();
@@ -301,7 +302,7 @@ pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
         macro_rules! prop {
             ($x:expr, $y:expr, $z:expr) => {
                 let pos = Into::<BlockPos>::into(($x, $y, $z));
-                let light = world.blocks.light_at_mut(&pos);
+                let light = world.light_at_mut(&pos);
                 let new_light = light.block();
                 if new_light != 0 && new_light < old_light {
                     light.set_block(0);
@@ -322,13 +323,13 @@ pub fn calc_light(pos: ChunkPos, world: &mut WorldData) {
     
     // propagation loop
     while let Some(pos) = queue.pop_front() {
-        let pos_light = world.blocks.light_at_mut(&pos).block();
+        let pos_light = world.light_at_mut(&pos).block();
         if pos_light == 0 {continue}
         macro_rules! prop {
             ($x:expr, $y:expr, $z:expr) => {
                 let prop_pos = Into::<BlockPos>::into(($x, $y, $z));
-                if world.blocks.block_at(&prop_pos).unwrap().transparent {
-                    let l = world.blocks.light_at_mut(&prop_pos);
+                if world.block_at(&prop_pos).unwrap().transparent {
+                    let l = world.light_at_mut(&prop_pos);
                     if l.block() + 2 <= pos_light {
                         l.set_block(pos_light - 1);
                         if pos_light > 2 {

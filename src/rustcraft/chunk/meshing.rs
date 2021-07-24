@@ -1,4 +1,5 @@
 
+use crate::world::VoxelData;
 use crate::BlocksData;
 use cgmath::Matrix4;
 use crate::Program;
@@ -167,7 +168,7 @@ pub fn cube_mesh() -> VAO {
 
 }
 
-pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Vec<f32>, Vec<f32>), (Vec<f32>, Vec<f32>, Vec<f32>)) {
+pub fn make_mesh(pos: ChunkPos, w: &VoxelData, reg: &Registry) -> ((Vec<f32>, Vec<f32>, Vec<f32>), (Vec<f32>, Vec<f32>, Vec<f32>)) {
 
     let now = std::time::Instant::now();
 
@@ -193,19 +194,19 @@ pub fn make_mesh(pos: ChunkPos, w: &WorldData, reg: &Registry) -> ((Vec<f32>, Ve
                 macro_rules! get {
                     ($x:expr, $y:expr, $z:expr) => {{
                         let p: BlockPos = ($x+bx, $y+by, $z+bz).into();
-                        w.blocks.block_at_any_state(&p)
+                        w.block_at_any_state(&p)
                             .or_else(|| {println!("{:?} {:?}",pos,p);None})
                             .unwrap()
                     }};
                     (light $x:expr, $y:expr, $z:expr) => {{
                         let p: BlockPos = ($x+bx, $y+by, $z+bz).into();
-                        w.blocks.light_at(&p).block() as f32 / 15.
+                        w.light_at(&p).block() as f32 / 15.
                     }};
                 }
 
                 let block = {
                     let p: BlockPos = (x+bx, y+by, z+bz).into();
-                    w.blocks.block_at_any_state(&p)
+                    w.block_at_any_state(&p)
                         .or_else(|| {println!("{:?} {:?}",pos,p);None})
                         .unwrap()
                 };

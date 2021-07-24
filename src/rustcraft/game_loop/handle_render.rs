@@ -1,4 +1,5 @@
 
+use crate::world::RayCastHit;
 use crate::static_prg::StaticProgram;
 use crate::prelude::*;
 use util::DebugText;
@@ -13,194 +14,181 @@ use crate::pgui::GUI;
 use crate::Program;
 use crate::meshing::ChunkRenderer;
 
-pub fn handle_render(
-    data: &mut data::Data,
-    rdata: &data::RData,
-    idata: &data::IData,
-    world: &mut WorldData,
-    chunk_renderer: &ChunkRenderer,
-    invren: &mut InventoryRenderer,
-    text_rend: &TextRenderer,
-    debug_text: &mut DebugText,
-    lines: &mut LineProgram,
-    prg: &Program,
-    pgui: &GUI,
-    state: &GameState,
-    raycast_hit: Option<WorldPos>,
-    sprg: &mut StaticProgram,
-) {
-    let light_factor = (world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
-    unsafe {
-        gl::ClearColor(
-            consts::SKY.0 * light_factor,
-            consts::SKY.1 * light_factor,
-            consts::SKY.2 * light_factor,
-            1.
-        );
-    }
+impl<'a> GameLoop<'a> {
+    pub fn handle_render(&mut self, raycast_hit: Option<RayCastHit>) {
+        let light_factor = (self.world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
+        unsafe {
+            gl::ClearColor(
+                consts::SKY.0 * light_factor,
+                consts::SKY.1 * light_factor,
+                consts::SKY.2 * light_factor,
+                1.
+            );
+        }
 
-    chunk_renderer.program.enable();
-    unsafe {
-        gl::Clear(
-            gl::COLOR_BUFFER_BIT |
-            gl::DEPTH_BUFFER_BIT
-        );
-        gl::Enable(gl::DEPTH_TEST);
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::Enable(gl::BLEND);
-    }
-    
-    // render chunks
-    idata.atlas.texture().bind();
-    chunk_renderer.load_proj(&rdata.proj_mat);
-    chunk_renderer.load_view(&rdata.view_mat);
-    let world_light = world.smooth_light_level().max(consts::MIN_BRIGHTNESS);
-    chunk_renderer.load_glob_light(light_factor);
-    chunk_renderer.render(world);
+        self.chunk_renderer.program.enable();
+        unsafe {
+            gl::Clear(
+                gl::COLOR_BUFFER_BIT |
+                gl::DEPTH_BUFFER_BIT
+            );
+            gl::Enable(gl::DEPTH_TEST);
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::Enable(gl::BLEND);
+        }
+        
+        // render chunks
+        self.idata.atlas.texture().bind();
+        self.chunk_renderer.load_proj(&self.rdata.proj_mat);
+        self.chunk_renderer.load_view(&self.rdata.view_mat);
+        let world_light = self.world.smooth_light_level().max(consts::MIN_BRIGHTNESS);
+        self.chunk_renderer.load_glob_light(light_factor);
+        self.chunk_renderer.render(&mut self.world);
 
-    unsafe {
-        gl::Disable(gl::BLEND);
-    }
+        unsafe {
+            gl::Disable(gl::BLEND);
+        }
 
-    // render bounding boxes
-    if data.settings.debug {
-        lines.enable();
-        lines.load_view(
-            &rdata.view_mat,
-            &rdata.proj_mat,    
-        );
-        Position::system_draw_bounding_boxes(world, lines);
-    }
+        // render bounding boxes
+        if self.data.settings.debug {
+            self.lines.enable();
+            self.lines.load_view(
+                &self.rdata.view_mat,
+                &self.rdata.proj_mat,    
+            );
+        Model::system_render(&mut self.world, &mut self.sprg);
+        Position::system_draw_bounding_boxes(&mut self.world, &mut self.lines);
+        }
 
-    // render entities 
-    sprg.enable();
-    sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
-    sprg.load_light(1.0);
-    sprg.load_uv((1.,1.), (0.,0.));
-    Model::system_render(world, sprg);
+        // render entities 
+        self.sprg.enable();
+        self.sprg.load_view(&self.rdata.view_mat, &self.rdata.proj_mat);
+        self.sprg.load_light(1.0);
+        self.sprg.load_uv((1.,1.), (0.,0.));
+        Model::system_render(&mut self.world, &mut self.sprg);
 
-    // render clouds
-    sprg.enable();
-    idata.clouds.bind();
-    sprg.load_view(&rdata.view_mat, &rdata.proj_mat);
-    sprg.load_uv((1.,1.), (0.,0.));
-    sprg.load_transform(&(Matrix4::from_translation((0.,consts::CLOUD_HEIGHT,0.).into()) * Matrix4::from_scale(idata.clouds.size().0 * consts::CLOUD_SIZE)));
-    sprg.load_light(light_factor);
-    // ? use quad instead
-    idata.cube.bind();
-    idata.cube.draw();
+        // render clouds
+        self.sprg.enable();
+        self.idata.clouds.bind();
+        self.sprg.load_view(&self.rdata.view_mat, &self.rdata.proj_mat);
+        self.sprg.load_uv((1.,1.), (0.,0.));
+        self.sprg.load_transform(&(Matrix4::from_translation((0.,consts::CLOUD_HEIGHT,0.).into()) * Matrix4::from_scale(self.idata.clouds.size().0 * consts::CLOUD_SIZE)));
+        self.sprg.load_light(light_factor);
+        // ? use quad instead
+        self.idata.cube.bind();
+        self.idata.cube.draw();
 
-    // render item in hand
-    if let Ok(pdata) = world.entities.ecs.query_one_mut::<&PlayerData>(world.entities.player) {
-        if let Some(item) = &pdata.inventory.data[pgui.selected_slot()] {
+        // render item in hand
+        if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&PlayerData>(self.world.entities.player) {
+            if let Some(item) = &pdata.inventory.data[self.pgui.selected_slot()] {
+                unsafe {
+                    gl::Disable(gl::DEPTH_TEST);
+                }
+                self.prg.enable();
+                self.prg.load_mat4(0, &self.rdata.proj_mat);
+                self.prg.load_mat4(1, &Matrix4::one());
+                let pos = (0.4, -1.5, -2.).into();
+                let rot = Euler::new(Deg(0.),Deg(-60.),Deg(0.));
+                self.prg.load_mat4(2, &(Matrix4::from_translation(pos) * Matrix4::from(rot)));
+                self.idata.atlas.bind();
+                /* match &item.item {
+                    ItemLike::Item(item) => {
+                        data.registry.item_vao.bind();
+                        data.registry.item_vao.draw_6((item.id - data.registry.items_offset) as i32); // hax
+                    }
+                    ItemLike::Block(block) => {
+                        // rdata.cube.draw();
+                    }
+                } */
+                unsafe {
+                    gl::Enable(gl::DEPTH_TEST);
+                }
+            }
+        }
+
+        if let Some(hit) = raycast_hit {
+            const E: f32 = 0.001;
+            let hit = hit.hit.corner_align().0.map(|v| v - E);
+            self.lines.enable();
+            let t = Matrix4::from_translation(hit) * Matrix4::from_scale(1. + 2.*E);
+            self.lines.load_view(
+                &self.rdata.view_mat,
+                &self.rdata.proj_mat,    
+            );
+            self.lines.load_transform(&t);
+            self.lines.load_color(&Vector4 {
+                x: 0.2,
+                y: 0.2,
+                z: 0.2,
+                w: 1.0,
+            });
+            unsafe {
+                gl::LineWidth(3.0);
+                gl::Enable(gl::LINE_SMOOTH | gl::DEPTH_TEST);
+            }
+            self.lines.bind_and_draw();
+
+            match self.state {
+                GameState::Playing { breaking: Some(breaking) } => {
+                    self.sprg.enable();
+                    self.sprg.load_transform(&t);
+                    self.idata.break_atlas.bind();
+                    let uvd = self.idata.break_atlas.uv_dif();
+                    let offset = self.idata.break_atlas.get_uv((breaking.0 * 10.) as usize);
+                    self.sprg.load_uv((uvd, uvd), offset);
+                    self.idata.cube.bind();
+                    self.idata.cube.draw();
+                },
+                _ => {}
+            }
+        }
+
+        // tmp vignette solution
+        unsafe {
+            gl::Disable(gl::DEPTH_TEST);
+            gl::Enable(gl::BLEND);
+        }
+        self.sprg.enable();
+        self.sprg.load_uv((1., 1.), (0.,0.));
+        self.sprg.load_light(1.);
+        self.sprg.load_view(&Matrix4::one(),&Matrix4::one());
+        self.sprg.load_transform(&(Matrix4::from_translation((-1., -1., -1.,).into()) * Matrix4::from_scale(2.)));
+        self.idata.vign.bind();
+        self.idata.cube.bind();
+        self.idata.cube.draw();
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+            gl::Disable(gl::BLEND);
+        }
+        
+        // render inventory
+        if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&PlayerData>(self.world.entities.player) {
+            // pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
+            let mpos = self.data.input.mouse_pos(self.data.display.size_i32().1);
             unsafe {
                 gl::Disable(gl::DEPTH_TEST);
             }
-            prg.enable();
-            prg.load_mat4(0, &rdata.proj_mat);
-            prg.load_mat4(1, &Matrix4::one());
-            let pos = (0.4, -1.5, -2.).into();
-            let rot = Euler::new(Deg(0.),Deg(-60.),Deg(0.));
-            prg.load_mat4(2, &(Matrix4::from_translation(pos) * Matrix4::from(rot)));
-            idata.atlas.bind();
-            /* match &item.item {
-                ItemLike::Item(item) => {
-                    data.registry.item_vao.bind();
-                    data.registry.item_vao.draw_6((item.id - data.registry.items_offset) as i32); // hax
+            match self.state {
+                GameState::Inventory { ref picked_item, ref inventory } => {
+                    self.invren.render(&self.pgui, &pdata.inventory.data, mpos, picked_item, true);
+                },
+                _ => {
+                    self.invren.render(&self.pgui, &pdata.inventory.data, mpos, &None, false);
                 }
-                ItemLike::Block(block) => {
-                    // rdata.cube.draw();
-                }
-            } */
-            unsafe {
-                gl::Enable(gl::DEPTH_TEST);
             }
         }
-    }
 
-    if let Some(hit) = raycast_hit {
-        const E: f32 = 0.001;
-        let hit = hit.corner_align().0.map(|v| v - E);
-        lines.enable();
-        let t = Matrix4::from_translation(hit) * Matrix4::from_scale(1. + 2.*E);
-        lines.load_view(
-            &rdata.view_mat,
-            &rdata.proj_mat,    
-        );
-        lines.load_transform(&t);
-        lines.load_color(&Vector4 {
-            x: 0.2,
-            y: 0.2,
-            z: 0.2,
-            w: 1.0,
-        });
-        unsafe {
-            gl::LineWidth(3.0);
-            gl::Enable(gl::LINE_SMOOTH | gl::DEPTH_TEST);
-        }
-        lines.bind_and_draw();
-
-        match state {
-            GameState::Playing { breaking: Some(breaking) } => {
-                sprg.enable();
-                sprg.load_transform(&t);
-                idata.break_atlas.bind();
-                let uvd = idata.break_atlas.uv_dif();
-                let offset = idata.break_atlas.get_uv((breaking.0 * 10.) as usize);
-                sprg.load_uv((uvd, uvd), offset);
-                idata.cube.bind();
-                idata.cube.draw();
+        match &self.state {
+            GameState::Chat { text, .. } => {
+                self.text_rend.render(&text, -0.9, -0.9, self.data.display.size())
             },
             _ => {}
-        }
-    }
+        };
 
-    // tmp vignette solution
-    unsafe {
-        gl::Disable(gl::DEPTH_TEST);
-        gl::Enable(gl::BLEND);
-    }
-    sprg.enable();
-    sprg.load_uv((1., 1.), (0.,0.));
-    sprg.load_light(1.);
-    sprg.load_view(&Matrix4::one(),&Matrix4::one());
-    sprg.load_transform(&(Matrix4::from_translation((-1., -1., -1.,).into()) * Matrix4::from_scale(2.)));
-    idata.vign.bind();
-    idata.cube.bind();
-    idata.cube.draw();
-    unsafe {
-        gl::Enable(gl::DEPTH_TEST);
-        gl::Disable(gl::BLEND);
-    }
-    
-    // render inventory
-    if let Ok(pdata) = world.entities.ecs.query_one_mut::<&PlayerData>(world.entities.player) {
-        // pgui.render(&mut guirend, &data.registry, &pdata.inventory, state.show_inventory(), data.input.mouse_pos(), &irenderer);
-        let mpos = data.input.mouse_pos(data.display.size_i32().1);
+        self.text_rend.render(&self.debug_text.text, -0.9, 0.9, self.data.display.size());
+        
         unsafe {
-            gl::Disable(gl::DEPTH_TEST);
-        }
-        match state {
-            GameState::Inventory { ref picked_item, ref inventory } => {
-                invren.render(&pgui, &pdata.inventory.data, mpos, picked_item, true);
-            },
-            _ => {
-                invren.render(&pgui, &pdata.inventory.data, mpos, &None, false);
-            }
+            gl::Enable(gl::DEPTH_TEST);
         }
     }
-
-    match &state {
-        GameState::Chat { text, .. } => {
-            text_rend.render(&text, -0.9, -0.9, data.display.size())
-        },
-        _ => {}
-    };
-
-    text_rend.render(&debug_text.text, -0.9, 0.9, data.display.size());
-    
-    unsafe {
-        gl::Enable(gl::DEPTH_TEST);
-    }
-
 }

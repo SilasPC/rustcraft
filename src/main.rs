@@ -10,6 +10,7 @@ pub mod coords;
 pub mod rustcraft;
 pub mod perlin;
 pub mod consts;
+use crate::game_loop::GameLoop;
 use crate::util::gen_full_block_vao;
 use crate::lines::box_vao;
 use crate::crafting::CraftingRegistry;
@@ -56,8 +57,10 @@ fn main() {
     let mut data = init_data();
     let mut rdata = init_rdata(&data);
     let idata = init_idata();
+
+    let mut game_loop = GameLoop::new(&mut data, &mut rdata, &idata);
     
-    game_loop::game_loop(&mut data, &mut rdata, &idata);
+    game_loop.run_loop();
     
 }
 
