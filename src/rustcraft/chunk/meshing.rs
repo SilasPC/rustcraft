@@ -30,13 +30,15 @@ impl ChunkRenderer {
     }
     pub fn render(&self, w: &WorldData) {
         self.program.enable();
-        for chunk in w.blocks.chunks.values().filter(|c| c.renderable()) {
+        // First pass
+        for chunk in w.blocks.chunks.values().filter(|c| c.chunk.renderable()).map(|c| &c.chunk) {
             self.program.load_mat4(2, &Matrix4::from_translation(
                 chunk.pos.as_world().0
             ));
             chunk.bind_and_draw();
         }
-        for chunk in w.blocks.chunks.values().filter(|c| c.renderable()) {
+        // Second pass
+        for chunk in w.blocks.chunks.values().filter(|c| c.chunk.renderable()).map(|c| &c.chunk) {
             self.program.load_mat4(2, &Matrix4::from_translation(
                 chunk.pos.as_world().0
             ));
@@ -386,7 +388,7 @@ pub fn make_mesh(pos: ChunkPos, w: &VoxelData, reg: &Registry) -> ((Vec<f32>, Ve
 
 pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
 
-    let data = &w.blocks.chunks.get(&pos).unwrap().data;
+    let data = &w.blocks.chunks.get(&pos).unwrap().chunk.data;
     let atlas = &reg.texture_atlas;
 
     let mut verts = vec![];
@@ -572,12 +574,12 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
     let (bx,by,bz) = pos.as_block().as_tuple();
 
-    let data = &w.blocks.chunks.get(&pos).unwrap().data;
+    let data = &w.blocks.chunks.get(&pos).unwrap().chunk.data;
 
     for x in 0..16 {
         for z in 0..16 {
             
-            let yplus = &w.blocks.chunks.get(&(pos+(0,1,0).into())).unwrap().data;
+            let yplus = &w.blocks.chunks.get(&(pos+(0,1,0).into())).unwrap().chunk.data;
             let y = 15;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -609,7 +611,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
                 }
             };
 
-            let yneg = &w.blocks.chunks.get(&(pos+(0,-1,0).into())).unwrap().data;
+            let yneg = &w.blocks.chunks.get(&(pos+(0,-1,0).into())).unwrap().chunk.data;
             let y = 0;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -651,7 +653,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
     for x in 0..16 {
         for y in 0..16 {
             
-            let zplus = &w.blocks.chunks.get(&(pos+(0,0,1).into())).unwrap().data;
+            let zplus = &w.blocks.chunks.get(&(pos+(0,0,1).into())).unwrap().chunk.data;
             let z = 15;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -688,7 +690,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
             };
 
-            let zneg = &w.blocks.chunks.get(&(pos+(0,0,-1).into())).unwrap().data;
+            let zneg = &w.blocks.chunks.get(&(pos+(0,0,-1).into())).unwrap().chunk.data;
             let z = 0;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -729,7 +731,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
     for y in 0..16 {
         for z in 0..16 {
             
-            let xplus = &w.blocks.chunks.get(&(pos+(1,0,0).into())).unwrap().data;
+            let xplus = &w.blocks.chunks.get(&(pos+(1,0,0).into())).unwrap().chunk.data;
             let x = 15;
             let xc = x as isize;
             let yc = y as isize + 1;
@@ -765,7 +767,7 @@ pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f3
 
             };
 
-            let xneg = &w.blocks.chunks.get(&(pos+(-1,0,0).into())).unwrap().data;
+            let xneg = &w.blocks.chunks.get(&(pos+(-1,0,0).into())).unwrap().chunk.data;
             let x = 0;
             let xc = x as isize;
             let yc = y as isize + 1;

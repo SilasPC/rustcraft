@@ -33,14 +33,33 @@ impl WorldData {
                             z + *i % RAD
                         ).into();
                         if let Some(c) = self.blocks.chunks.get_mut(&p) {
-                            if c.chunk_state == ChunkState::Empty {
-                                c.gen_terrain(&self.noise, reg);
+                            if c.chunk.chunk_state == ChunkState::Empty {
+                                c.chunk.gen_terrain(&self.noise, reg);
                                 work += 1;
                             }
                         } else {
-                            let mut c = Box::new(Chunk::new(p, self.air.clone()));
-                            c.gen_terrain(&self.noise, reg);
-                            self.blocks.chunks.insert(p, c);
+                            let mut chunk = Box::new(Chunk::new(p, self.air.clone()));
+                            chunk.gen_terrain(&self.noise, reg);
+                            let mut chunk_data = ChunkData {
+                                chunk,
+                                loaded_neighbours: 0, 
+                            };
+                            for dx in -1..=1 {
+                                for dy in -1..=1 {
+                                    for dz in -1..=1 {
+                                        let p = (
+                                            p.x+dx,
+                                            p.y+dy,
+                                            p.z+dz,
+                                        ).into();
+                                        if let Some(c) = self.blocks.chunks.get_mut(&p) {
+                                            chunk_data.loaded_neighbours += 1;
+                                            c.loaded_neighbours += 1;
+                                        }
+                                    }
+                                }
+                            }
+                            self.blocks.chunks.insert(p, chunk_data);
                             work += 1;
                         }
                         // println!("generated for {:?}",p);
@@ -61,7 +80,7 @@ impl WorldData {
                             y + (*i / RAD) % RAD,
                             z + *i % RAD
                         ).into();
-                        if self.blocks.chunks.get(&p).unwrap().chunk_state == ChunkState::Filled {
+                        if self.blocks.chunks.get(&p).unwrap().chunk.chunk_state == ChunkState::Filled {
                             super::gen::gen_detail(p, self, reg);
                             work += 1;
                         }
@@ -86,17 +105,17 @@ impl WorldData {
                         {
                             let (m1, m2) = meshing::make_mesh(p, &self.blocks, reg);
                             let c = self.blocks.chunks.get_mut(&p).unwrap();
-                            if let Some(mesh) = &mut c.mesh {
+                            if let Some(mesh) = &mut c.chunk.mesh {
                                 mesh.0.update_lit(&m1.0, &m1.1, &m1.2);
                                 mesh.1.update_lit(&m2.0, &m2.1, &m2.2);
                             } else {
-                                c.mesh = Some((
+                                c.chunk.mesh = Some((
                                     VAO::textured_lit(&m1.0, &m1.1, &m1.2),
                                     VAO::textured_lit(&m2.0, &m2.1, &m2.2)
                                 ));
                             }
-                            c.needs_refresh = false;
-                            c.chunk_state = ChunkState::Rendered;
+                            c.chunk.needs_refresh = false;
+                            c.chunk.chunk_state = ChunkState::Rendered;
                         }
                         // self.chunks.get_mut(&p).unwrap().refresh(reg);
                         // println!("detailed for {:?}",p);

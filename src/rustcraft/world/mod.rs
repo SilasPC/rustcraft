@@ -23,8 +23,20 @@ pub struct EntityData {
     pub player: hecs::Entity,
 }
 
+pub struct ChunkData {
+    pub chunk: Box<Chunk>,
+    /// Self is treated as a neighbour, so count should be in 0..=27
+    pub loaded_neighbours: usize,
+}
+
+impl ChunkData {
+    pub fn all_neighbours_loaded(&self) -> bool {
+        self.loaded_neighbours == 27
+    }
+}
+
 pub struct VoxelData {
-    pub chunks: HashMap<ChunkPos, Box<Chunk>>,
+    pub chunks: HashMap<ChunkPos, ChunkData>,
     pub changed_chunks: HashSet<ChunkPos>,
 }
 

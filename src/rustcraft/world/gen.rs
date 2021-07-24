@@ -44,7 +44,7 @@ pub fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
             }
         }    
     }
-    let center = world.blocks.chunks.get_mut(&pos).unwrap();
+    let center = &mut world.blocks.chunks.get_mut(&pos).unwrap().chunk;
     center.chunk_state = ChunkState::Detailed;
     center.needs_refresh = true;
 }

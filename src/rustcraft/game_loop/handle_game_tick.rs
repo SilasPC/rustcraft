@@ -27,7 +27,13 @@ impl<'a> GameLoop<'a> {
                 }
             }
     
-            let keys = self.world.blocks.chunks.iter().filter(|(_,c)| c.renderable()).map(|(k,_)| k.clone()).collect::<Vec<_>>();
+            let keys = self.world.blocks.chunks.iter()
+                .filter(|(_,c)|
+                    c.all_neighbours_loaded() &&
+                    c.chunk.renderable()
+                )
+                .map(|(k,_)| k.clone())
+                .collect::<Vec<_>>();
             for cp in keys {
                 // println!("{:?}",cp);
                 for _ in 0..consts::RANDOM_TICK_SPEED {
