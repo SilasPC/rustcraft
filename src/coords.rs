@@ -82,6 +82,7 @@ impl From<(i32,i32,i32)> for ChunkPos {
 }
 
 impl Coord for WorldPos {
+    fn zero() -> Self {(0.,0.,0.).into()}
     fn as_block(&self) -> BlockPos {
         self.0.map(|v| v.floor() as i32).into()
     }
@@ -97,6 +98,7 @@ impl Coord for WorldPos {
 }
 
 impl Coord for BlockPos {
+    fn zero() -> Self {(0,0,0).into()}
     fn as_block(&self) -> BlockPos {
         *self
     }
@@ -132,6 +134,7 @@ impl ChunkPos {
     }
 }
 impl Coord for ChunkPos {
+    fn zero() -> Self {(0,0,0).into()}
     fn as_block(&self) -> BlockPos {
         self.0.map(|x| x * 16).into()
     }
@@ -147,6 +150,8 @@ impl Coord for ChunkPos {
 }
 
 pub trait Coord {
+    #[inline(always)]
+    fn zero() -> Self;
     #[inline(always)]
     fn as_world(&self) -> WorldPos;
     #[inline(always)]

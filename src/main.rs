@@ -29,6 +29,7 @@ use engine::*;
 use rustcraft::*;
 
 pub mod prelude {
+    pub use serde_json::Value as JSON;
     pub use crate::consts;
     pub use game::settings::Settings;
     pub use util::ArcStr;

@@ -3,7 +3,13 @@ use super::*;
 use crate::prelude::*;
 
 impl VoxelData {
-    
+
+    /// The caller has responsibility to register changes with
+    /// the method `VoxelData::register_change(..)`, as well as
+    /// registering changes to the chunk directly.
+    pub fn block_at_mut(&mut self, pos: &impl Coord) -> Option<&mut Block> {
+        self.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(pos))
+    }
     pub fn block_at(&self, pos: &impl Coord) -> Option<&Block> {
         self.chunk_at(pos.as_chunk()).map(|c| c.block_at(pos))
     }
@@ -15,7 +21,7 @@ impl VoxelData {
             .map(|c| c.set_at(pos, block))
             .unwrap_or(false);
         if success {
-            self.changed_chunks.insert(pos.as_chunk());
+            self.register_change(&pos.as_chunk());
         }
         success
     }
@@ -49,6 +55,10 @@ impl VoxelData {
         } else {
             false
         }
+    }
+
+    pub fn register_change(&mut self, pos: &impl Coord) {
+        self.changed_chunks.insert(pos.as_chunk());
     }
 
     pub fn light_at(&self, pos: &impl Coord) -> &Light {

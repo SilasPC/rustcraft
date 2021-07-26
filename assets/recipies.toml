@@ -12,3 +12,11 @@ count = 4
 [[shaped]]
 input = ["dirt"]
 output = "grass"
+
+[[shaped]]
+input = [
+    "planks", "planks", "planks",
+    "planks", "air",    "planks",
+    "planks", "planks", "planks",
+]
+output = "chest"

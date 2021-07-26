@@ -63,6 +63,7 @@ pub fn load_recipies(reg: &Registry) -> CraftingRegistry {
             .into_iter()
             .map(|id| reg.get(&id).clone())
             .map(Option::from)
+            .map(|o| o.filter(|item| item.id() != "air"))
             .chain([None].iter().cycle().cloned())
             .take(9)
             .collect();
@@ -82,6 +83,10 @@ struct SavedRecipe {
     output: String,
     #[serde(default = "one")]
     count: usize
+}
+
+fn chest_use(pos: BlockPos, data: &mut WorldData) {
+    // TODO somehow trigger inventory to open
 }
 
 const fn one() -> usize {1}

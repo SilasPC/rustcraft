@@ -7,7 +7,36 @@ pub enum Value {
     Str(String),
     Dict(HashMap<String,Value>),
     Arr(Vec<Value>),
-    Item(ItemLike)
+    Item(ItemLike),
+    ItemStack(Option<ItemStack>),
+}
+
+impl Value {
+    pub fn as_arr(&self) -> &Vec<Value> {
+        match self {
+            Self::Arr(vec) => vec,
+            _ => panic!()
+        }
+    }
+    pub fn as_arr_mut(&mut self) -> &mut Vec<Value> {
+        match self {
+            Self::Arr(vec) => vec,
+            _ => panic!()
+        }
+    }
+    pub fn as_item_stack(&self) -> &Option<ItemStack> {
+        match self {
+            Self::ItemStack(stack) => stack,
+            _ => panic!()
+        }
+    }
+    
+    pub fn as_item_stack_mut(&mut self) -> &mut Option<ItemStack> {
+        match self {
+            Self::ItemStack(stack) => stack,
+            _ => panic!()
+        }
+    }
 }
 
 fn no_data() -> Option<Value> {

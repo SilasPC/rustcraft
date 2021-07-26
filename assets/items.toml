@@ -78,6 +78,12 @@ group_transparent = true
 semi_transparent = true
 texture = [10, 10, 10]
 
+[[block]]
+id = "chest"
+solid = true
+name = "Chest"
+texture = [12, 12, 12]
+
 [[item]]
 id = "stick"
 name = "Stick"

@@ -173,6 +173,12 @@ impl Chunk {
         self.pos.map(|x| (x * 16 + 8) as f32)
     }
 
+    /// The caller has the responsibility to ensure
+    /// lighting updates are executed via `Chunk::light_update(..)`
+    pub fn block_at_mut(&mut self, pos: &impl Coord) -> &mut Block {
+        let (x,y,z) = pos.as_sub().into();
+        &mut self.data[x][y][z]
+    }
     pub fn block_at(&self, pos: &impl Coord) -> &Block {
         let (x,y,z) = pos.as_sub().into();
         &self.data[x][y][z]
@@ -187,21 +193,29 @@ impl Chunk {
         &self.light[x][y][z]
     }
 
+    pub fn light_update(&mut self, pos: &impl Coord) {
+        let sc = pos.as_sub();
+        let old_light = &mut self.light[sc.x][sc.y][sc.z];
+        let block = &mut self.data[sc.x][sc.y][sc.z];
+        if old_light.block() != block.light {
+            let remove = old_light.block() > block.light;
+            let val = pos.as_block();
+            if remove {
+                self.light_remove_updates.push_back((val, block.light));
+            } else {
+                self.light_updates.push_back(val);
+            }
+            self.light[sc.x][sc.y][sc.z].set_block(block.light);
+            self.needs_refresh = true;
+        }
+    }
+
     pub fn set_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
         let sc = pos.as_sub();
         let b = &mut self.data[sc.x][sc.y][sc.z];
         if b != block {
-            if b.light != block.light {
-                let remove = b.light > block.light;
-                let val = pos.as_block();
-                if remove {
-                    self.light_remove_updates.push_back((val,b.light));
-                } else {
-                    self.light_updates.push_back(val);
-                }
-                self.light[sc.x][sc.y][sc.z].set_block(block.light);
-            }
             *b = block.clone();
+            self.light_update(pos);
             self.needs_refresh = true;
             true
         } else {

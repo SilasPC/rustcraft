@@ -182,6 +182,54 @@ pub fn player_inventory() -> PlayerInventoryShell {
     }
 }
 
+#[derive(Clone)]
+pub struct ChestGUI {
+    pub texture: Arc<Texture>,
+    pub slots: Vec<PixelPos>,
+    pub chest: BlockPos,
+}
+
+impl ChestGUI {
+    pub fn new() -> Self {
+
+        let texture = Texture::from_path("assets/chest.png").into();
+
+        let mut slots = vec![];
+
+        let mut c = (4, 4);
+        c.1 += 2 * 20;
+        for i in 0..27 {
+            if i % 9 == 0 && i > 0 {
+                c.0 -= 9 * 20;
+                c.1 -= 20;
+            }
+
+            slots.push(c.into());
+
+            c.0 += 20;
+        }
+
+        Self {
+            texture,
+            slots,
+            chest: BlockPos::zero()
+        }
+        
+    }
+}
+
+impl InventoryShell for ChestGUI {
+    fn dyn_clone(&self) -> Box<dyn InventoryShell> {box self.clone() as Box<dyn InventoryShell>}
+    fn texture(&self) -> &Texture {&self.texture}
+    fn slots(&self) -> &[PixelPos] {&self.slots}
+    fn borrow_data<'w>(&self, w: &'w mut WorldData) -> Option<&'w mut dyn InventoryData> {
+        let block = w.blocks.block_at_mut(&self.chest)?;
+        if block.id.as_ref() != "chest" {
+            return None
+        }
+        Some(block.mutate().data.as_mut().unwrap())
+    }
+}
 
 #[derive(Clone)]
 pub struct CraftingGUI {
@@ -212,5 +260,14 @@ impl InventoryShell for CraftingGUI {
         let pdata: &mut PlayerData = w.entities.ecs.query_one_mut::<&mut PlayerData>(w.entities.player).ok()?;
         let d: &mut dyn InventoryData = &mut pdata.inventory.data as &mut dyn InventoryData;
         Some(d)
+    }
+}
+
+impl<'a> InventoryData for Value {
+    fn slot(&self, slot: usize) -> &Option<ItemStack> {
+        self.as_arr()[slot].as_item_stack()
+    }
+    fn slot_mut(&mut self, slot: usize) -> &mut Option<ItemStack> {
+        self.as_arr_mut()[slot].as_item_stack_mut()
     }
 }
