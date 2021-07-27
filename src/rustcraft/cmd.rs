@@ -12,7 +12,8 @@ impl From<()> for PErr {
 
 #[derive(Debug)]
 pub enum Cmd {
-    Give { id: String, count: usize }
+    Give { id: String, count: usize },
+    Summon { id: String },
 }
 
 impl std::str::FromStr for Cmd {
@@ -24,7 +25,7 @@ impl std::str::FromStr for Cmd {
 }
 
 fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
-    if s.get_char()? == '/' {
+    /* if s.get_char()? == '/' */ {
         let cmd = s.get_iden()?;
         match cmd.as_str() {
             "give" => {
@@ -36,6 +37,10 @@ fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
                 let count = count as usize;
                 return Ok(Cmd::Give{ id, count })
             },
+            "summon" => {
+                let id = s.get_iden()?;
+                return Ok(Cmd::Summon { id })
+            }
             _ => return Err(PErr)
         }
     };
@@ -45,7 +50,7 @@ fn parse(mut s: Scanner) -> Result<Cmd, PErr> {
 impl Cmd {
     pub fn exec(&self, world: &mut WorldData, idata: &data::IData,) {
         match self {
-            Self::Give{id,count} => {
+            Self::Give { id, count } => {
                 if let Ok(pdata) = world.entities.ecs.query_one_mut::<&mut crate::PlayerData>(world.entities.player) {
                     let mut count = *count;
                     while count > 0 {
@@ -54,6 +59,18 @@ impl Cmd {
                         pdata.inventory.merge(&mut ItemStack::of(idata.registry.get(id).clone(), rem).into());
                     }
                 }
+            },
+            Self::Summon { id } => {
+                compile_warning!(make entity templates);
+                let pos = Position::new((50,55,50).into(), (0.9,0.9,0.9).into());
+                let aabb = pos.get_aabb();
+                let ent = world.entities.ecs.spawn((
+                    pos,
+                    Physics::new(),
+                    PathFinding::new(),
+                    FollowEntity::new(Some(world.entities.player)),
+                ));
+                world.entities.tree.insert(ent, ent, &aabb);
             }
         }
     }

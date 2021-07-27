@@ -97,7 +97,7 @@ impl VoxelData {
                         // ! need to make another solution here
                         // ! need to make a hybrid version as well
                         if !self.chunks.get(&p.into()).unwrap().chunk.renderable() || meshed.contains(&p) {continue}
-                        println!("{:?}", p);
+                        // println!("{:?}", p);
                         let (m1,m2) = (meshing::make_mesh(p.into(), self, reg));
                         let c = &mut self.chunks.get_mut(&p.into()).unwrap().chunk;
                         {

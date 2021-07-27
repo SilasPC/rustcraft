@@ -22,6 +22,8 @@ toml = "*"
 serde_json = "*"
 derive_more = "*"
 scanlex = "*"
+pathfinding = "*"
+itertools = "*"
 
 [profile.dev]
 opt-level = 3

@@ -15,8 +15,10 @@ impl<'a> GameLoop<'a> {
             let start = Instant::now();
             
             self.block_updates.update(&mut self.world);
-            crate::rustcraft::component::ItemCmp::system_tick_age_items(&mut self.world);
             self.world.ticks += 1;
+
+            component::ItemCmp::system_tick_age_items(&mut self.world);
+            component::PathFinding::system_update_tick(&mut self.world);
     
             let mut rng = rand::thread_rng();
             use rand::prelude::*;

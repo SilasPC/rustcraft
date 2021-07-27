@@ -82,6 +82,9 @@ impl From<(i32,i32,i32)> for ChunkPos {
 }
 
 impl Coord for WorldPos {
+    fn abs(&self) -> Self {
+        self.0.map(f32::abs).into()
+    }
     fn zero() -> Self {(0.,0.,0.).into()}
     fn as_block(&self) -> BlockPos {
         self.0.map(|v| v.floor() as i32).into()
@@ -98,6 +101,9 @@ impl Coord for WorldPos {
 }
 
 impl Coord for BlockPos {
+    fn abs(&self) -> Self {
+        self.0.map(i32::abs).into()
+    }
     fn zero() -> Self {(0,0,0).into()}
     fn as_block(&self) -> BlockPos {
         *self
@@ -134,6 +140,9 @@ impl ChunkPos {
     }
 }
 impl Coord for ChunkPos {
+    fn abs(&self) -> Self {
+        self.0.map(i32::abs).into()
+    }
     fn zero() -> Self {(0,0,0).into()}
     fn as_block(&self) -> BlockPos {
         self.0.map(|x| x * 16).into()
@@ -150,6 +159,18 @@ impl Coord for ChunkPos {
 }
 
 pub trait Coord {
+    fn dist(&self, other: &Self) -> f32 {
+        (self.as_world() - other.as_world()).0.magnitude()
+    }
+    fn manhat_dist(&self, other: &Self) -> f32 {
+        let (x,y,z) = (self.as_world() - other.as_world()).0.map(f32::abs).into();
+        x+y+z
+    }
+    fn max_dist(&self, other: &Self) -> f32 {
+        let (x,y,z) = (self.as_world() - other.as_world()).0.map(f32::abs).into();
+        x.max(y).max(z)
+    }
+    fn abs(&self) -> Self;
     #[inline(always)]
     fn zero() -> Self;
     #[inline(always)]

@@ -7,7 +7,9 @@ mod falling_block;
 mod item;
 mod player;
 mod model;
+mod path_finding;
 
+pub use path_finding::*;
 pub use crate::prelude::*;
 pub use model::*;
 pub use falling_block::*;

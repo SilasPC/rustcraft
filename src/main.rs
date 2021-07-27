@@ -29,6 +29,7 @@ use engine::*;
 use rustcraft::*;
 
 pub mod prelude {
+    pub use hecs::Entity;
     pub use serde_json::Value as JSON;
     pub use crate::consts;
     pub use game::settings::Settings;
@@ -45,7 +46,7 @@ pub mod prelude {
     pub use cgmath::*;
     pub use crate::registry::Registry;
     pub use crate::coords::*;
-    pub use std::collections::{HashSet, HashMap, VecDeque};
+    pub use std::collections::{HashSet, HashMap, VecDeque, BinaryHeap};
     pub use crate::vao::VAO;
     pub use crate::rustcraft::chunk::{chunk::{self, Chunk}, meshing};
     pub use std::sync::Arc;
