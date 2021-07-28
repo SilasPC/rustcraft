@@ -68,6 +68,8 @@ impl Physics {
         if self.gravity {self.vel.y -= 10. * delta;}
         
         let mut new_pos = pos.pos.0;
+        let mut new_vel = self.vel;
+        let old_vel = self.vel;
 
         #[allow(non_snake_case)] {
 
@@ -76,7 +78,7 @@ impl Physics {
                     let sE = 0.01;
                     let bE = pos.size.x - sE;
                     let byE = 0.99;
-                    let offset = if self.vel.x > 0. {pos.size.x} else {0.};
+                    let offset = if new_vel.x > 0. {pos.size.x} else {0.};
                     world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
                     world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
                     world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
@@ -85,7 +87,7 @@ impl Physics {
                 (y) => {{
                     let sE = 0.01;
                     let bE = pos.size.x - sE;
-                    let offset = if self.vel.y > 0. {pos.size.y} else {0.};
+                    let offset = if new_vel.y > 0. {pos.size.y} else {0.};
                     world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
                     world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
                     world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
@@ -95,7 +97,7 @@ impl Physics {
                     let sE = 0.01;
                     let bE = pos.size.x - sE;
                     let byE = 0.99;
-                    let offset = if self.vel.z > 0. {pos.size.z} else {0.};
+                    let offset = if new_vel.z > 0. {pos.size.z} else {0.};
                     world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
                     world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
                     world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
@@ -103,39 +105,41 @@ impl Physics {
                 }};
             }
 
-            let old_vel = self.vel;
-            new_pos.x += self.vel.x * delta;
-            if self.vel.x != 0. && test!(x) {
-                if self.vel.x > 0. {
+            new_pos.x += new_vel.x * delta;
+            if new_vel.x != 0. && test!(x) {
+                if new_vel.x > 0. {
                     new_pos.x = new_pos.x.floor() + 1. - pos.size.x;
                 } else {
                     new_pos.x = new_pos.x.ceil();
                 }
-				self.vel.x = 0.;
+				new_vel.x = 0.;
 			}
 
-            new_pos.z += self.vel.z * delta;
-            if self.vel.z != 0. && test!(z) {
-                if self.vel.z > 0. {
+            new_pos.z += new_vel.z * delta;
+            if new_vel.z != 0. && test!(z) {
+                if new_vel.z > 0. {
                     new_pos.z = new_pos.z.floor() + 1. - pos.size.z;
                 } else {
                     new_pos.z = new_pos.z.ceil();
                 }
-				self.vel.z = 0.;
+				new_vel.z = 0.;
 			}
             
-            new_pos.y += self.vel.y * delta;
-            if self.vel.y != 0. && test!(y) {
-                if self.vel.y > 0. {
+            new_pos.y += new_vel.y * delta;
+            if new_vel.y != 0. && test!(y) {
+                if new_vel.y > 0. {
                     new_pos.y = new_pos.y.floor() + 1. - pos.size.y;
                 } else {
                     new_pos.y = new_pos.y.ceil();
                 }
-				self.vel.y = 0.;
-                compile_warning!(edge stop);
-			} else if /* was_grounded && self.vel.y < 0. && self.edge_stop */ self.edge_stop {
+				new_vel.y = 0.;
+			} else if was_grounded && new_vel.y <= 0. && self.edge_stop {
                 // not grounded, try cancel x
-                new_pos.x = pos.pos.0.x;
+                
+                new_vel.y = 0.;
+                new_pos = pos.pos.0;
+                compile_warning!(edge stop is a bit funky);
+                /* new_pos.x = pos.pos.0.x;
                 if !test!(y) {
                     // still not grounded, cancel x not enough, try cancel z instead
                     new_pos.x += old_vel.x * delta;
@@ -144,11 +148,12 @@ impl Physics {
                         // still not grounded, must cancel both
                         new_pos.x = pos.pos.0.x;
                     }
-                }
+                } */
             }
 
         }
 
+        self.vel = new_vel;
         pos.pos = new_pos.into();
 
         // ?
@@ -158,7 +163,7 @@ impl Physics {
 
         if self.vel.y != 0. {
             self.grounded = false;
-        } else if old_y_vel == 0. && self.gravity {
+        } else if self.vel.y == 0. && self.gravity && !was_grounded {
             self.grounded = true;
         }
         

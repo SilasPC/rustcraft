@@ -1,9 +1,18 @@
 
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, serde::Deserialize)]
 pub struct View {
-    offset: Vector3<f32>,
+    #[serde(default = "util::vec_f32_zero")]
+    pub offset: Vector3<f32>,
+}
+
+impl Default for View {
+    fn default() -> Self {
+        Self {
+            offset: util::vec_f32_zero()
+        }
+    }
 }
 
 impl From<Vector3<f32>> for View {

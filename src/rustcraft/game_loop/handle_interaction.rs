@@ -75,7 +75,7 @@ impl<'a> GameLoop<'a> {
                                 if let Some(drop_id) = &block.drops {
                                     let mut stack = ItemStack::of(self.idata.content.items.get(&drop_id).clone(), 1);
                                     let phys = Physics::new();
-                                    let pos = Position::new(hit.center_align(),(0.3,0.3,0.3).into());
+                                    let pos = Position::new(hit.align_center(),(0.3,0.3,0.3).into());
                                     let aabb = pos.get_aabb();
                                     let model = box util::RenderedItem {
                                         vao: self.idata.item_cubes.clone(),

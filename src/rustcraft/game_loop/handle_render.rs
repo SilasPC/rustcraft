@@ -106,7 +106,7 @@ impl<'a> GameLoop<'a> {
 
         if let Some(hit) = raycast_hit {
             const E: f32 = 0.001;
-            let hit = hit.hit.corner_align().0.map(|v| v - E);
+            let hit = hit.hit.align_corner().0.map(|v| v - E);
             self.lines.enable();
             let t = Matrix4::from_translation(hit) * Matrix4::from_scale(1. + 2.*E);
             self.lines.load_view(

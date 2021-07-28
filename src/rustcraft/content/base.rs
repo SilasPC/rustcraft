@@ -5,6 +5,7 @@ use crate::prelude::*;
 
 pub fn register_components(cnt: &mut ContentBuilder) {
     cnt.components.register("Physics".into(), Physics::new());
+    cnt.components.register("Viewable".into(), View::default());
     compile_warning!(more stuff);
 }
 

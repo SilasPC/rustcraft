@@ -188,11 +188,11 @@ pub trait Coord {
         sub.z == 0 || sub.z == 15
     }
     #[inline(always)]
-    fn center_align(&self) -> WorldPos {
+    fn align_center(&self) -> WorldPos {
         self.as_block().as_world() + (0.5,0.5,0.5).into()
     }
     #[inline(always)]
-    fn corner_align(&self) -> WorldPos {
+    fn align_corner(&self) -> WorldPos {
         self.as_block().as_world()
     }
 }
