@@ -89,7 +89,7 @@ impl<'a> GameLoop<'a> {
         let mut last_tick_dur = 0.;
         
         let mut invren = InventoryRenderer {
-            iren: ItemGUIRenderer::generate(idata.registry.as_ref()),
+            iren: ItemGUIRenderer::generate(&idata.content.items),
             gui: GUIRenderer::new(data.display.size_i32()),
             atlas: idata.atlas.clone(),
             highlight: Texture::from_path("assets/slot_highlight.png").into()
@@ -144,8 +144,8 @@ impl<'a> GameLoop<'a> {
         // ! STOP SYSTEMS
 
         // TODO this is too slow
-        self.world.blocks.refresh(&self.idata.registry);
-        self.world.load(&self.idata.registry, 5); // ! adjust for performance
+        self.world.blocks.refresh(&self.idata.content.items);
+        self.world.load(&self.idata.content.items, 5); // ! adjust for performance
 
         // RENDER
         let now = Instant::now();

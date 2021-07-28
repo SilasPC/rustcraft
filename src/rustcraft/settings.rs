@@ -21,7 +21,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn load() -> Self {
-        let tomlstr = std::fs::read_to_string("assets/settings.toml").unwrap();
+        let tomlstr = std::fs::read_to_string("data/settings.toml").unwrap();
         toml::from_str(tomlstr.as_ref()).unwrap()
     }
 }

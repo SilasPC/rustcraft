@@ -430,3 +430,10 @@ macro_rules! repeat {
         }
     };
 }
+
+pub const fn vec_f32_zero() -> Vector3<f32> {
+    Vector3 { x: 0., y: 0., z: 0. }
+}
+pub const fn bool_true() -> bool {
+    true
+}

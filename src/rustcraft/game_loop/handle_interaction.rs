@@ -71,9 +71,9 @@ impl<'a> GameLoop<'a> {
                         };
                         
                         if broken {
-                            if self.world.blocks.set_block_at(&hit, self.idata.registry.get("air").as_block().unwrap()) {
+                            if self.world.blocks.set_block_at(&hit, self.idata.content.items.get("air").as_block().unwrap()) {
                                 if let Some(drop_id) = &block.drops {
-                                    let mut stack = ItemStack::of(self.idata.registry.get(&drop_id).clone(), 1);
+                                    let mut stack = ItemStack::of(self.idata.content.items.get(&drop_id).clone(), 1);
                                     let phys = Physics::new();
                                     let pos = Position::new(hit.center_align(),(0.3,0.3,0.3).into());
                                     let aabb = pos.get_aabb();

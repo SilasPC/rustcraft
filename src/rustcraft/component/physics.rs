@@ -2,12 +2,17 @@
 use crate::world::VoxelData;
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, serde::Deserialize)]
 pub struct Physics {
+    #[serde(default = "util::bool_true")]
     gravity: bool,
+    #[serde(skip, default = "util::vec_f32_zero")]
     force: Vector3<f32>,
+    #[serde(skip, default = "util::vec_f32_zero")]
     vel: Vector3<f32>,
+    #[serde(skip)]
     grounded: bool,
+    #[serde(skip)]
     edge_stop: bool,
 }
 

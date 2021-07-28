@@ -56,21 +56,22 @@ impl Cmd {
                     while count > 0 {
                         let rem = count.min(64);
                         count -= rem;
-                        pdata.inventory.merge(&mut ItemStack::of(idata.registry.get(id).clone(), rem).into());
+                        pdata.inventory.merge(&mut ItemStack::of(idata.content.items.get(id).clone(), rem).into());
                     }
                 }
             },
             Self::Summon { id } => {
-                compile_warning!(make entity templates);
-                let pos = Position::new((50,55,50).into(), (0.9,0.9,0.9).into());
-                let aabb = pos.get_aabb();
-                let ent = world.entities.ecs.spawn((
-                    pos,
-                    Physics::new(),
-                    PathFinding::new(),
-                    FollowEntity::new(Some(world.entities.player)),
-                ));
-                world.entities.tree.insert(ent, ent, &aabb);
+                if let Some(template) = idata.content.entities.entities.get(id) {
+                    let mut builder = hecs::EntityBuilder::new();
+                    let pos = Position::new((50,55,50).into(), (0.9,0.9,0.9).into());
+                    let aabb = pos.get_aabb();
+                    builder.add(pos);
+                    template.build_all_into(&mut builder);
+                    let ent = world.entities.ecs.spawn(builder.build());
+                    world.entities.tree.insert(ent, ent, &aabb);
+                } else {
+                    println!("No such entity template {}", id);
+                }
             }
         }
     }

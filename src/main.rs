@@ -29,6 +29,7 @@ use engine::*;
 use rustcraft::*;
 
 pub mod prelude {
+    pub use entity::template::{EntityRegistry, EntityTemplate};
     pub use hecs::Entity;
     pub use serde_json::Value as JSON;
     pub use crate::consts;
@@ -102,13 +103,21 @@ fn init_idata() -> data::IData {
         Texture::from_path("assets/break_atlas.png"),
         4
     ).into();
-    let registry = make_registry(Arc::clone(&atlas));
-    let crafting = load_recipies(&registry);
+    let mut content = ContentBuilder::new();
+    
+    use content::base::*;
+    register_components(&mut content);
+    register_entities(&mut content);
+    register_items(&mut content);
+    register_recipies(&mut content);
+
+    let content: Arc<_> = content.finish(Arc::clone(&atlas)).into();
+
     let font = Font::from_font_files("assets/font.png", "assets/font.fnt").into();
     let line_box = lines::box_vao().into();
     let cube = meshing::cube_mesh().into();
     let item_cubes = gen_full_block_vao(
-        registry.items.values().filter_map(ItemLike::as_block),
+        content.items.items.values().filter_map(ItemLike::as_block),
         &mut HashMap::new(),
         &*atlas,
     ).into();
@@ -116,10 +125,9 @@ fn init_idata() -> data::IData {
     let clouds = Texture::from_path("assets/clouds.png").into();
 
     data::IData {
-        air: registry.get("air").to_block().unwrap(),
+        air: content.items.get("air").to_block().unwrap(),
+        content,
         item_cubes,
-        crafting,
-        registry,
         atlas,
         break_atlas,
         font,

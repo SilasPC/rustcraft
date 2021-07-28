@@ -2,8 +2,7 @@
 use crate::prelude::*;
 
 pub struct IData {
-    pub crafting: CraftingRegistry,
-    pub registry: Arc<Registry>,
+    pub content: Arc<Content>,
     pub item_cubes: Arc<VAO>,
     pub cube: Arc<VAO>,
     pub line_box: Arc<VAO>,
