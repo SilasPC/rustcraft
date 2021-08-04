@@ -18,7 +18,7 @@ impl WorldData {
         self.to_load.push_back(Loading::Filling(0, p))
     }
 
-    pub fn load(&mut self, reg: &Registry, max_work: usize) {
+    pub fn load(&mut self, reg: &ItemRegistry, max_work: usize) {
         const DIAMETER: i32 = 10;
         if let Some(mut loading) = self.to_load.pop_front() {
             let mut work = 0;

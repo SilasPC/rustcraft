@@ -32,7 +32,7 @@ impl PlayerInventory {
         }
     }
 
-    pub fn transfer(&mut self, slot: u32, from: &mut Option<ItemStack>, reg: &Registry, cr: &CraftingRegistry) {
+    pub fn transfer(&mut self, slot: u32, from: &mut Option<ItemStack>, reg: &ItemRegistry, cr: &CraftingRegistry) {
         match slot {
             0..=35 => ItemStack::transfer(from, &mut self.data[slot as usize]),
             /* 36..=44 => {

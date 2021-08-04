@@ -166,7 +166,7 @@ pub fn cube_mesh() -> VAO {
 
 }
 
-pub fn make_mesh(pos: ChunkPos, w: &VoxelData, reg: &Registry) -> ((Vec<f32>, Vec<f32>, Vec<f32>), (Vec<f32>, Vec<f32>, Vec<f32>)) {
+pub fn make_mesh(pos: ChunkPos, w: &VoxelData, reg: &ItemRegistry) -> ((Vec<f32>, Vec<f32>, Vec<f32>), (Vec<f32>, Vec<f32>, Vec<f32>)) {
 
     let now = std::time::Instant::now();
 
@@ -386,7 +386,7 @@ pub fn make_mesh(pos: ChunkPos, w: &VoxelData, reg: &Registry) -> ((Vec<f32>, Ve
 
 }
 
-pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &ItemRegistry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
 
     let data = &w.blocks.chunks.get(&pos).unwrap().chunk.data;
     let atlas = &reg.texture_atlas;
@@ -561,7 +561,7 @@ pub fn make_mesh_old(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>,
 }
 
 
-pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &Registry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
+pub fn make_mesh_hybrid(pos: ChunkPos, w: &WorldData, reg: &ItemRegistry) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
 
     let now = std::time::Instant::now();
     let atlas = &reg.texture_atlas;

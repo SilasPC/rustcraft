@@ -223,7 +223,7 @@ impl Chunk {
         }
     }
 
-    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen, reg: &Registry) {
+    pub fn gen_terrain(&mut self, noise: &crate::rustcraft::world::TerrainGen, reg: &ItemRegistry) {
         for x in 0..16 {
             for z in 0..16 {
                 let palette = noise.palette(x,z);

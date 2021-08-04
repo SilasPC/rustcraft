@@ -9,7 +9,7 @@ pub struct ItemGUIRenderer {
 }
 
 impl ItemGUIRenderer {
-    pub fn generate(reg: &Registry) -> Self {
+    pub fn generate(reg: &ItemRegistry) -> Self {
         let mut offsets = HashMap::new();
         let block = gen_block_vao(
             reg.items.values().filter_map(ItemLike::as_block),

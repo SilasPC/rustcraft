@@ -45,7 +45,7 @@ pub mod prelude {
     pub use crate::rustcraft::component;
     pub use crate::rustcraft::chunk::chunk::*;
     pub use cgmath::*;
-    pub use crate::registry::Registry;
+    pub use crate::registry::ItemRegistry;
     pub use crate::coords::*;
     pub use std::collections::{HashSet, HashMap, VecDeque, BinaryHeap};
     pub use crate::vao::VAO;

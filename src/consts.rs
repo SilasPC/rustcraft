@@ -1,14 +1,16 @@
 
+use std::time::Duration;
+
 /// Seed used for world generation
 pub const DEBUG_SEED: &'static str = "seed!";
 /// Tick interval duration
-pub const TICK_DURATION: std::time::Duration = std::time::Duration::from_millis(50);
+pub const TICK_DURATION: Duration = Duration::from_millis(50);
 /// Number of random ticks per chunk per game tick
 pub const RANDOM_TICK_SPEED: usize = 3;
 /// Sky minimum brightness
-pub const SKY_MIN_BRIGHTNESS: f32 = 0.35;
+pub const SKY_MIN_BRIGHTNESS: f32 = 0.0;
 /// Minimum block brightness
-pub const MIN_BRIGHTNESS: f32 = 0.3;
+pub const MIN_BRIGHTNESS: f32 = 0.0;
 
 
 /// Sky color

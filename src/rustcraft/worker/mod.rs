@@ -3,7 +3,7 @@ use std::sync::{Arc, mpsc::*};
 use crate::prelude::*;
 
 pub struct WorkerData {
-    pub registry: Arc<Registry>,
+    pub registry: Arc<ItemRegistry>,
 }
 
 pub struct JobDispatcher {

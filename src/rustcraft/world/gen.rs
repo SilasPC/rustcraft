@@ -1,7 +1,7 @@
 
 use crate::prelude::*;
 
-pub fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &Registry) {
+pub fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &ItemRegistry) {
     let (x,y,z) = pos.as_block().as_tuple();
     let dirt = reg.get("dirt").as_block().unwrap();
     let log = reg.get("log").as_block().unwrap();

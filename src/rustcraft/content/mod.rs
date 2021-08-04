@@ -146,7 +146,7 @@ impl ContentBuilder {
     }
     pub fn finish(self, texture_atlas: Arc<TextureAtlas>) -> Content {
         Content {
-            items: Registry {
+            items: ItemRegistry {
                 texture_atlas,
                 items: self.items,
             },
@@ -158,7 +158,7 @@ impl ContentBuilder {
 }
 
 pub struct Content {
-    pub items: Registry,
+    pub items: ItemRegistry,
     pub crafting: CraftingRegistry,
     pub entities: EntityRegistry,
     pub components: ComponentRegistry,

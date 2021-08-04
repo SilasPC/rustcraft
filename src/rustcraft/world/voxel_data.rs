@@ -75,7 +75,7 @@ impl VoxelData {
         self.chunks.get_mut(&pos).filter(|c| c.chunk.chunk_state >= ChunkState::Detailed).map(|cd| cd.chunk.as_mut())
     }
 
-    pub fn refresh(&mut self, reg: &Registry) {
+    pub fn refresh(&mut self, reg: &ItemRegistry) {
         let mut cc = std::mem::take(&mut self.changed_chunks);
         let mut meshed = HashSet::new();
         cc.retain(|x| self.chunk_at(*x).map(Chunk::renderable).unwrap_or(false));

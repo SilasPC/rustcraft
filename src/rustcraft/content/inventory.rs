@@ -2,7 +2,7 @@
 use crate::util::fdiv;
 use crate::rustcraft::inventory::*;
 use crate::render_gui::ItemGUIRenderer;
-use crate::registry::Registry;
+use crate::registry::ItemRegistry;
 use crate::player::inventory::PlayerInventory;
 use crate::engine::texture::Texture;
 use crate::engine::gui::{gui::*, render::*};
