@@ -437,3 +437,9 @@ pub const fn vec_f32_zero() -> Vector3<f32> {
 pub const fn bool_true() -> bool {
     true
 }
+
+pub fn hash(h: &impl std::hash::Hash) -> u64 {
+    let mut dh = std::collections::hash_map::DefaultHasher::new();
+    h.hash(&mut dh);
+    std::hash::Hasher::finish(&dh)
+}

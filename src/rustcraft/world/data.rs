@@ -34,12 +34,12 @@ impl WorldData {
                         ).into();
                         if let Some(c) = self.blocks.chunks.get_mut(&p) {
                             if c.chunk.chunk_state == ChunkState::Empty {
-                                c.chunk.gen_terrain(&self.noise, reg);
+                                c.chunk.gen_terrain(&*self.noise, reg);
                                 work += 1;
                             }
                         } else {
                             let mut chunk = Box::new(Chunk::new(p, self.air.clone()));
-                            chunk.gen_terrain(&self.noise, reg);
+                            chunk.gen_terrain(&*self.noise, reg);
                             let mut chunk_data = ChunkData {
                                 chunk,
                                 loaded_neighbours: 0, 

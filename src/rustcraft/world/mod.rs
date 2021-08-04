@@ -45,7 +45,7 @@ pub struct WorldData {
     pub blocks: VoxelData,
     pub seed: String,
     pub air: Block,
-    pub noise: TerrainGen,
+    pub noise: Box<dyn TerrainGenerator>,
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
     pub to_update: Vec<BlockPos>,
@@ -54,17 +54,7 @@ pub struct WorldData {
 impl WorldData {
     
     pub fn new(seed: &str, air: Block) -> Self {
-        let noise = crate::perlin::PerlinNoise::new(seed.to_owned(), 4, 0.5);
-        let noise_basic = crate::perlin::PerlinNoise::new(seed.to_owned(), 1, 1.);
-        let palettes = [
-            ["stone","dirt","grass"],
-            ["stone","sand","sand"]
-        ];
-        let noise = TerrainGen {
-            noise,
-            noise_basic,
-            palettes
-        };
+        let noise = IslandGenerator::new_dyn(seed);
         let mut ecs = hecs::World::new();
         let mut tree = BVH::new();
         let player = {

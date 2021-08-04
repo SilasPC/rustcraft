@@ -17,7 +17,7 @@ impl std::fmt::Debug for PerlinNoise {
 }
 
 impl PerlinNoise {
-    pub fn new(seed: String, octaves: usize, fallout: f64) -> PerlinNoise {
+    pub fn new(seed: &str, octaves: usize, fallout: f64) -> PerlinNoise {
         let mut perm = [0; 512];
 
         let mut seed_buf = [0; 32];
