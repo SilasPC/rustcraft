@@ -4,7 +4,7 @@ use derive_more::*;
 use cgmath::*;
 use serde::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Face {
     XPos,
     XNeg,

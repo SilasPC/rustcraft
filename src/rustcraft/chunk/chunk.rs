@@ -36,8 +36,7 @@ pub struct Chunk {
     pub pos: ChunkPos,
     pub data: BlocksData,
     pub light: LightData,
-    pub light_updates: VecDeque<BlockPos>,
-    pub light_remove_updates: VecDeque<(BlockPos, u8)>,
+    pub light_updates: LightUpdates,
     pub mesh: Option<(VAO, VAO)>,
 }
 /* 
@@ -137,7 +136,7 @@ impl Chunk {
     pub fn new(pos: ChunkPos, air: Block) -> Self {
         let data = vec![vec![vec![air;16];16];16];
         let light = [[[Light::default(); 16]; 16]; 16];
-        Self { light_remove_updates: VecDeque::new(), light_updates: VecDeque::new(), chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
+        Self { light_updates: LightUpdates::default(), chunk_state: ChunkState::Empty, data, mesh: None, pos, needs_refresh: false, light }
     }
 
     pub fn world_pos(&self) -> Vector3<f32> {
@@ -176,13 +175,7 @@ impl Chunk {
         let old_light = &mut self.light[sc.x][sc.y][sc.z];
         let block = &mut self.data[sc.x][sc.y][sc.z];
         if old_light.block() != block.light {
-            let remove = old_light.block() > block.light;
-            let val = pos.as_block();
-            if remove {
-                self.light_remove_updates.push_back((val, block.light));
-            } else {
-                self.light_updates.push_back(val);
-            }
+            self.light_updates.reg_block(&pos.as_block(), old_light.block(), block.light);
             self.light[sc.x][sc.y][sc.z].set_block(block.light);
             self.needs_refresh = true;
         }
