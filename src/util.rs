@@ -8,8 +8,14 @@ use std::ffi::CString;
 use crate::prelude::*;
 
 use derive_more::*;
-#[derive(Deref, DerefMut, From, Into, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[derive(Default, Deref, DerefMut, Into, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct ArcStr(Arc<String>);
+
+impl<T: AsRef<str>> From<T> for ArcStr {
+    fn from(s: T) -> Self {
+        ArcStr(s.as_ref().to_owned().into())
+    }
+}
 
 impl serde::Serialize for ArcStr {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>  {

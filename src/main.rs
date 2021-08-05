@@ -103,14 +103,9 @@ fn init_idata() -> data::IData {
         Texture::from_path("assets/break_atlas.png"),
         4
     ).into();
-    let mut content = ContentBuilder::new();
-    
-    use content::base::*;
-    register_components(&mut content);
-    register_entities(&mut content);
-    register_items(&mut content);
-    register_recipies(&mut content);
 
+    let mut content = ContentBuilder::new();
+    content.load_mod(&mut content::base::BaseMod);
     let content: Arc<_> = content.finish(Arc::clone(&atlas)).into();
 
     let font = Font::from_font_files("assets/font.png", "assets/font.fnt").into();

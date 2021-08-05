@@ -73,66 +73,13 @@ fn chest_use(pos: BlockPos, data: &mut WorldData) {
 }
 
 const fn one() -> usize {1}
-/* 
-fn grass_update(mut pos: BlockPos, data: &mut WorldData) {
-    pos.0.y += 1;
-    let mut turn_to_dirt = false;
-    if let Some(block) = world.block_at(&pos) {
-        turn_to_dirt = block.solid || !block.transparent;
-    }
-    if turn_to_dirt {
-        pos.0.y -= 1;
-        world.set_block_at(&pos, data.registry.get("dirt").as_block().unwrap());
-    }
-}
-
-fn fire_update(pos: BlockPos, data: &mut WorldData) {
-    use rand::Rng;
-    let mut r = rand::thread_rng();
-    if r.gen::<f32>() < 0.9 {
-        world.to_update.push(pos);
-        return
-    }
-    let fire = data.registry.get("glowstone").as_block().unwrap(); // tmp glowstone
-    let air = data.registry.get("air").as_block().unwrap();
-    macro_rules! test {
-        ($x:expr) => {test!($x, 0.2)};
-        ($x:expr, always) => {{
-            let npos = pos + $x.into();
-            if data.world.block_at(&npos).map(|b| b.flammable).unwrap_or(false) {
-                let above = npos + (0,1,0).into();
-                if data.world.replace_at(&above, fire) {
-                    data.world.to_update.push(above);
-                }
-            }
-        }};
-        ($x:expr, $p:expr) => {{
-            if r.gen::<f32>() < $p {
-                test!($x, always);
-            }
-        }};
-    }
-    for y in -1..=1 {
-        test!((1,y,0));
-        test!((-1,y,0));
-        test!((0,y,1));
-        test!((0,y,-1));
-    }
-    if r.gen::<f32>() < 0.9 {
-        let below = pos + (0,-1,0).into();
-        data.world.set_block_at(&pos, &air);
-        data.world.set_block_at(&below, &air);
-        test!((0,-2,0), 0.5);
-    } else {
-        data.world.to_update.push(pos);
-    }
-} */
 
 pub struct ContentBuilder {
     pub items: HashMap<String, ItemLike>,
     pub crafting: CraftingRegistry,
     pub entities: EntityRegistry,
     pub components: ComponentRegistry,
+    pub behaviors: BehaviorRegistry,
 }
 
 impl ContentBuilder {
@@ -142,7 +89,15 @@ impl ContentBuilder {
             crafting: CraftingRegistry::new(),
             entities: EntityRegistry::new(),
             components: ComponentRegistry::new(),
+            behaviors: BehaviorRegistry::default(),
         }
+    }
+    pub fn load_mod(&mut self, cmod: &mut dyn ContentMod) {
+        cmod.register_components(self);
+        cmod.register_entities(self);
+        cmod.register_behaviors(self);
+        cmod.register_items(self);
+        cmod.register_recipies(self);
     }
     pub fn finish(self, texture_atlas: Arc<TextureAtlas>) -> Content {
         Content {
@@ -153,6 +108,7 @@ impl ContentBuilder {
             crafting: self.crafting,
             entities: self.entities,
             components: self.components,
+            behaviors: self.behaviors,
         }
     }
 }
@@ -162,4 +118,19 @@ pub struct Content {
     pub crafting: CraftingRegistry,
     pub entities: EntityRegistry,
     pub components: ComponentRegistry,
+    pub behaviors: BehaviorRegistry,
+}
+
+#[derive(Default)]
+pub struct BehaviorRegistry {
+    pub behaviors: HashMap<String, BehaviorFn>,
+}
+
+pub trait ContentMod {
+    fn name(&mut self) -> &str;
+    fn register_components(&mut self, cnt: &mut ContentBuilder) {}
+    fn register_entities(&mut self, cnt: &mut ContentBuilder) {}
+    fn register_behaviors(&mut self, cnt: &mut ContentBuilder) {}
+    fn register_items(&mut self, cnt: &mut ContentBuilder) {}
+    fn register_recipies(&mut self, cnt: &mut ContentBuilder) {}
 }

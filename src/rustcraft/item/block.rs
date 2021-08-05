@@ -110,6 +110,11 @@ impl Block {
         mt.1 = false;
         &mut mt.0
     }
+    #[deprecated(note = "don't mutate something shared")]
+    pub fn mutate_shared(&mut self) -> &mut BlockData {
+        let mt = Arc::make_mut(&mut self.0);
+        &mut mt.0
+    }
     pub fn is_shared(&self) -> bool {self.0.1}
     // pub fn ptr_eq(&self, rhs: &Self) -> bool {Arc::ptr_eq(&self.0, &rhs.0)}
     pub fn render_eq(&self, rhs: &Self) -> bool {self.0.0.render_eq(&rhs.0.0)}
@@ -121,7 +126,7 @@ impl Block {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct BlockData {
     pub id: ArcStr,
     pub name: String,
@@ -142,8 +147,6 @@ pub struct BlockData {
     #[serde(default)]
     pub no_render: bool,
     pub texture: (usize,usize,usize),
-    #[serde(default)]
-    pub has_gravity: bool,
     #[serde(default)]
     pub drops: Option<ArcStr>,
     #[serde(skip)]
