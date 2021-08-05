@@ -3,7 +3,9 @@ mod data;
 mod raycast;
 mod generation;
 mod voxel_data;
+pub mod updates;
 
+use crate::world::updates::Updates;
 pub use generation::*;
 pub use data::*;
 pub use raycast::*;
@@ -41,6 +43,7 @@ pub struct VoxelData {
 }
 
 pub struct WorldData {
+    pub block_updates: Updates,
     pub entities: EntityData,
     pub blocks: VoxelData,
     pub seed: String,
@@ -72,7 +75,8 @@ impl WorldData {
             chunks: HashMap::new(),
             changed_chunks: HashSet::new(),
         };
-        WorldData { entities, to_update: vec![], to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
+        let block_updates = Updates::default();
+        WorldData { block_updates, entities, to_update: vec![], to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
     }
 
 }

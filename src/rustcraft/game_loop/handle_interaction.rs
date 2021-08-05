@@ -5,10 +5,10 @@ use crate::game_loop::handle_input::Return;
 use crate::util::Drawable;
 use crate::game_loop::InventoryRenderer;
 use crate::util::DebugText;
-use crate::game_loop::Updates;
 use crate::game_loop::Text;
 use crate::game_loop::GameState;
 use crate::prelude::*;
+use world::updates::Updates;
 
 impl<'a> GameLoop<'a> {
     pub fn handle_interaction(&mut self, ret: Return) -> Option<RayCastHit> {
@@ -89,8 +89,7 @@ impl<'a> GameLoop<'a> {
                                     );
                                     to_spawn.push((cmps,aabb));
                                 }
-                                self.block_updates.add_area(hit.as_block());
-                                // self.data.self.world.to_update.push(hit.as_block());
+                                self.world.block_updates.add_area(hit.as_block());
                             }
                         }
                     }
@@ -103,8 +102,8 @@ impl<'a> GameLoop<'a> {
                         if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
                             if self.world.blocks.set_block_at(&hit_prev, &block) {
                                 success = true;
-                                self.block_updates.add_area(hit_prev);
-                                self.block_updates.add_single(hit_prev);
+                                self.world.block_updates.add_area(hit_prev);
+                                self.world.block_updates.add_single(hit_prev);
                                 self.world.to_update.push(hit_prev);
                             }
                         } else {

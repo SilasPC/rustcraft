@@ -4,6 +4,27 @@ use derive_more::*;
 use cgmath::*;
 use serde::*;
 
+#[derive(Clone, Copy, Debug)]
+pub enum Face {
+    XPos,
+    XNeg,
+    YPos,
+    YNeg,
+    ZPos,
+    ZNeg,
+}
+
+impl Face {
+    #[inline(always)]
+    pub fn iter_all() -> impl Iterator<Item = Face> {
+        [
+            Face::XNeg, Face::XPos,
+            Face::YNeg, Face::YPos,
+            Face::ZNeg, Face::ZPos,
+        ].iter().copied()
+    }
+}
+
 #[derive(From, Into, Clone, Copy, Debug)]
 /// Y-axis is upwards.
 pub struct PixelPos(pub (i32, i32));
@@ -125,6 +146,16 @@ impl WorldPos {
     }
 }
 impl BlockPos {
+    pub fn shifted(&self, f: Face) -> Self {
+        match f {
+            Face::XNeg => *self + (-1,0,0).into(),
+            Face::XPos => *self + (1,0,0).into(),
+            Face::YNeg => *self + (0,-1,0).into(),
+            Face::YPos => *self + (0,1,0).into(),
+            Face::ZNeg => *self + (0,0,-1).into(),
+            Face::ZPos => *self + (0,0,1).into(),
+        }
+    }
     pub fn as_tuple(&self) -> (i32,i32,i32) {
         self.0.into()
     }
@@ -206,7 +237,6 @@ impl AsCoord for Vector3<f32> {
         WorldPos(*self)
     }
 }
-
 
 impl AsCoord for (f32,f32,f32) {
     fn as_coord(&self) -> WorldPos {

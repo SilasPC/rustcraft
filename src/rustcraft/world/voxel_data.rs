@@ -1,6 +1,7 @@
 
 use super::*;
 use crate::prelude::*;
+use game::chunk::*;
 
 impl VoxelData {
 

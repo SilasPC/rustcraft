@@ -1,4 +1,5 @@
 
+use game::world::updates::Updates;
 use crate::prelude::*;
 use super::*;
 
@@ -14,7 +15,7 @@ impl<'a> GameLoop<'a> {
 
             let start = Instant::now();
             
-            self.block_updates.update(&mut self.world);
+            Updates::update(&mut self.world);
             self.world.ticks += 1;
 
             component::ItemCmp::system_tick_age_items(&mut self.world);

@@ -2,7 +2,7 @@
 use std::time::Duration;
 
 /// Seed used for world generation
-pub const DEBUG_SEED: &'static str = "seed!";
+pub const DEBUG_SEED: &'static str = "a new seed!";
 /// Tick interval duration
 pub const TICK_DURATION: Duration = Duration::from_millis(50);
 /// Number of random ticks per chunk per game tick

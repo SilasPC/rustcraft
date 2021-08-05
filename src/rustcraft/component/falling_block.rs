@@ -6,7 +6,9 @@ pub struct FallingBlock {
 }
 
 impl FallingBlock {
+
     pub fn of(block: Block) -> Self { Self { block } }
+
     pub fn system_collide_land(data: &mut WorldData) {
         let mut to_destroy = vec![];
         let mut to_spawn = vec![];
@@ -33,4 +35,27 @@ impl FallingBlock {
             let _ = data.entities.ecs.despawn(ent);
         }
     }
+
+    pub fn behaviour_on_update(pos: BlockPos, data: &mut WorldData) {
+        let block = data.blocks.block_at(&pos).unwrap();
+        if block.has_gravity {
+            let below = pos.shifted(Face::YNeg);
+            if let Some(below) = data.blocks.block_at(&below) {
+                let below = below.as_ref();
+                if !below.solid {
+                    let block = block.clone();
+                    data.blocks.set_block_at(&pos, &data.air);
+                    let pos_comp = Position::new(pos.as_world(), (1.,1.,1.).into());
+                    let phys = Physics::new();
+                    let aabb = pos_comp.get_aabb();
+                    let falling_block = data.entities.ecs.spawn((
+                        pos_comp, phys, FallingBlock::of(block)
+                    ));
+                    data.entities.tree.insert(falling_block, falling_block, &aabb);
+                    data.block_updates.add_area(pos);
+                }
+            }
+        }
+    }
+
 }
