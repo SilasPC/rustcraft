@@ -11,6 +11,7 @@ pub mod coords;
 pub mod rustcraft;
 pub mod perlin;
 pub mod consts;
+use crate::builder::ContentBuilder;
 use crate::game_loop::GameLoop;
 use crate::util::gen_full_block_vao;
 use crate::lines::box_vao;
@@ -38,6 +39,7 @@ pub mod prelude {
     #[macro_use]
     pub use util;
     pub use engine;
+    pub use engine::audio::{AudioSys, self};
     pub use rustcraft as game;
     pub use crate::rustcraft::world::{self, *};
     pub use crate::rustcraft::item::*;
@@ -58,8 +60,6 @@ use crate::prelude::*;
 
 fn main() {
 
-    
-    engine::audio::do_it();
     let mut data = init_data();
     let mut rdata = init_rdata(&data);
     let idata = init_idata();
@@ -89,6 +89,7 @@ fn init_data() -> data::Data {
     display.set_fullscreen(settings.fullscreen);
     data::Data {
         display,
+        audio: AudioSys::new(),
         input: Input::default(),
         settings,
         paused: false,

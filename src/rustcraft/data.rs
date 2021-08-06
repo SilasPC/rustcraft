@@ -24,6 +24,7 @@ pub struct RData {
 
 pub struct Data {
     pub display: GLDisplay,
+    pub audio: AudioSys,
     pub event_pump: sdl2::EventPump,
     pub input: Input,
     pub settings: Settings,

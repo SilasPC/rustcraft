@@ -7,79 +7,73 @@ use lewton::VorbisError;
 use lewton::inside_ogg::OggStreamReader;
 use alto::Source;
 
-pub fn do_it() {
-    let alto = alto::Alto::load_default().unwrap();
+pub struct AudioSys {
+	alto: alto::Alto,
+	device: Option<(alto::OutputDevice, alto::Context)>,
+}
 
-    for s in alto.enumerate_outputs() {
-        println!("Found device: {}", s.to_str().unwrap());
-    }
-    
-    let device = alto.open(None).unwrap(); // Opens the default audio device
-    let cxt = device.new_context(None).unwrap(); // Creates a default context
-    
-    // Configure listener
-    cxt.set_position([1.0, 4.0, 5.0]);
-    cxt.set_velocity([2.5, 0.0, 0.0]);
-    cxt.set_orientation(([0.0, 0.0, 1.0], [0.0, 1.0, 0.0]));
-    
-    
-    // Now you can load your samples and store them in a buffer with
-    // `context.new_buffer(samples, frequency)`;
-
-    let f = std::fs::File::open("assets/sample.ogg").expect("Can't open file");
-
-	// Prepare the reading
-	let mut srr = OggStreamReader::new(f).unwrap();
-
-    let mut src = cxt.new_streaming_source()
-		.expect("could not create streaming src");
-	let sample_rate = srr.ident_hdr.audio_sample_rate as i32;
-
-    if srr.ident_hdr.audio_channels > 2 {
-		// the openal crate can't process these many channels directly
-		println!("Stream error: {} channels are too many!", srr.ident_hdr.audio_channels);
+impl AudioSys {
+	pub fn new() -> Self {
+		let alto = alto::Alto::load_default().unwrap();
+		let device = alto.open(None).ok()
+			.and_then(|d| d.new_context(None).map(|ctx| (d, ctx)).ok());
+		Self {
+			device,
+			alto,
+		}
 	}
+	pub fn active_device(&self) -> Option<String> {
+		use alto::DeviceObject;
+		self.device.as_ref().and_then(|d| d.0.specifier()).map(|ds| ds.to_string_lossy().into_owned())
+	}
+	pub fn list_devices(&self) -> Vec<String> {
+		self.alto.enumerate_outputs()
+			.into_iter()
+			.map(|cs| cs.to_string_lossy().into_owned())
+			.collect()
+	}
+	pub fn play(&self, s: &mut Sound) {
+		s.src.play();
+	}
+}
 
-	println!("Sample rate: {}", srr.ident_hdr.audio_sample_rate);
+pub struct Sound {
+	src: alto::StaticSource,
+}
 
-	// Now the fun starts..
-	let mut n = 0;
-	let mut len_play = 0.0;
-	let mut start_play_time = None;
-	let start_decode_time = Instant::now();
-	let sample_channels = srr.ident_hdr.audio_channels as f32 *
-		srr.ident_hdr.audio_sample_rate as f32;
-	while let Some(pck_samples) = srr.read_dec_packet_itl().unwrap() {
-		println!("Decoded packet no {}, with {} samples.", n, pck_samples.len());
-		n += 1;
+impl Sound {
+	pub fn load(cxt: &alto::Context, p: &str) -> Self {
+		let f = std::fs::File::open(p).expect("Can't open file");
+		let mut srr = OggStreamReader::new(f).unwrap();
+		let mut src = cxt.new_static_source()
+			.expect("could not create streaming src");
+		let sample_rate = srr.ident_hdr.audio_sample_rate as i32;
+
+		if srr.ident_hdr.audio_channels > 2 {
+			println!("Stream error: {} channels are too many!", srr.ident_hdr.audio_channels);
+		}
+
+		let sample_channels = srr.ident_hdr.audio_channels as f32 *
+			srr.ident_hdr.audio_sample_rate as f32;
+
+		let mut samples = vec![];
+		let mut len = 0.;
+		while let Some(pck_samples) = srr.read_dec_packet_itl().unwrap() {
+			len += pck_samples.len() as f32 / sample_channels;
+			samples.extend(pck_samples);
+		}
+
 		let buf = match srr.ident_hdr.audio_channels {
-			1 => cxt.new_buffer::<Mono<i16>,_>(&pck_samples, sample_rate),
-			2 => cxt.new_buffer::<Stereo<i16>,_>(&pck_samples, sample_rate),
+			1 => cxt.new_buffer::<Mono<i16>,_>(&samples, sample_rate),
+			2 => cxt.new_buffer::<Stereo<i16>,_>(&samples, sample_rate),
 			n => panic!("unsupported number of channels: {}", n),
 		}.unwrap();
 
-		src.queue_buffer(buf).unwrap();
+		src.set_buffer(buf.into());
 
-		len_play += pck_samples.len() as f32 / sample_channels;
-		// If we are faster than realtime, we can already start playing now.
-		if n == 100 {
-			let cur = Instant::now();
-			if cur - start_decode_time < Duration::from_millis((len_play * 1000.0) as u64) {
-				start_play_time = Some(cur);
-				src.play();
-			}
+		Self {
+			src
 		}
-	}
-	let total_duration = Duration::from_millis((len_play * 1000.0) as u64);
-	let sleep_duration = total_duration - match start_play_time {
-			None => {
-				src.play();
-				Duration::from_millis(0)
-			},
-			Some(t) => (Instant::now() - t)
-		};
-	println!("The piece is {} s long.", len_play);
-	std::thread::sleep(sleep_duration);
-    panic!("done");
 
+	}
 }

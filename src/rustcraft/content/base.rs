@@ -2,6 +2,7 @@
 use crate::content::SavedRecipies;
 use crate::content::SerialItemRegistry;
 use crate::prelude::*;
+use super::builder::*;
 
 pub struct BaseMod;
 impl ContentMod for BaseMod {
