@@ -24,6 +24,8 @@ derive_more = "*"
 scanlex = "*"
 pathfinding = "*"
 itertools = "*"
+alto = "*"
+lewton = "*"
 
 [profile.dev]
 opt-level = 3

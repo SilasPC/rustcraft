@@ -58,6 +58,8 @@ use crate::prelude::*;
 
 fn main() {
 
+    
+    engine::audio::do_it();
     let mut data = init_data();
     let mut rdata = init_rdata(&data);
     let idata = init_idata();
