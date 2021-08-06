@@ -24,12 +24,6 @@ impl<'a> GameLoop<'a> {
             let mut rng = rand::thread_rng();
             use rand::prelude::*;
     
-            for p in std::mem::take(&mut self.world.to_update) {
-                if let Some(on_update) = self.world.blocks.block_at(&p).map(|b| b.behavior.clone()).flatten().map(|beh| beh.on_update).flatten() {
-                    on_update(p, &mut self.world)
-                }
-            }
-    
             let keys = self.world.blocks.chunks.iter()
                 .filter(|(_,c)|
                     c.all_neighbours_loaded() &&
@@ -42,8 +36,7 @@ impl<'a> GameLoop<'a> {
                 for _ in 0..consts::RANDOM_TICK_SPEED {
                     let random = rng.gen::<(i32,i32,i32)>();
                     let pos = cp.as_block() + Vector3::from(random).map(|x| x.abs() % 16).into();
-                    assert_eq!(cp, pos.as_chunk());
-                    if let Some(on_rnd_tick) = self.world.blocks.block_at(&pos).map(|b| b.behavior.clone()).flatten().map(|beh| beh.on_rnd_tick).flatten() {
+                    if let Some(on_rnd_tick) = self.world.blocks.block_at(&pos).and_then(|b| b.behavior.as_ref()).and_then(|beh| beh.on_rnd_tick.as_ref()) {
                         on_rnd_tick(pos, &mut self.world)
                     }
                 }

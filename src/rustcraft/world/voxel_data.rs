@@ -3,12 +3,39 @@ use super::*;
 use crate::prelude::*;
 use game::chunk::*;
 
+/// Automatically handles update logic needed with `VoxelData::block_at_mut_unguarded` on drop
+pub struct BlockMutGuard<'w> {
+    pos: BlockPos,
+    voxels: &'w mut VoxelData,
+}
+
+impl<'w> BlockMutGuard<'w> {
+    pub fn get_mut(&mut self) -> Option<&mut Block> {
+        let pos = self.pos;
+        self.voxels.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(&pos))
+    }
+}
+
+impl<'w> Drop for BlockMutGuard<'w> {
+    fn drop(&mut self) {
+        self.voxels.register_change(&self.pos);
+        self.voxels.chunk_at_mut(self.pos.as_chunk()).unwrap().light_update(&self.pos);
+    }
+}
+
 impl VoxelData {
+
+    pub fn block_at_mut(&mut self, pos: &impl Coord) -> BlockMutGuard<'_> {
+        BlockMutGuard {
+            voxels: self,
+            pos: pos.as_block()
+        }
+    }
 
     /// The caller has responsibility to register changes with
     /// the method `VoxelData::register_change(..)`, as well as
     /// registering changes to the chunk directly.
-    pub fn block_at_mut(&mut self, pos: &impl Coord) -> Option<&mut Block> {
+    pub fn block_at_mut_unguarded(&mut self, pos: &impl Coord) -> Option<&mut Block> {
         self.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(pos))
     }
     pub fn block_at(&self, pos: &impl Coord) -> Option<&Block> {

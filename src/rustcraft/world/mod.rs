@@ -27,13 +27,13 @@ pub struct EntityData {
 
 pub struct ChunkData {
     pub chunk: Box<Chunk>,
-    /// Self is treated as a neighbour, so count should be in 0..=27
+    /// Self is not treated as a neighbour, so count should be in 0..=26
     pub loaded_neighbours: usize,
 }
 
 impl ChunkData {
     pub fn all_neighbours_loaded(&self) -> bool {
-        self.loaded_neighbours == 27
+        self.loaded_neighbours == 26
     }
 }
 
@@ -51,7 +51,6 @@ pub struct WorldData {
     pub noise: Box<dyn TerrainGenerator>,
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
-    pub to_update: Vec<BlockPos>,
 }
 
 impl WorldData {
@@ -76,7 +75,7 @@ impl WorldData {
             changed_chunks: HashSet::new(),
         };
         let block_updates = Updates::default();
-        WorldData { block_updates, entities, to_update: vec![], to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
+        WorldData { block_updates, entities, to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
     }
 
 }

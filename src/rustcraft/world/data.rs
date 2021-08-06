@@ -105,6 +105,7 @@ impl WorldData {
                         {
                             let (m1, m2) = meshing::make_mesh(p, &self.blocks, reg);
                             let c = self.blocks.chunks.get_mut(&p).unwrap();
+                            assert_eq!(c.loaded_neighbours, 26);
                             if let Some(mesh) = &mut c.chunk.mesh {
                                 mesh.0.update_lit(&m1.0, &m1.1, &m1.2);
                                 mesh.1.update_lit(&m2.0, &m2.1, &m2.2);

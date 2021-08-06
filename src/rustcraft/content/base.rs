@@ -45,7 +45,7 @@ impl ContentMod for BaseMod {
         }
         macro_rules! add_behavior {
             ($id:expr, $beh:expr) => {
-                reg.items.get_mut("sand")
+                reg.items.get_mut($id)
                     .unwrap()
                     .as_block_mut()
                     .unwrap()
@@ -55,6 +55,10 @@ impl ContentMod for BaseMod {
         }
         add_behavior!("sand", Behavior {
             on_update: Some(FallingBlock::behaviour_on_update),
+            ..Default::default()
+        });
+        add_behavior!("glowstone", Behavior {
+            on_rnd_tick: Some(rnd_glow_dec),
             ..Default::default()
         });
         /* add_behavior!("grass", Behavior {
@@ -75,6 +79,20 @@ impl ContentMod for BaseMod {
                 .take(9)
                 .collect();
             reg.crafting.register(true, input, ItemStack::of(reg.items.get(&shaped.output).cloned().unwrap(), 1));
+        }
+    }
+}
+
+fn rnd_glow_dec(pos: BlockPos, world: &mut WorldData) {
+    let mut guard = world.blocks.block_at_mut(&pos);
+    let b = guard.get_mut().unwrap();
+    println!("{:?} decrease?", b);
+    if b.light > 1 {
+        let mb = b.mutate();
+        mb.light -= 5.min(mb.light);
+        println!("{:?} decreased", pos);
+        if mb.light == 0 {
+            mb.behavior.as_mut().unwrap().on_rnd_tick = None;
         }
     }
 }

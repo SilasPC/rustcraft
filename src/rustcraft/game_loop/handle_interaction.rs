@@ -104,7 +104,6 @@ impl<'a> GameLoop<'a> {
                                 success = true;
                                 self.world.block_updates.add_area(hit_prev);
                                 self.world.block_updates.add_single(hit_prev);
-                                self.world.to_update.push(hit_prev);
                             }
                         } else {
                             let b = self.world.blocks.block_at(&hit).unwrap();

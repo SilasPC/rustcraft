@@ -49,6 +49,7 @@ drops = "sand"
 [[block]]
 id = "leaves"
 name = "Leaves"
+solid = false
 flammable = true
 transparent = true
 replacable = true
