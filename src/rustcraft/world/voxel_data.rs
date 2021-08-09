@@ -18,7 +18,7 @@ impl<'w> BlockMutGuard<'w> {
 
 impl<'w> Drop for BlockMutGuard<'w> {
     fn drop(&mut self) {
-        self.voxels.register_change(&self.pos);
+        self.voxels.register_mesh_change(self.pos);
         self.voxels.chunk_at_mut(self.pos.as_chunk()).unwrap().light_update(&self.pos);
     }
 }
@@ -49,7 +49,7 @@ impl VoxelData {
             .map(|c| c.set_at(pos, block))
             .unwrap_or(false);
         if success {
-            self.register_change(&pos.as_chunk());
+            self.register_mesh_change(pos.as_block());
         }
         success
     }
@@ -85,8 +85,20 @@ impl VoxelData {
         }
     }
 
-    pub fn register_change(&mut self, pos: &impl Coord) {
-        self.changed_chunks.insert(pos.as_chunk());
+    pub fn register_mesh_change(&mut self, pos: BlockPos) {
+        for f in Face::iter_all() {
+            if let Some(b) = self.block_at(&pos.shifted(f)) {
+                if b.transparent {
+                    self.changed_chunks.insert(pos.as_chunk());
+                    for f in Face::iter_all() {
+                        self.changed_chunks.insert(
+                            pos.shifted(f).as_chunk()
+                        );
+                    }
+                    break
+                }
+            }
+        }
     }
 
     pub fn light_at(&self, pos: &impl Coord) -> &Light {
@@ -113,14 +125,14 @@ impl VoxelData {
         }
         // println!("{}",cc.len());
         for cp in cc {
-            for x in -1..=1 {
+            /* for x in -1..=1 {
                 for y in -1..=1 {
-                    for z in -1..=1 {
-                        let p = Vector3 {
+                    for z in -1..=1 { */
+                        let p = cp; /* Vector3 {
                             x: x + cp.x,
                             y: y + cp.y,
                             z: z + cp.z,
-                        };
+                        }; */
                         // ! make_mesh is slow, old version faster
                         // ! need to make another solution here
                         // ! need to make a hybrid version as well
@@ -136,9 +148,9 @@ impl VoxelData {
                         c.needs_refresh = false;
                         c.chunk_state = ChunkState::Rendered;
                         meshed.insert(p);
-                    }
+                    /* }
                 }
-            }
+            } */
         }
     }
 

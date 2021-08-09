@@ -132,6 +132,8 @@ pub struct BlockData {
     pub name: String,
     #[serde(default = "yes")]
     pub solid: bool,
+    #[serde(default = "yes")]
+    pub hitbox: bool,
     #[serde(default)]
     pub transparent: bool,
     #[serde(default)]

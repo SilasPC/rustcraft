@@ -2,6 +2,7 @@
 [[block]]
 id = "air"
 name = "Air"
+hitbox = false
 no_render = true
 transparent = true
 replacable = true

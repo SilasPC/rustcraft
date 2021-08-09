@@ -41,7 +41,7 @@ impl VoxelData {
 
     fn check_hit(&self, pos: &impl Coord) -> bool {
         self.block_at(pos)
-            .map(|b| b.solid)
+            .map(|b| b.hitbox)
             .unwrap_or(false)
     }
 

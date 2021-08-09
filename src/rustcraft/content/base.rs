@@ -43,22 +43,21 @@ impl ContentMod for BaseMod {
         for (k, v) in map {
             assert!(reg.items.insert(k, v).is_none())
         }
-        macro_rules! add_behavior {
-            ($id:expr, $beh:expr) => {
+        macro_rules! mut_shr {
+            ($id:expr) => {
                 reg.items.get_mut($id)
                     .unwrap()
                     .as_block_mut()
                     .unwrap()
                     .mutate_shared()
-                    .behavior = Some(box $beh);
             };
         }
-        add_behavior!("sand", Behavior {
+        mut_shr!("sand").behavior = Some(box Behavior {
             on_update: Some(FallingBlock::behaviour_on_update),
             ..Default::default()
         });
-        add_behavior!("glowstone", Behavior {
-            on_rnd_tick: Some(rnd_glow_dec),
+        mut_shr!("glowstone").behavior = Some(box Behavior {
+            on_update: Some(rnd_glow_dec),
             ..Default::default()
         });
         /* add_behavior!("grass", Behavior {
@@ -86,11 +85,11 @@ impl ContentMod for BaseMod {
 fn rnd_glow_dec(pos: BlockPos, world: &mut WorldData) {
     let mut guard = world.blocks.block_at_mut(&pos);
     let b = guard.get_mut().unwrap();
-    println!("{:?} decrease?", b);
+    // println!("{:?} decrease?", b);
     if b.light > 1 {
         let mb = b.mutate();
         mb.light -= 5.min(mb.light);
-        println!("{:?} decreased", pos);
+        // println!("{:?} decreased", pos);
         if mb.light == 0 {
             mb.behavior.as_mut().unwrap().on_rnd_tick = None;
         }
