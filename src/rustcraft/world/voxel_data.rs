@@ -3,7 +3,7 @@ use super::*;
 use crate::prelude::*;
 use game::chunk::*;
 
-/// Automatically handles update logic needed with `VoxelData::block_at_mut_unguarded` on drop
+/*// Automatically handles update logic needed with `VoxelData::block_at_mut_unguarded` on drop
 pub struct BlockMutGuard<'w> {
     pos: BlockPos,
     voxels: &'w mut VoxelData,
@@ -21,30 +21,24 @@ impl<'w> Drop for BlockMutGuard<'w> {
         self.voxels.register_mesh_change(self.pos);
         self.voxels.chunk_at_mut(self.pos.as_chunk()).unwrap().light_update(&self.pos);
     }
-}
+}*/
 
-impl VoxelData {
+impl<'cnt: 'b, 'b> VoxelData<'cnt> {
 
-    pub fn block_at_mut(&mut self, pos: &impl Coord) -> BlockMutGuard<'_> {
+    /* pub fn block_at_mut(&mut self, pos: &impl Coord) -> BlockMutGuard<'_> {
         BlockMutGuard {
             voxels: self,
             pos: pos.as_block()
         }
-    }
+    } */
 
-    /// The caller has responsibility to register changes with
-    /// the method `VoxelData::register_change(..)`, as well as
-    /// registering changes to the chunk directly.
-    pub fn block_at_mut_unguarded(&mut self, pos: &impl Coord) -> Option<&mut Block> {
-        self.chunk_at_mut(pos.as_chunk()).map(|c| c.block_at_mut(pos))
-    }
-    pub fn block_at(&self, pos: &impl Coord) -> Option<&Block> {
+    pub fn block_at(&'b self, pos: &impl Coord) -> Option<&'cnt BlockData> {
         self.chunk_at(pos.as_chunk()).map(|c| c.block_at(pos))
     }
-    pub fn block_at_any_state(&self, pos: &impl Coord) -> Option<&Block> {
+    pub fn block_at_any_state(&'b self, pos: &impl Coord) -> Option<&'cnt BlockData> {
         self.chunks.get(&pos.as_chunk()).map(|c| c.chunk.block_at(pos))
     }
-    pub fn set_block_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
+    pub fn set_block_at(&'b mut self, pos: &impl Coord, block: &'cnt BlockData) -> bool {
         let success = self.chunk_at_mut(pos.as_chunk())
             .map(|c| c.set_at(pos, block))
             .unwrap_or(false);
@@ -53,7 +47,7 @@ impl VoxelData {
         }
         success
     }
-    pub fn set_block_at_any_state(&mut self, pos: &impl Coord, block: &Block) -> bool {
+    pub fn set_block_at_any_state(&mut self, pos: &impl Coord, block: &'cnt BlockData) -> bool {
         let success = self.chunks.get_mut(&pos.as_chunk())
             .map(|c| c.chunk.set_at(pos, block))
             .unwrap_or(false);
@@ -62,7 +56,7 @@ impl VoxelData {
         }
         success
     }
-    pub fn replace_at(&mut self, pos: &impl Coord, block: &Block) -> bool {
+    pub fn replace_at(&'b mut self, pos: &impl Coord, block: &'cnt BlockData) -> bool {
         if let Some(c) = self.chunk_at_mut(pos.as_chunk()) {
             if c.block_at(pos).replacable {
                 c.set_at(pos, block)
@@ -73,7 +67,7 @@ impl VoxelData {
             false
         }
     }
-    pub fn replace_at_any_state(&mut self, pos: &impl Coord, block: &Block) -> bool {
+    pub fn replace_at_any_state(&mut self, pos: &impl Coord, block: &'cnt BlockData) -> bool {
         if let Some(c) = self.chunks.get_mut(&pos.as_chunk()) {
             if c.chunk.block_at(pos).replacable {
                 c.chunk.set_at(pos, block)
@@ -108,14 +102,14 @@ impl VoxelData {
         self.chunk_at_mut(pos.as_chunk()).unwrap().light_at_mut(pos)
     }
 
-    pub fn chunk_at(&self, pos: ChunkPos) -> Option<&Chunk> {
+    pub fn chunk_at(&self, pos: ChunkPos) -> Option<&Chunk<'cnt>> {
         self.chunks.get(&pos).filter(|c| c.chunk.chunk_state >= ChunkState::Detailed).map(|cd| cd.chunk.as_ref())
     }
-    pub fn chunk_at_mut(&mut self, pos: ChunkPos) -> Option<&mut Chunk> {
+    pub fn chunk_at_mut(&mut self, pos: ChunkPos) -> Option<&mut Chunk<'cnt>> {
         self.chunks.get_mut(&pos).filter(|c| c.chunk.chunk_state >= ChunkState::Detailed).map(|cd| cd.chunk.as_mut())
     }
 
-    pub fn refresh(&mut self, reg: &ItemRegistry) {
+    pub fn refresh(&'b mut self, reg: &ItemRegistry) {
         let mut cc = std::mem::take(&mut self.changed_chunks);
         let mut meshed = HashSet::new();
         cc.retain(|x| self.chunk_at(*x).map(Chunk::renderable).unwrap_or(false));

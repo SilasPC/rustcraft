@@ -189,7 +189,7 @@ impl Coord for ChunkPos {
     }
 }
 
-pub trait Coord {
+pub trait Coord: Copy {
     fn dist(&self, other: &Self) -> f32 {
         (self.as_world() - other.as_world()).0.magnitude()
     }

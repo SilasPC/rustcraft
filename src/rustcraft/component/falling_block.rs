@@ -2,15 +2,15 @@
 use super::*;
 
 pub struct FallingBlock {
-    pub block: Block
+    /* pub block: Block */
 }
 
 impl FallingBlock {
 
-    pub fn of(block: Block) -> Self { Self { block } }
+    pub fn of(/* block: Block */) -> Self { Self { /* block */ } }
 
     pub fn system_collide_land(data: &mut WorldData) {
-        let mut to_destroy = vec![];
+        /* let mut to_destroy = vec![];
         let mut to_spawn = vec![];
         for (ent, (pos, phys, this)) in data.entities.ecs.query_mut::<(&mut Position, &mut Physics, &FallingBlock)>() {
             if phys.is_grounded() {
@@ -33,12 +33,12 @@ impl FallingBlock {
         }
         for ent in to_destroy {
             let _ = data.entities.ecs.despawn(ent);
-        }
+        } */
     }
 
     /// Behavior function causing the block to fall if suspended in mid air
     pub fn behaviour_on_update(pos: BlockPos, data: &mut WorldData) {
-        let block = data.blocks.block_at(&pos).unwrap();
+        /* let block = data.blocks.block_at(&pos).unwrap();
         let below = pos.shifted(Face::YNeg);
         if let Some(below) = data.blocks.block_at(&below) {
             let below = below.as_ref();
@@ -54,7 +54,7 @@ impl FallingBlock {
                 data.entities.tree.insert(falling_block, falling_block, &aabb);
                 data.block_updates.add_area(pos);
             }
-        }
+        } */
     }
 
 }

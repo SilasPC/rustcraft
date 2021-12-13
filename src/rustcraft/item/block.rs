@@ -71,7 +71,7 @@ impl std::fmt::Debug for Behavior {
 }
 
 #[derive(Clone, Debug)]
-pub struct Block(Arc<(BlockData,bool)>);
+pub struct Block(pub Arc<(BlockData,bool)>);
 
 impl Eq for Block {}
 impl PartialEq for Block {
@@ -128,7 +128,7 @@ impl Block {
 
 #[derive(Default, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct BlockData {
-    pub id: ArcStr,
+    pub id: String,
     pub name: String,
     #[serde(default = "yes")]
     pub solid: bool,
@@ -150,11 +150,9 @@ pub struct BlockData {
     pub no_render: bool,
     pub texture: (usize,usize,usize),
     #[serde(default)]
-    pub drops: Option<ArcStr>,
+    pub drops: Option<String>,
     #[serde(skip)]
     pub behavior: Option<Box<Behavior>>,
-    #[serde(skip)]
-    pub data: Option<Value>,
 }
 
 impl BlockData {

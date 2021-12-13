@@ -2,6 +2,7 @@
 pub mod game_loop;
 pub mod input;
 pub mod world;
+// pub mod world2;
 pub mod component;
 pub mod player;
 pub mod item;

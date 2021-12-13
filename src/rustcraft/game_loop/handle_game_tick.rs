@@ -3,9 +3,9 @@ use game::world::updates::Updates;
 use crate::prelude::*;
 use super::*;
 
-impl<'a> GameLoop<'a> {
+impl<'cnt: 'b, 'b> GameLoop<'cnt> {
 
-    pub fn handle_game_tick(&mut self) -> Option<Duration> {
+    pub fn handle_game_tick(&'b mut self) -> Option<Duration> {
         if self.last_tick.elapsed() > consts::TICK_DURATION {
             self.last_tick += consts::TICK_DURATION;
     

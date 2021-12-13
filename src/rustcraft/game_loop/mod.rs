@@ -26,11 +26,11 @@ mod handle_interaction;
 mod state;
 use state::*;
 
-pub struct GameLoop<'a> {
-    pub data: &'a mut data::Data,
-    pub rdata: &'a mut data::RData,
-    pub idata: &'a data::IData,
-    pub world: WorldData,
+pub struct GameLoop<'cnt> {
+    pub data: &'cnt mut data::Data,
+    pub rdata: &'cnt mut data::RData,
+    pub idata: &'cnt data::IData,
+    pub world: WorldData<'cnt>,
     pub chunk_renderer: ChunkRenderer,
     pub pgui: PlayerGUI,
     pub last_tick: Instant,
@@ -44,10 +44,10 @@ pub struct GameLoop<'a> {
     pub invren: InventoryRenderer,
 }
 
-impl<'a> GameLoop<'a> {
-    pub fn new(data: &'a mut data::Data, rdata: &'a mut data::RData, idata: &'a data::IData) -> Self {
+impl<'cnt: 'b, 'b> GameLoop<'cnt> {
+    pub fn new(data: &'cnt mut data::Data, rdata: &'cnt mut data::RData, idata: &'cnt data::IData) -> Self {
             
-        let mut world = WorldData::new(consts::DEBUG_SEED, idata.air.clone());
+        let mut world = WorldData::new(consts::DEBUG_SEED, idata.air());
 
         data.display.refresh();
         data.display.set_mouse_capture(true);
@@ -114,8 +114,8 @@ impl<'a> GameLoop<'a> {
 
     }
 
-    pub fn run_loop(&mut self) {while self.run() {}}
-    pub fn run(&mut self) -> bool {
+    pub fn run_loop(&'b mut self) {while self.run() {}}
+    pub fn run(&'b mut self) -> bool {
 
         self.rdata.delta = self.rdata.frame_time.elapsed().as_secs_f32().min(0.1);
         self.rdata.frame_time = Instant::now();
@@ -141,7 +141,7 @@ impl<'a> GameLoop<'a> {
 
         // TODO this is too slow
         self.world.blocks.refresh(&self.idata.content.items);
-        self.world.load(&self.idata.content.items, 5); // ! adjust for performance
+        self.world.load(&self.idata.content, 5); // ! adjust for performance
 
         // RENDER
         let now = Instant::now();

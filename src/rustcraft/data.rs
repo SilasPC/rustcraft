@@ -9,9 +9,14 @@ pub struct IData {
     pub font: Arc<Font>,
     pub break_atlas: Arc<TextureAtlas>,
     pub atlas: Arc<TextureAtlas>,
-    pub air: Block,
     pub vign: Arc<Texture>,
     pub clouds: Arc<Texture>,
+}
+
+impl IData {
+    pub fn air(&self) -> &BlockData {
+        self.content.blocks.get("air").unwrap()
+    }
 }
 
 pub struct RData {

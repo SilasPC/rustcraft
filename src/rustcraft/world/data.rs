@@ -2,7 +2,7 @@
 use super::*;
 use crate::prelude::*;
 
-impl WorldData {
+impl<'cnt: 'b, 'b> WorldData<'cnt> {
 
     pub fn smooth_light_level(&self) -> f32 {
         (self.time_of_day() * std::f32::consts::TAU).sin() + 0.5
@@ -18,7 +18,7 @@ impl WorldData {
         self.to_load.push_back(Loading::Filling(0, p))
     }
 
-    pub fn load(&mut self, reg: &ItemRegistry, max_work: usize) {
+    pub fn load(&'b mut self, reg: &'cnt Content, max_work: usize) {
         const DIAMETER: i32 = 10;
         if let Some(mut loading) = self.to_load.pop_front() {
             let mut work = 0;
@@ -38,7 +38,7 @@ impl WorldData {
                                 work += 1;
                             }
                         } else {
-                            let mut chunk = Box::new(Chunk::new(p, self.air.clone()));
+                            let mut chunk = Box::new(Chunk::new(p, self.air));
                             chunk.gen_terrain(&*self.noise, reg);
                             let mut chunk_data = ChunkData {
                                 chunk,
@@ -103,7 +103,7 @@ impl WorldData {
                             z + *i % RAD
                         ).into();
                         {
-                            let (m1, m2) = meshing::make_mesh(p, &self.blocks, reg);
+                            let (m1, m2) = meshing::make_mesh(p, &self.blocks, &reg.items);
                             let c = self.blocks.chunks.get_mut(&p).unwrap();
                             assert_eq!(c.loaded_neighbours, 26);
                             if let Some(mesh) = &mut c.chunk.mesh {

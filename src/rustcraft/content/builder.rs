@@ -41,6 +41,11 @@ impl ContentBuilder {
     }
     pub fn finish(self, texture_atlas: Arc<TextureAtlas>) -> Content {
         Content {
+            blocks: self.items
+                .iter()
+                .filter_map(|(k, v)| v.as_block().map(|b| (k, b)))
+                .map(|(k, v)| (k.clone(), v.0.0.clone()))
+                .collect(),
             items: ItemRegistry {
                 texture_atlas,
                 items: self.items,

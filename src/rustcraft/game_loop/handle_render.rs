@@ -10,7 +10,7 @@ use crate::game_loop::GameState;
 use crate::PlayerData;
 use crate::meshing::ChunkRenderer;
 
-impl<'a> GameLoop<'a> {
+impl<'b: 'cnt, 'cnt> GameLoop<'cnt> {
     pub fn handle_render(&mut self, raycast_hit: Option<RayCastHit>) {
         let light_factor = (self.world.smooth_light_level() * (1. - consts::SKY_MIN_BRIGHTNESS)) + consts::SKY_MIN_BRIGHTNESS;
         let sky_col = Vector3::from(consts::SKY) * light_factor;

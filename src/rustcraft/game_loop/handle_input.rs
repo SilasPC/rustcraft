@@ -8,8 +8,8 @@ pub struct Return {
     pub do_quit: bool,
 }
 
-impl<'a> GameLoop<'a> {
-    pub fn handle_input(&mut self) -> Return {
+impl<'cnt: 'b, 'b> GameLoop<'cnt> {
+    pub fn handle_input(&'b mut self) -> Return {
 
         let mut ret = Return::default();
 

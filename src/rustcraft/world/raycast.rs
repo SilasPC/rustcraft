@@ -9,7 +9,7 @@ pub struct RayCastHit {
     pub prev: WorldPos,
 }
 
-impl VoxelData {
+impl<'cnt> VoxelData<'cnt> {
     
     pub fn raycast(&self, mut pos: WorldPos, heading: &Vector3<f32>, max_dist: f32) -> Option<RayCastHit> {
         

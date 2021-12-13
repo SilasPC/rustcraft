@@ -1,16 +1,16 @@
 
 use crate::prelude::*;
 
-pub fn gen_detail(pos: ChunkPos, world: &mut WorldData, reg: &ItemRegistry) {
+pub fn gen_detail<'cnt>(pos: ChunkPos, world: &mut WorldData<'cnt>, reg: &'cnt Content) {
     let (x,y,z) = pos.as_block().as_tuple();
-    let dirt = reg.get("dirt").as_block().unwrap();
-    let log = reg.get("log").as_block().unwrap();
-    let leaves = reg.get("leaves").as_block().unwrap();
+    let dirt = reg.blocks.get("dirt").unwrap();
+    let log = reg.blocks.get("log").unwrap();
+    let leaves = reg.blocks.get("leaves").unwrap();
     for x in x..x+16 {
         for z in z..z+16 {
             'yloop: for y in y..y+16 {
                 let below: BlockPos = (x,y-1,z).into();
-                if world.blocks.block_at_any_state(&below).unwrap().id.as_ref() == "grass" {
+                if world.blocks.block_at_any_state(&below).unwrap().id == "grass" {
                     let h = util::hash(&(x,z));
                     if h % 10 == 0 {
                         let h = 4 + h.rem_euclid(4) as i32; // 4..=7

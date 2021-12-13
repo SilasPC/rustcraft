@@ -223,11 +223,12 @@ impl InventoryShell for ChestGUI {
     fn texture(&self) -> &Texture {&self.texture}
     fn slots(&self) -> &[PixelPos] {&self.slots}
     fn borrow_data<'w>(&self, w: &'w mut WorldData) -> Option<&'w mut dyn InventoryData> {
-        let block = w.blocks.block_at_mut_unguarded(&self.chest)?;
+        /* let block = w.blocks.block_at_mut_unguarded(&self.chest)?;
         if block.id.as_ref() != "chest" {
             return None
         }
-        Some(block.mutate().data.as_mut().unwrap())
+        Some(block.mutate().data.as_mut().unwrap()) */
+        None
     }
 }
 

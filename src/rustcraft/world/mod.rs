@@ -25,37 +25,37 @@ pub struct EntityData {
     pub player: hecs::Entity,
 }
 
-pub struct ChunkData {
-    pub chunk: Box<Chunk>,
+pub struct ChunkData<'cnt> {
+    pub chunk: Box<Chunk<'cnt>>,
     /// Self is not treated as a neighbour, so count should be in 0..=26
     pub loaded_neighbours: usize,
 }
 
-impl ChunkData {
+impl<'cnt> ChunkData<'cnt> {
     pub fn all_neighbours_loaded(&self) -> bool {
         self.loaded_neighbours == 26
     }
 }
 
-pub struct VoxelData {
-    pub chunks: HashMap<ChunkPos, ChunkData>,
+pub struct VoxelData<'cnt> {
+    pub chunks: HashMap<ChunkPos, ChunkData<'cnt>>,
     pub changed_chunks: HashSet<ChunkPos>,
 }
 
-pub struct WorldData {
+pub struct WorldData<'cnt> {
     pub block_updates: Updates,
     pub entities: EntityData,
-    pub blocks: VoxelData,
+    pub blocks: VoxelData<'cnt>,
     pub seed: String,
-    pub air: Block,
+    pub air: &'cnt BlockData,
     pub noise: Box<dyn TerrainGenerator>,
     pub ticks: u64,
     pub to_load: VecDeque<Loading>,
 }
 
-impl WorldData {
+impl<'cnt> WorldData<'cnt> {
     
-    pub fn new(seed: &str, air: Block) -> Self {
+    pub fn new(seed: &str, air: &'cnt BlockData) -> Self {
         let noise = IslandGenerator::new_dyn(seed);
         let mut ecs = hecs::World::new();
         let mut tree = BVH::new();

@@ -56,10 +56,10 @@ impl ContentMod for BaseMod {
             on_update: Some(FallingBlock::behaviour_on_update),
             ..Default::default()
         });
-        mut_shr!("glowstone").behavior = Some(box Behavior {
+        /* mut_shr!("glowstone").behavior = Some(box Behavior {
             on_update: Some(rnd_glow_dec),
             ..Default::default()
-        });
+        }); */
         /* add_behavior!("grass", Behavior {
             on_rnd_tick: Some(grass_rnd_tick),
             ..Default::default()
@@ -82,7 +82,7 @@ impl ContentMod for BaseMod {
     }
 }
 
-fn rnd_glow_dec(pos: BlockPos, world: &mut WorldData) {
+/* fn rnd_glow_dec(pos: BlockPos, world: &mut WorldData) {
     let mut guard = world.blocks.block_at_mut(&pos);
     let b = guard.get_mut().unwrap();
     // println!("{:?} decrease?", b);
@@ -94,7 +94,7 @@ fn rnd_glow_dec(pos: BlockPos, world: &mut WorldData) {
             mb.behavior.as_mut().unwrap().on_rnd_tick = None;
         }
     }
-}
+} */
 
 /* fn grass_rnd_tick(pos: BlockPos, world: &mut WorldData) {
     let mut turn_to_dirt = false;
@@ -147,3 +147,34 @@ fn rnd_glow_dec(pos: BlockPos, world: &mut WorldData) {
         data.world.to_update.push(pos);
     }
 } */
+
+fn register_base_blocks(blocks: &mut HashMap<String, BlockData>) {
+    blocks.insert("air".into(), BlockData {
+        id: "air".into(),
+        name: "Air".into(),
+        hitbox: true,
+        no_render: true,
+        transparent: true,
+        replacable: true,
+        solid: false,
+        texture: (0, 0, 0),
+        ..Default::default()
+    }).assert_none();
+    blocks.insert("stone".into(), BlockData {
+        id: "stone".into(),
+        name: "Stone".into(),
+        texture: (0, 0, 0),
+        drops: Some("cobblestone".into()),
+        ..Default::default()
+    }).assert_none();
+}
+
+trait AssertNone {
+    fn assert_none(self);
+}
+
+impl<T> AssertNone for Option<T> {
+    fn assert_none(self) {
+        assert!(!self.is_none());
+    }
+}

@@ -22,40 +22,12 @@ use crate::util::BVH;
 use crate::content::*;
 use engine::program::*;
 use rustcraft::component::*;
-use cgmath::*;
-use std::time::Instant;
 use crate::rustcraft::input::Input;
 use crate::engine::texture::*;
 use engine::*;
 use rustcraft::*;
 
-pub mod prelude {
-    pub use entity::template::{EntityRegistry, EntityTemplate};
-    pub use hecs::Entity;
-    pub use serde_json::Value as JSON;
-    pub use crate::consts;
-    pub use game::settings::Settings;
-    pub use util::ArcStr;
-    #[macro_use]
-    pub use util;
-    pub use engine;
-    pub use engine::audio::{AudioSys, self};
-    pub use rustcraft as game;
-    pub use crate::rustcraft::world::{self, *};
-    pub use crate::rustcraft::item::*;
-    pub use crate::*;
-    pub use crate::rustcraft::component;
-    pub use crate::rustcraft::chunk::chunk::*;
-    pub use cgmath::*;
-    pub use crate::registry::ItemRegistry;
-    pub use crate::coords::*;
-    pub use std::collections::{HashSet, HashMap, VecDeque, BinaryHeap};
-    pub use crate::vao::VAO;
-    pub use crate::rustcraft::chunk::{chunk::{self, Chunk}, meshing};
-    pub use std::sync::Arc;
-    pub use std::time::{Duration, Instant};
-}
-
+pub mod prelude;
 use crate::prelude::*;
 
 fn main() {
@@ -123,7 +95,6 @@ fn init_idata() -> data::IData {
     let clouds = Texture::from_path("assets/clouds.png").into();
 
     data::IData {
-        air: content.items.get("air").to_block().unwrap(),
         content,
         item_cubes,
         atlas,

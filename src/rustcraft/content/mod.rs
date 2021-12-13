@@ -2,11 +2,10 @@ pub mod inventory;
 pub mod base;
 pub mod builder;
 
-use crate::util::fdiv;
 use crate::loader::Loader;
 use crate::crafting::CraftingRegistry;
-use crate::rustcraft::component::{Physics,Position,PlayerData,View};
 use crate::prelude::*;
+use component::{Physics, Position, PlayerData, View};
 
 pub fn make_player() -> (impl hecs::DynamicBundle, util::AABB) {
     let pos = Position::new(Vector3 {x:50., y: 55., z: 50.}.as_coord(), (0.8,1.9,0.8).into());
@@ -64,6 +63,7 @@ fn chest_use(pos: BlockPos, data: &mut WorldData) {
 const fn one() -> usize {1}
 
 pub struct Content {
+    pub blocks: HashMap<String, BlockData>,
     pub items: ItemRegistry,
     pub crafting: CraftingRegistry,
     pub entities: EntityRegistry,

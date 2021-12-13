@@ -10,18 +10,18 @@ use crate::game_loop::GameState;
 use crate::prelude::*;
 use world::updates::Updates;
 
-impl<'a> GameLoop<'a> {
-    pub fn handle_interaction(&mut self, ret: Return) -> Option<RayCastHit> {
+impl<'cnt: 'b, 'b> GameLoop<'cnt> {
+    pub fn handle_interaction(&'b mut self, ret: Return) -> Option<RayCastHit> {
 
         let mut raycast_hit = None;
-        let mut on_use = None;
-        let mut to_spawn = vec![];
+        let mut on_use: std::option::Option<(coords::WorldPos, for<'r, 's> fn(coords::BlockPos, &'r mut rustcraft::world::WorldData<'s>))> = None;
+        let mut to_spawn: Vec<((Position, Physics, ItemCmp, Model), util::AABB)> = vec![];
 
-        let mut opos = None;
+        let mut opos: Option<WorldPos> = None;
 
         if let Ok((pos, phys, view, pdata)) = self.world.entities.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(self.world.entities.player) {
 
-            raycast_hit = self.world.blocks.raycast(pos.pos+view.offset().into(), &pos.heading(), 5.);
+            /* raycast_hit = self.world.blocks.raycast(pos.pos+view.offset().into(), &pos.heading(), 5.);
             opos = Some(pos.pos);
 
             let b = &self.world.blocks;
@@ -71,7 +71,7 @@ impl<'a> GameLoop<'a> {
                         };
                         
                         if broken {
-                            if self.world.blocks.set_block_at(&hit, self.idata.content.items.get("air").as_block().unwrap()) {
+                            if self.world.blocks.set_block_at(&hit, self.idata.air()) {
                                 if let Some(drop_id) = &block.drops {
                                     let mut stack = ItemStack::of(self.idata.content.items.get(&drop_id).clone(), 1);
                                     let phys = Physics::new();
@@ -79,7 +79,7 @@ impl<'a> GameLoop<'a> {
                                     let aabb = pos.get_aabb();
                                     let model = box util::RenderedItem {
                                         vao: self.idata.item_cubes.clone(),
-                                        offset: self.invren.iren.offsets[drop_id.as_ref()]
+                                        offset: self.invren.iren.offsets[drop_id]
                                     };
                                     let cmps = (
                                         pos,
@@ -123,7 +123,7 @@ impl<'a> GameLoop<'a> {
 
                 let force = self.data.input.compute_movement_vector(pos.yaw()) * 40.;
                 phys.apply_force_continuous(self.rdata.delta, &force);
-            }
+            } */
 
             self.rdata.view_mat = view.calc_view_mat(&pos);
             if self.data.settings.third_person {

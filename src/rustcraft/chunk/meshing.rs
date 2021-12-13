@@ -212,7 +212,7 @@ pub fn make_mesh(pos: ChunkPos, w: &VoxelData, reg: &ItemRegistry) -> ((Vec<f32>
                 macro_rules! should_draw {
                     ($x:expr, $y:expr, $z:expr) => {{
                         let b = get!($x,$y,$z);
-                        b.transparent && !(b.group_transparent && b == block)
+                        b.transparent && !(b.group_transparent && std::ptr::eq(b, block))
                     }};
                 }
 

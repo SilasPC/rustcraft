@@ -46,7 +46,7 @@ impl Light {
     }
 }
 
-pub fn calc_light(pos: ChunkPos, world: &mut VoxelData) {
+pub fn calc_light<'cnt: 'b, 'b>(pos: ChunkPos, world: &'b mut VoxelData<'cnt>) {
     let Vector3 {x, y, z} = pos.into();
     let (
         mut block_removal,
