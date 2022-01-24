@@ -42,10 +42,15 @@ pub struct GameLoop<'cnt> {
     pub state: GameState,
     pub last_tick_dur: f32,
     pub invren: InventoryRenderer,
+    pub tx: mpsc::Sender<server::ClientMsg>,
+    pub rx: mpsc::Receiver<server::ServerMsg>,
+    pub player_pos: Position,
+    pub player_phys: Physics,
+    pub player_view: View,
 }
 
 impl<'cnt: 'b, 'b> GameLoop<'cnt> {
-    pub fn new(data: &'cnt mut data::Data, rdata: &'cnt mut data::RData, idata: &'cnt data::IData) -> Self {
+    pub fn new(conn: (mpsc::Sender<server::ClientMsg>, mpsc::Receiver<server::ServerMsg>), data: &'cnt mut data::Data, rdata: &'cnt mut data::RData, idata: &'cnt data::IData) -> Self {
             
         let mut world = WorldData::new(consts::DEBUG_SEED, idata.air());
 
@@ -86,7 +91,7 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
         let mut last_tick_dur = 0.;
         
         let mut invren = InventoryRenderer {
-            iren: ItemGUIRenderer::generate(&idata.content.items),
+            iren: ItemGUIRenderer::generate(&idata.content.items, &idata.atlas),
             gui: GUIRenderer::new(data.display.size_i32()),
             atlas: idata.atlas.clone(),
             highlight: Texture::from_path("assets/slot_highlight.png").into()
@@ -94,7 +99,11 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
 
         world.load_around(&WorldPos::from(Vector3 {x:50., y: 55., z: 50.}));
 
+        let (tx,rx) = conn;
+        let (player_pos, player_phys, player_view,_) = make_player().0;
         Self {
+            tx,
+            rx,
             data,
             rdata,
             idata,
@@ -110,6 +119,9 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
             state,
             last_tick_dur,
             invren,
+            player_pos,
+            player_phys,
+            player_view,
         }
 
     }
@@ -136,12 +148,15 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
             WanderingAI::system_update(&mut self.world, self.rdata.delta);
             Physics::system_update(&mut self.world, self.rdata.delta);
             FallingBlock::system_collide_land(&mut self.world);
+
+            self.player_phys.update(&mut self.player_pos, self.rdata.delta, &self.world.blocks);
+
         }
         // ! STOP SYSTEMS
 
         // TODO this is too slow
-        self.world.blocks.refresh(&self.idata.content.items);
-        self.world.load(&self.idata.content, 5); // ! adjust for performance
+        self.world.blocks.refresh(&self.idata.content.items, &self.idata.atlas);
+        self.world.load(&self.idata.content, &self.idata.atlas, 5); // ! adjust for performance
 
         // RENDER
         let now = Instant::now();

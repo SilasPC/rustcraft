@@ -5,7 +5,7 @@ use super::*;
 #[derive(Clone, serde::Deserialize)]
 pub struct Physics {
     #[serde(default = "util::bool_true")]
-    gravity: bool,
+    pub gravity: bool,
     #[serde(skip, default = "util::vec_f32_zero")]
     force: Vector3<f32>,
     #[serde(skip, default = "util::vec_f32_zero")]
@@ -14,6 +14,8 @@ pub struct Physics {
     grounded: bool,
     #[serde(skip)]
     edge_stop: bool,
+    #[serde(skip)]
+    pub freecam: bool,
 }
 
 impl Physics {
@@ -25,13 +27,17 @@ impl Physics {
             grounded: true,
             force: zero,
             vel: zero,
-            edge_stop: false
+            edge_stop: false,
+            freecam: false
         }
     }
 
-    pub fn try_jump(&mut self) {
+    pub fn try_jump(&mut self, delta: f32) {
         if self.grounded {
             self.vel.y += 5.;
+        } else if self.freecam {
+            let dir = if self.edge_stop {Face::YNeg} else {Face::YPos};
+            self.apply_force_continuous(delta, &dir.to_dir());
         }
     }
 
@@ -75,33 +81,39 @@ impl Physics {
 
             macro_rules! test {
                 (x) => {{
-                    let sE = 0.01;
-                    let bE = pos.size.x - sE;
-                    let byE = 0.99;
-                    let offset = if new_vel.x > 0. {pos.size.x} else {0.};
-                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true)
+                    if self.freecam {false} else {
+                        let sE = 0.01;
+                        let bE = pos.size.x - sE;
+                        let byE = 0.99;
+                        let offset = if new_vel.x > 0. {pos.size.x} else {0.};
+                        world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+sE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+offset, new_pos.y+byE, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true)
+                    }
                 }};
                 (y) => {{
-                    let sE = 0.01;
-                    let bE = pos.size.x - sE;
-                    let offset = if new_vel.y > 0. {pos.size.y} else {0.};
-                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true)
+                    if self.freecam {false} else {
+                        let sE = 0.01;
+                        let bE = pos.size.x - sE;
+                        let offset = if new_vel.y > 0. {pos.size.y} else {0.};
+                        world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+sE))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+offset, new_pos.z+bE))).map(|b| b.solid).unwrap_or(true)
+                    }
                 }};
                 (z) => {{
-                    let sE = 0.01;
-                    let bE = pos.size.x - sE;
-                    let byE = 0.99;
-                    let offset = if new_vel.z > 0. {pos.size.z} else {0.};
-                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
-                    world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true)
+                    if self.freecam {false} else {
+                        let sE = 0.01;
+                        let bE = pos.size.x - sE;
+                        let byE = 0.99;
+                        let offset = if new_vel.z > 0. {pos.size.z} else {0.};
+                        world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+sE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+sE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true) ||
+                        world.block_at(&WorldPos::from((new_pos.x+bE, new_pos.y+byE, new_pos.z+offset))).map(|b| b.solid).unwrap_or(true)
+                    }
                 }};
             }
 
@@ -163,7 +175,7 @@ impl Physics {
 
         if self.vel.y != 0. {
             self.grounded = false;
-        } else if self.vel.y == 0. && self.gravity && !was_grounded {
+        } else if self.vel.y == 0. && self.gravity && !self.freecam && !was_grounded {
             self.grounded = true;
         }
         

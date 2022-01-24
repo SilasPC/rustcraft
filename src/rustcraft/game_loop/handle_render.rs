@@ -65,22 +65,20 @@ impl<'b: 'cnt, 'cnt> GameLoop<'cnt> {
         self.sprg.load_uv((1.,1.), (0.,0.));
         Model::system_render(&mut self.world, &mut self.sprg);
 
-        if let Ok(pos) = self.world.entities.ecs.query_one_mut::<&Position>(self.world.entities.player) {
-            // render clouds
-            self.sprg.enable();
-            self.idata.clouds.bind();
-            self.sprg.load_view(&self.rdata.view_mat, &self.rdata.proj_mat);
-            self.sprg.load_uv((1.,1.), (0.,0.));
-            self.sprg.load_transform(&(Matrix4::from_translation((pos.pos.x,consts::CLOUD_HEIGHT,pos.pos.z).into()) * Matrix4::from_scale(self.idata.clouds.size().0 * consts::CLOUD_SIZE)));
-            self.sprg.load_light(light_factor);
-            // ? use quad instead
-            self.idata.cube.bind();
-            self.idata.cube.draw();
-        }
+        // render clouds
+        self.sprg.enable();
+        self.idata.clouds.bind();
+        self.sprg.load_view(&self.rdata.view_mat, &self.rdata.proj_mat);
+        self.sprg.load_uv((1.,1.), (0.,0.));
+        self.sprg.load_transform(&(Matrix4::from_translation((self.player_pos.pos.x,consts::CLOUD_HEIGHT,self.player_pos.pos.z).into()) * Matrix4::from_scale(self.idata.clouds.size().0 * consts::CLOUD_SIZE)));
+        self.sprg.load_light(light_factor);
+        // ? use quad instead
+        self.idata.cube.bind();
+        self.idata.cube.draw();
 
 
         // render item in hand
-        if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&PlayerData>(self.world.entities.player) {
+        /* if let Ok(pdata) = self.world.entities.ecs.query_one_mut::<&PlayerData>(self.world.entities.player) {
             if let Some(item) = &pdata.inventory.data[self.pgui.selected_slot()] {
                 unsafe {
                     gl::Disable(gl::DEPTH_TEST);
@@ -105,7 +103,7 @@ impl<'b: 'cnt, 'cnt> GameLoop<'cnt> {
                     gl::Enable(gl::DEPTH_TEST);
                 }
             }
-        }
+        } */
 
         if let Some(hit) = raycast_hit {
             const E: f32 = 0.001;

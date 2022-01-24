@@ -17,17 +17,28 @@ pub enum ChunkState {
     Rendered
 }
 
+#[derive(Default, Clone, Copy)]
 pub struct ChunkLoadLevel {
     pub spread: u8,
     pub source: u8,
+}
+
+fn add_src<'cnt>(lvl: u8, pos: ChunkPos, w: &mut VoxelData<'cnt>, air: &'cnt BlockData) {
+    let mut queue = VecDeque::new();
+    if let Some(c) = w.chunk_at_mut(pos) {
+        c.load_level.source = lvl;
+        queue.push_back(pos);
+    }
+    while let Some(p) = queue.pop_front() {
+        
+    }
 }
 
 pub type BlocksData<'cnt> = Vec<Vec<Vec<&'cnt BlockData>>>;
 pub type LightData = [[[Light; 16]; 16]; 16];
 
 pub struct Chunk<'cnt> {
-    pub load_level_spread: u8,
-    pub load_level_set: u8,
+    pub load_level: ChunkLoadLevel,
     pub chunk_state: ChunkState,
     pub needs_refresh: bool,
     pub pos: ChunkPos,
@@ -58,8 +69,7 @@ impl<'cnt> Chunk<'cnt> {
             pos,
             needs_refresh: false,
             light,
-            load_level_spread: 0,
-            load_level_set: 0,
+            load_level: ChunkLoadLevel::default(),
         }
     }
 

@@ -9,14 +9,14 @@ impl ContentMod for BaseMod {
 
     fn name(&mut self) -> &str {"rustcraft"}
     
-    fn register_components(&mut self, cnt: &mut ContentBuilder) {
+    /* fn register_components(&mut self, cnt: &mut ContentBuilder) {
         cnt.components.register("Physics".into(), Physics::new());
         cnt.components.register("Viewable".into(), View::default());
         compile_warning!(more stuff);
-    }
+    } */
     
     fn register_entities(&mut self, cnt: &mut ContentBuilder) {
-        let ents = std::fs::read_to_string("base/entities.toml").unwrap();
+        /* let ents = std::fs::read_to_string("base/entities.toml").unwrap();
         let ents = ents.parse::<toml::Value>().unwrap();
         let ents = ents.as_table().unwrap();
         for (k, v) in ents {
@@ -28,7 +28,7 @@ impl ContentMod for BaseMod {
             assert!(cnt.entities.entities.insert(k.to_owned(), EntityTemplate {
                 cmps
             }).is_none());
-        };
+        }; */
     }
 
     fn register_behaviors(&mut self, cnt: &mut ContentBuilder) {

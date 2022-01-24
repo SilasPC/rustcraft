@@ -14,6 +14,7 @@ impl From<()> for PErr {
 pub enum Cmd {
     Give { id: String, count: usize },
     Summon { id: String },
+    ForceLoad { pos: ChunkPos },
 }
 
 impl std::str::FromStr for Cmd {
@@ -59,9 +60,9 @@ impl Cmd {
                         pdata.inventory.merge(&mut ItemStack::of(idata.content.items.get(id).clone(), rem).into());
                     }
                 }
-            },
+            }
             Self::Summon { id } => {
-                if let Some(template) = idata.content.entities.entities.get(id) {
+                /* if let Some(template) = idata.content.entities.entities.get(id) {
                     let mut builder = hecs::EntityBuilder::new();
                     let pos = Position::new((50,55,50).into(), (0.9,0.9,0.9).into());
                     let aabb = pos.get_aabb();
@@ -71,6 +72,15 @@ impl Cmd {
                     world.entities.tree.insert(ent, ent, &aabb);
                 } else {
                     println!("No such entity template {}", id);
+                } */
+            }
+            Self::ForceLoad { pos } => {
+                // actually do something useful
+                if !world.force_loaded.insert(*pos) {
+                    println!("Force loading {:?}", pos);
+                } else {
+                    world.force_loaded.remove(pos);
+                    println!("Removed force loading for {:?}", pos);
                 }
             }
         }

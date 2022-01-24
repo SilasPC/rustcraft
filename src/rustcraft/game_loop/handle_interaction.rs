@@ -19,9 +19,9 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
 
         let mut opos: Option<WorldPos> = None;
 
-        if let Ok((pos, phys, view, pdata)) = self.world.entities.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(self.world.entities.player) {
+        /* if let Ok((pos, phys, view, pdata)) = self.world.entities.ecs.query_one_mut::<(&mut Position, &mut Physics, &View, &mut PlayerData)>(self.world.entities.player) {
 
-            /* raycast_hit = self.world.blocks.raycast(pos.pos+view.offset().into(), &pos.heading(), 5.);
+            raycast_hit = self.world.blocks.raycast(pos.pos+view.offset().into(), &pos.heading(), 5.);
             opos = Some(pos.pos);
 
             let b = &self.world.blocks;
@@ -32,111 +32,113 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
                 self.last_tick_dur
             );
 
-            if let GameState::Playing{ breaking } = &mut self.state {
-
-                phys.set_edge_stop(self.data.input.holding_sneak());
-
-                if self.data.input.holding_jump() {
-                    phys.try_jump();
-                }
-
-                if !self.data.input.holding_primary() || raycast_hit.is_none() {
-                    *breaking = None;
-                }
-                if self.data.input.holding_primary() {
-                    if let Some(RayCastHit {hit, prev: hit_prev, ..}) = raycast_hit {
-
-                        if let Some(breaking) = breaking {
-                            if breaking.1 != hit.as_block() {
-                                *breaking = (0., hit.as_block());
-                            }
-                        } else {
-                            *breaking = Some((0., hit.as_block()));
-                        }
-                        
-                        let block = self.world.blocks.block_at(&hit).unwrap().clone();
-
-                        let broken = {
-                            let t = {
-                                let breaking = breaking.as_mut().unwrap();
-                                breaking.0 += self.rdata.delta; // TODO mult by hardness factor
-                                breaking.0
-                            };
-                            if t >= 1.0 {
-                                *breaking = None;
-                                true
-                            } else {
-                                false
-                            }
-                        };
-                        
-                        if broken {
-                            if self.world.blocks.set_block_at(&hit, self.idata.air()) {
-                                if let Some(drop_id) = &block.drops {
-                                    let mut stack = ItemStack::of(self.idata.content.items.get(&drop_id).clone(), 1);
-                                    let phys = Physics::new();
-                                    let pos = Position::new(hit.align_center(),(0.3,0.3,0.3).into());
-                                    let aabb = pos.get_aabb();
-                                    let model = box util::RenderedItem {
-                                        vao: self.idata.item_cubes.clone(),
-                                        offset: self.invren.iren.offsets[drop_id]
-                                    };
-                                    let cmps = (
-                                        pos,
-                                        phys,
-                                        ItemCmp::from(stack),
-                                        Model::from(model as Box<dyn Drawable>),
-                                    );
-                                    to_spawn.push((cmps,aabb));
-                                }
-                                self.world.block_updates.add_area(hit.as_block());
-                            }
-                        }
-                    }
-                } else if self.data.input.clicked_secondary() {
-
-                    if let Some(RayCastHit {hit, prev: hit_prev, ..}) = raycast_hit {
-                        let hit_prev = hit_prev.as_block();
-                        let maybe_item = &mut pdata.inventory.data[self.pgui.selected_slot as usize];
-                        let mut success = false;
-                        if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
-                            if self.world.blocks.set_block_at(&hit_prev, &block) {
-                                success = true;
-                                self.world.block_updates.add_area(hit_prev);
-                                self.world.block_updates.add_single(hit_prev);
-                            }
-                        } else {
-                            let b = self.world.blocks.block_at(&hit).unwrap();
-                            on_use = b.behavior.as_ref().and_then(|b| b.on_use.map(|f| (hit,f)));
-                        }
-                        if success {
-                            ItemStack::deduct(maybe_item, 1);
-                        }
-                    }
-
-                }
-
-                pos.rotate(
-                    self.data.input.mouse_y() as f32 * self.data.settings.mouse_sensitivity,
-                    self.data.input.mouse_x() as f32 * self.data.settings.mouse_sensitivity
-                );
-
-                let force = self.data.input.compute_movement_vector(pos.yaw()) * 40.;
-                phys.apply_force_continuous(self.rdata.delta, &force);
-            } */
-
-            self.rdata.view_mat = view.calc_view_mat(&pos);
-            if self.data.settings.third_person {
-                let heading = pos.heading();
-                let d = consts::THIRD_PERSON_DISTANCE;
-                let trans = if let Some(RayCastHit { dist_prev, .. }) = self.world.blocks.raycast(pos.pos, &-heading, d) {
-                    Matrix4::from_translation(dist_prev * heading)
-                } else {
-                    Matrix4::from_translation(heading * d)
-                };
-                self.rdata.view_mat = self.rdata.view_mat * trans;
-            }
             
+            
+        } */
+        
+        if let GameState::Playing{ breaking } = &mut self.state {
+
+            self.player_phys.set_edge_stop(self.data.input.holding_sneak());
+
+            if self.data.input.holding_jump() {
+                self.player_phys.try_jump(self.rdata.delta);
+            }
+
+            if !self.data.input.holding_primary() || raycast_hit.is_none() {
+                *breaking = None;
+            }
+            if self.data.input.holding_primary() {
+                if let Some(RayCastHit {hit, prev: hit_prev, ..}) = raycast_hit {
+
+                    if let Some(breaking) = breaking {
+                        if breaking.1 != hit.as_block() {
+                            *breaking = (0., hit.as_block());
+                        }
+                    } else {
+                        *breaking = Some((0., hit.as_block()));
+                    }
+                    
+                    let block = self.world.blocks.block_at(&hit).unwrap().clone();
+
+                    let broken = {
+                        let t = {
+                            let breaking = breaking.as_mut().unwrap();
+                            breaking.0 += self.rdata.delta; // TODO mult by hardness factor
+                            breaking.0
+                        };
+                        if t >= 1.0 {
+                            *breaking = None;
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    
+                    if broken {
+                        if self.world.blocks.set_block_at(&hit, self.idata.air()) {
+                            if let Some(drop_id) = &block.drops {
+                                let mut stack = ItemStack::of(self.idata.content.items.get(&drop_id).clone(), 1);
+                                let phys = Physics::new();
+                                let pos = Position::new(hit.align_center(),(0.3,0.3,0.3).into());
+                                let aabb = pos.get_aabb();
+                                let model = box util::RenderedItem {
+                                    vao: self.idata.item_cubes.clone(),
+                                    offset: self.invren.iren.offsets[drop_id]
+                                };
+                                let cmps = (
+                                    pos,
+                                    phys,
+                                    ItemCmp::from(stack),
+                                    Model::from(model as Box<dyn Drawable>),
+                                );
+                                to_spawn.push((cmps,aabb));
+                            }
+                            self.world.block_updates.add_area(hit.as_block());
+                        }
+                    }
+                }
+            } else if self.data.input.clicked_secondary() {
+
+                /* if let Some(RayCastHit {hit, prev: hit_prev, ..}) = raycast_hit {
+                    let hit_prev = hit_prev.as_block();
+                    let maybe_item = &mut pdata.inventory.data[self.pgui.selected_slot as usize];
+                    let mut success = false;
+                    if let Some(ref mut block) = maybe_item.as_mut().and_then(|item| item.item.as_block()) {
+                        if self.world.blocks.set_block_at(&hit_prev, &block) {
+                            success = true;
+                            self.world.block_updates.add_area(hit_prev);
+                            self.world.block_updates.add_single(hit_prev);
+                        }
+                    } else {
+                        let b = self.world.blocks.block_at(&hit).unwrap();
+                        on_use = b.behavior.as_ref().and_then(|b| b.on_use.map(|f| (hit,f)));
+                    }
+                    if success {
+                        ItemStack::deduct(maybe_item, 1);
+                    }
+                } */
+
+            }
+
+            self.player_pos.rotate(
+                self.data.input.mouse_y() as f32 * self.data.settings.mouse_sensitivity,
+                self.data.input.mouse_x() as f32 * self.data.settings.mouse_sensitivity
+            );
+
+            let force = self.data.input.compute_movement_vector(self.player_pos.yaw()) * 40.;
+            self.player_phys.apply_force_continuous(self.rdata.delta, &force);
+        }
+
+        self.rdata.view_mat = self.player_view.calc_view_mat(&self.player_pos);
+        if self.data.settings.third_person {
+            let heading = self.player_pos.heading();
+            let d = consts::THIRD_PERSON_DISTANCE;
+            let trans = if let Some(RayCastHit { dist_prev, .. }) = self.world.blocks.raycast(self.player_pos.pos, &-heading, d) {
+                Matrix4::from_translation(dist_prev * heading)
+            } else {
+                Matrix4::from_translation(heading * d)
+            };
+            self.rdata.view_mat = self.rdata.view_mat * trans;
         }
 
         for (cmps, aabb) in to_spawn {

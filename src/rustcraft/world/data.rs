@@ -18,7 +18,7 @@ impl<'cnt: 'b, 'b> WorldData<'cnt> {
         self.to_load.push_back(Loading::Filling(0, p))
     }
 
-    pub fn load(&'b mut self, reg: &'cnt Content, max_work: usize) {
+    pub fn load(&'b mut self, reg: &'cnt Content, atlas: &TextureAtlas, max_work: usize) {
         const DIAMETER: i32 = 10;
         if let Some(mut loading) = self.to_load.pop_front() {
             let mut work = 0;
@@ -103,7 +103,7 @@ impl<'cnt: 'b, 'b> WorldData<'cnt> {
                             z + *i % RAD
                         ).into();
                         {
-                            let (m1, m2) = meshing::make_mesh(p, &self.blocks, &reg.items);
+                            let (m1, m2) = meshing::make_mesh(p, &self.blocks, &reg.items, atlas);
                             let c = self.blocks.chunks.get_mut(&p).unwrap();
                             assert_eq!(c.loaded_neighbours, 26);
                             if let Some(mesh) = &mut c.chunk.mesh {

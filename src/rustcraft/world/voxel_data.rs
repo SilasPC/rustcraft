@@ -109,7 +109,7 @@ impl<'cnt: 'b, 'b> VoxelData<'cnt> {
         self.chunks.get_mut(&pos).filter(|c| c.chunk.chunk_state >= ChunkState::Detailed).map(|cd| cd.chunk.as_mut())
     }
 
-    pub fn refresh(&'b mut self, reg: &ItemRegistry) {
+    pub fn refresh(&'b mut self, reg: &ItemRegistry, atlas: &TextureAtlas) {
         let mut cc = std::mem::take(&mut self.changed_chunks);
         let mut meshed = HashSet::new();
         cc.retain(|x| self.chunk_at(*x).map(Chunk::renderable).unwrap_or(false));
@@ -132,7 +132,7 @@ impl<'cnt: 'b, 'b> VoxelData<'cnt> {
                         // ! need to make a hybrid version as well
                         if !self.chunks.get(&p.into()).unwrap().chunk.renderable() || meshed.contains(&p) {continue}
                         // println!("{:?}", p);
-                        let (m1,m2) = (meshing::make_mesh(p.into(), self, reg));
+                        let (m1,m2) = (meshing::make_mesh(p.into(), self, reg, atlas));
                         let c = &mut self.chunks.get_mut(&p.into()).unwrap().chunk;
                         {
                             let m = c.mesh.as_mut().unwrap();

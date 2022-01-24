@@ -41,6 +41,10 @@ impl<'cnt: 'b, 'b> GameLoop<'cnt> {
                     }
                 }
             }
+
+            // tmp load around player every tick
+            // self.tx.send(ClientMsg::LoadAround(self.player_pos.pos.as_chunk()));
+
             Some(start.elapsed())
         } else {
             None

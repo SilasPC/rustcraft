@@ -449,3 +449,23 @@ pub fn hash(h: &impl std::hash::Hash) -> u64 {
     h.hash(&mut dh);
     std::hash::Hasher::finish(&dh)
 }
+
+pub struct AsyncStdin {
+    pub rx: std::sync::mpsc::Receiver<String>,
+}
+impl AsyncStdin {
+    pub fn new() -> Self {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            use std::io::BufRead;
+            let mut buf = String::new();
+            let stdin = std::io::stdin();
+            let mut lock = stdin.lock();
+            loop {
+                if lock.read_line(&mut buf).is_err() {return}
+                if tx.send(buf.clone()).is_err() {return}
+            }
+        });
+        Self { rx, }
+    }
+}

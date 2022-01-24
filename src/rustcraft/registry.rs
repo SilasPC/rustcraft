@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 pub struct ItemRegistry {
     pub items: HashMap<String, ItemLike>,
-    pub texture_atlas: Arc<TextureAtlas>,
 }
 
 impl ItemRegistry {

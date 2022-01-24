@@ -11,6 +11,7 @@ pub mod coords;
 pub mod rustcraft;
 pub mod perlin;
 pub mod consts;
+pub mod server;
 use crate::builder::ContentBuilder;
 use crate::game_loop::GameLoop;
 use crate::util::gen_full_block_vao;
@@ -32,14 +33,54 @@ use crate::prelude::*;
 
 fn main() {
 
+    println!("Loading...");
     let mut data = init_data();
     let mut rdata = init_rdata(&data);
     let idata = init_idata();
 
-    let mut game_loop = GameLoop::new(&mut data, &mut rdata, &idata);
+    let (conn, server) = server(idata.content.clone());
+    let mut game_loop = GameLoop::new(conn, &mut data, &mut rdata, &idata);
     
+    println!("Client started");
     game_loop.run_loop();
+    println!("Client stopped");
+
+    server.stop();
+}
+
+
+use mpsc::{Sender,Receiver,channel};
+use server::*;
+struct Server {
+    kill: Sender<()>,
+    thread: std::thread::JoinHandle<()>,
+}
+impl Server {
+    pub fn stop(self) {
+        self.kill.send(());
+        self.thread.join();
+    }
+}
+fn server(content: Arc<Content>) -> ((Sender<ClientMsg>, Receiver<ServerMsg>), Server) {
     
+    let (stx,rx) = channel();
+    let (tx,srx) = channel();
+    let (kill,krx) = channel();
+
+    let thread = std::thread::spawn(move || {
+
+        println!("Server start");
+        let mut server = ServerLoop::new((stx, srx), &content);
+        while server.run_and_sleep() && !krx.try_recv().is_ok() {} 
+        println!("Server stop");
+
+    });
+
+    ((tx,rx), Server {
+        kill,
+        thread,
+    })
+
 }
 
 fn init_data() -> data::Data {
@@ -70,10 +111,10 @@ fn init_data() -> data::Data {
 }
 
 fn init_idata() -> data::IData {
-    let atlas = TextureAtlas::new(
+    let atlas = Arc::new(TextureAtlas::new(
         Texture::from_path("assets/atlas.png"),
         6
-    ).into();
+    ));
     let break_atlas = TextureAtlas::new(
         Texture::from_path("assets/break_atlas.png"),
         4
@@ -81,7 +122,7 @@ fn init_idata() -> data::IData {
 
     let mut content = ContentBuilder::new();
     content.load_mod(&mut content::base::BaseMod);
-    let content: Arc<_> = content.finish(Arc::clone(&atlas)).into();
+    let content: Arc<_> = content.finish().into();
 
     let font = Font::from_font_files("assets/font.png", "assets/font.fnt").into();
     let line_box = lines::box_vao().into();

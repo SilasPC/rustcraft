@@ -9,15 +9,15 @@ pub struct ItemGUIRenderer {
 }
 
 impl ItemGUIRenderer {
-    pub fn generate(reg: &ItemRegistry) -> Self {
+    pub fn generate(reg: &ItemRegistry, atlas: &TextureAtlas) -> Self {
         let mut offsets = HashMap::new();
         let block = gen_block_vao(
             reg.items.values().filter_map(ItemLike::as_block),
-            &mut offsets, reg.texture_atlas.as_ref()
+            &mut offsets, atlas
         );
         let item = gen_item_vao(
             reg.items.values().filter_map(ItemLike::as_item),
-            &mut offsets, reg.texture_atlas.as_ref()
+            &mut offsets, atlas
         );
         Self {
             item,

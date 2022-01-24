@@ -23,6 +23,16 @@ impl Face {
             Face::ZNeg, Face::ZPos,
         ].iter().copied()
     }
+    pub fn to_dir(self) -> Vector3<f32> {
+        match self {
+            Self::XPos => (1.,0.,0.),
+            Self::XNeg => (-1.,0.,0.),
+            Self::YPos => (0.,1.,0.),
+            Self::YNeg => (0.,-1.,0.),
+            Self::ZPos => (0.,0.,1.),
+            Self::ZNeg => (0.,0.,-1.),
+        }.into()
+    }
 }
 
 #[derive(From, Into, Clone, Copy, Debug)]

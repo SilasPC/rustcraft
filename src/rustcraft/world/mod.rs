@@ -43,6 +43,7 @@ pub struct VoxelData<'cnt> {
 }
 
 pub struct WorldData<'cnt> {
+    pub force_loaded: HashSet<ChunkPos>,
     pub block_updates: Updates,
     pub entities: EntityData,
     pub blocks: VoxelData<'cnt>,
@@ -75,7 +76,8 @@ impl<'cnt> WorldData<'cnt> {
             changed_chunks: HashSet::new(),
         };
         let block_updates = Updates::default();
-        WorldData { block_updates, entities, to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
+        let force_loaded = HashSet::default();
+        WorldData { force_loaded, block_updates, entities, to_load: VecDeque::new(), seed: seed.to_owned(), blocks, noise, air, ticks: 0 }
     }
 
 }

@@ -7,7 +7,7 @@ use crate::crafting::CraftingRegistry;
 use crate::prelude::*;
 use component::{Physics, Position, PlayerData, View};
 
-pub fn make_player() -> (impl hecs::DynamicBundle, util::AABB) {
+pub fn make_player() -> ((Position, Physics, View, PlayerData), util::AABB) {
     let pos = Position::new(Vector3 {x:50., y: 55., z: 50.}.as_coord(), (0.8,1.9,0.8).into());
     let aabb = pos.get_aabb();
     let view = View::from(Vector3 {
@@ -15,7 +15,10 @@ pub fn make_player() -> (impl hecs::DynamicBundle, util::AABB) {
         y: 1.8,
         z: 0.5,
     });
-    ((pos, Physics::new(), view, PlayerData::new()), aabb)
+    let mut phys = Physics::new();
+    phys.gravity = false;
+    phys.freecam = false;
+    ((pos, phys, view, PlayerData::new()), aabb)
 }
 
 #[derive(serde::Deserialize)]
@@ -66,8 +69,8 @@ pub struct Content {
     pub blocks: HashMap<String, BlockData>,
     pub items: ItemRegistry,
     pub crafting: CraftingRegistry,
-    pub entities: EntityRegistry,
-    pub components: ComponentRegistry,
+    // pub entities: EntityRegistry,
+    //pub components: ComponentRegistry,
     pub behaviors: BehaviorRegistry,
 }
 
